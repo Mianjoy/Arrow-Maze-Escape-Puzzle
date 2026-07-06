@@ -1,4 +1,4 @@
-import '../aggregates/board.dart';
+import '../entities/board.dart';
 import '../entities/arrow.dart';
 import '../../shared/value_objects/position.dart';
 

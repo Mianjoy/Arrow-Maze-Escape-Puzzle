@@ -15,8 +15,8 @@ export 'shared/exceptions/cell_occupied_exception.dart';
 
 // Board
 export 'board/entities/arrow.dart';
+export 'board/entities/board.dart';
 export 'board/entities/cell.dart';
-export 'board/aggregates/board.dart';
 export 'board/value_objects/arrow_state.dart';
 export 'board/value_objects/board_dimension.dart';
 export 'board/value_objects/board_generation_config.dart';
@@ -33,9 +33,15 @@ export 'board/events/arrow_extracted_event.dart';
 export 'board/events/arrow_blocked_event.dart';
 
 // Level
-export 'level/entities/level.dart';
-export 'level/value_objects/level_configuration.dart';
+export 'level/aggregates/level.dart';
+export 'level/value_objects/level_board_definition.dart';
+export 'level/value_objects/level_cell_data.dart';
 export 'level/value_objects/level_difficulty.dart';
+export 'level/value_objects/player_start.dart';
+export 'level/value_objects/star_rating.dart';
+export 'level/factories/level_factory.dart';
+export 'level/services/shortest_path_calculator.dart';
+export 'level/services/star_rating_calculator.dart';
 
 // Player
 export 'player/entities/player.dart';
@@ -45,6 +51,7 @@ export 'player/value_objects/player_statistics.dart';
 // Game
 export 'game/aggregates/game.dart';
 export 'game/value_objects/game_status.dart';
+export 'game/value_objects/game_loss_message.dart';
 export 'game/events/game_won_event.dart';
 
 // Progress

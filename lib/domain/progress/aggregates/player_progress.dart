@@ -1,5 +1,6 @@
 import 'package:meta/meta.dart';
 
+import '../../level/value_objects/star_rating.dart';
 import '../../shared/value_objects/identifier.dart';
 import '../value_objects/level_progress.dart';
 import '../value_objects/level_progress_status.dart';
@@ -36,11 +37,12 @@ class PlayerProgress {
     );
   }
 
-  /// Registra la completitud de un nivel con métricas de desempeño.
+  /// Registra la completitud de un nivel con métricas de desempeño y estrellas.
   PlayerProgress completeLevel({
     required Identifier levelId,
     required int moveCount,
     required int elapsedSeconds,
+    required StarRating starsEarned,
   }) {
     final current = _levels[levelId] ??
         LevelProgress(levelId: levelId, status: LevelProgressStatus.unlocked);
@@ -48,6 +50,7 @@ class PlayerProgress {
     final updated = current.recordCompletion(
       moveCount: moveCount,
       elapsedSeconds: elapsedSeconds,
+      starsEarned: starsEarned,
     );
 
     return PlayerProgress(

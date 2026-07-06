@@ -1,5 +1,6 @@
 import 'package:meta/meta.dart';
 
+import '../../level/value_objects/star_rating.dart';
 import '../../shared/value_objects/identifier.dart';
 import 'level_progress_status.dart';
 
@@ -12,6 +13,7 @@ class LevelProgress {
     required this.status,
     this.bestMoveCount,
     this.bestTimeSeconds,
+    this.bestStars,
     this.completionCount = 0,
   });
 
@@ -27,6 +29,9 @@ class LevelProgress {
   /// Mejor tiempo en segundos.
   final int? bestTimeSeconds;
 
+  /// Mejor calificación en estrellas obtenida.
+  final StarRating? bestStars;
+
   /// Veces que el jugador completó el nivel.
   final int completionCount;
 
@@ -34,6 +39,7 @@ class LevelProgress {
   LevelProgress recordCompletion({
     required int moveCount,
     required int elapsedSeconds,
+    required StarRating starsEarned,
   }) {
     final newBestMoves = bestMoveCount == null
         ? moveCount
@@ -43,11 +49,14 @@ class LevelProgress {
         ? elapsedSeconds
         : (elapsedSeconds < bestTimeSeconds! ? elapsedSeconds : bestTimeSeconds);
 
+    final newBestStars = StarRating.bestOf(bestStars, starsEarned);
+
     return LevelProgress(
       levelId: levelId,
       status: LevelProgressStatus.completed,
       bestMoveCount: newBestMoves,
       bestTimeSeconds: newBestTime,
+      bestStars: newBestStars,
       completionCount: completionCount + 1,
     );
   }
@@ -62,6 +71,7 @@ class LevelProgress {
       status: LevelProgressStatus.unlocked,
       bestMoveCount: bestMoveCount,
       bestTimeSeconds: bestTimeSeconds,
+      bestStars: bestStars,
       completionCount: completionCount,
     );
   }

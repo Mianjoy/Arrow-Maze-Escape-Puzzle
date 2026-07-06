@@ -3,12 +3,12 @@ import 'package:meta/meta.dart';
 import '../../shared/value_objects/direction.dart';
 import '../../shared/value_objects/identifier.dart';
 import '../../shared/value_objects/position.dart';
-import 'arrow_state.dart';
+import '../value_objects/arrow_state.dart';
 
 /// Entidad que representa una flecha colocada en el tablero.
 ///
 /// Cada flecha tiene una [position], una [direction] y un [state] que evoluciona
-/// durante la partida. Es una entidad hija del agregado [Board].
+/// durante la partida. Pertenece al estado del tablero gestionado por [Game].
 @immutable
 class Arrow {
   /// Crea una flecha con identidad, posición, dirección y estado inicial.

@@ -9,11 +9,11 @@ import '../value_objects/arrow_state.dart';
 import '../../shared/exceptions/cell_occupied_exception.dart';
 import '../../shared/exceptions/domain_exception.dart';
 
-/// Agregado raíz que representa el tablero de juego.
+/// Entidad que representa el estado del tablero en un momento dado.
 ///
-/// Encapsula la colección de [Cell] y [Arrow], garantizando invariantes
-/// como la no superposición de flechas. Es el punto de entrada para
-/// mutaciones del estado del grid.
+/// Contiene [Cell] y [Arrow] sin orquestar reglas de juego.
+/// Las mutaciones durante una partida las coordina el agregado [Game];
+/// la definición inicial proviene del agregado [Level].
 @immutable
 class Board {
   /// Crea un tablero con [id], [dimension] y colecciones iniciales.
@@ -46,7 +46,7 @@ class Board {
   List<Arrow> get activeArrows =>
       _arrows.where((arrow) => arrow.state == ArrowState.active).toList();
 
-  /// Indica si todas las flechas han sido extraídas (condición de victoria).
+  /// Indica si todas las flechas han sido extraídas.
   bool get isCleared => activeArrows.isEmpty;
 
   /// Obtiene la celda en [position] o lanza [DomainException] si no existe.
@@ -67,7 +67,7 @@ class Board {
 
   /// Coloca una [arrow] en el tablero si la celda destino está vacía.
   ///
-  /// Retorna un nuevo [Board] inmutable con el estado actualizado.
+  /// Usado al construir el tablero desde la definición del nivel.
   /// Lanza [CellOccupiedException] si la posición ya está ocupada.
   Board placeArrow(Arrow arrow) {
     final targetCell = cellAt(arrow.position);

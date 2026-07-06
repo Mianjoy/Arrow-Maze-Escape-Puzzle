@@ -1,5 +1,5 @@
 import '../../shared/value_objects/identifier.dart';
-import '../aggregates/board.dart';
+import '../entities/board.dart';
 import '../value_objects/board_dimension.dart';
 import 'cell_factory.dart';
 

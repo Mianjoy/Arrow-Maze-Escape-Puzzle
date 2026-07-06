@@ -1,4 +1,4 @@
-import '../aggregates/board.dart';
+import '../entities/board.dart';
 import '../value_objects/board_generation_config.dart';
 
 /// Contrato para generadores procedurales de tableros.

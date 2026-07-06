@@ -1,4 +1,4 @@
-import '../aggregates/board.dart';
+import '../entities/board.dart';
 import '../entities/arrow.dart';
 import '../value_objects/arrow_state.dart';
 import '../value_objects/move_result.dart';

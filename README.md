@@ -20,34 +20,71 @@ El proyecto sigue **Clean Architecture** con separación estricta de capas:
 lib/domain/
 ├── shared/           # Value objects, enums y excepciones transversales
 ├── player/           # Jugador y perfil
-├── board/            # Tablero, celdas, flechas y motor de movimiento
-├── level/            # Niveles y configuración
-├── game/             # Partida activa (sesión de juego)
+├── board/            # Board, Cell, Arrow (entidades de estado)
+├── level/            # Level (agregado), carga JSON, estrellas
+├── game/             # Game (agregado de sesión activa)
 ├── progress/         # Progreso del jugador por nivel
 └── repositories/     # Contratos de persistencia (interfaces)
 ```
 
-### Entidades principales
+### Agregados raíz
 
-- **Player** — Identidad y estadísticas del jugador.
-- **Board** — Agregado raíz del tablero con celdas y flechas.
-- **Cell** — Celda individual del grid.
-- **Level** — Definición de un nivel (dimensiones, dificultad, flechas).
+| Agregado | Responsabilidad |
+|----------|-----------------|
+| **Level** | Definición del nivel desde JSON, tablero inicial y ruta óptima |
+| **Game** | Coordina movimientos, victoria, derrota y estrellas durante la partida |
+| **PlayerProfile** | Perfil y estadísticas del jugador |
+| **PlayerProgress** | Progreso y mejores estrellas por nivel |
 
-### Entidades adicionales (para revisión)
+### Entidades (no agregados)
 
-- **Arrow** — Flecha con dirección y estado en el tablero.
-- **Game** — Sesión de juego activa que une jugador, nivel y tablero.
-- **PlayerProgress** — Agregado de progreso desbloqueado/completado por nivel.
+- **Board** — Estado del tablero (celdas y flechas); no orquesta reglas de juego.
+- **Cell**, **Arrow**, **Player** — Entidades de soporte.
+
+### Carga de niveles desde JSON
+
+Cada nivel se define en un archivo JSON con este esquema:
+
+```json
+{
+  "id": "level-001",
+  "difficulty": "easy",
+  "board": {
+    "rows": 3,
+    "cols": 3,
+    "cells": [
+      { "row": 0, "col": 0, "direction": "right" }
+    ]
+  },
+  "playerStart": { "row": 1, "col": 1 },
+  "parMoves": 6,
+  "timeLimit": 120
+}
+```
+
+Ver ejemplo en [`docs/levels/example_level.json`](docs/levels/example_level.json).
+
+`LevelFactory` parsea el JSON, calcula la ruta óptima con `ShortestPathCalculator` y produce un agregado `Level` listo para jugar.
+
+### Sistema de estrellas
+
+| Movimientos usados | Estrellas |
+|--------------------|-----------|
+| ≤ ruta óptima | ⭐⭐⭐ (3) |
+| Intermedio (entre óptimo y par) | ⭐⭐ (2) |
+| = parMoves (máximo sin perder) | ⭐ (1) |
+| > parMoves | Derrota |
+
+Si el jugador agota `parMoves` sin completar el nivel, `Game` transiciona a `GameStatus.lost` con el mensaje configurado en `GameLossMessage.movesExceeded`.
 
 ### Patrones de diseño aplicados
 
-- **Aggregate Root** — `Board`, `Game`, `PlayerProfile`, `PlayerProgress`
-- **Value Object** — `Position`, `Direction`, `Identifier`, etc.
-- **Factory** — `BoardFactory`, `CellFactory`
-- **Domain Service** — `ArrowMovementEngine`, `CollisionValidator`, `RandomBoardGenerator`
-- **Repository** — Interfaces en `repositories/` (sin implementación)
-- **Domain Event** — `ArrowExtractedEvent`, `ArrowBlockedEvent`, `GameWonEvent`
+- **Aggregate Root** — `Level`, `Game`, `PlayerProfile`, `PlayerProgress`
+- **Value Object** — `Position`, `StarRating`, `LevelBoardDefinition`, etc.
+- **Factory** — `LevelFactory`, `BoardFactory`, `CellFactory`
+- **Domain Service** — `ShortestPathCalculator`, `StarRatingCalculator`, `ArrowMovementEngine`
+- **Repository** — Interfaces en `repositories/`
+- **Domain Event** — `GameWonEvent`, `ArrowExtractedEvent`, etc.
 
 ## Uso de IA
 
