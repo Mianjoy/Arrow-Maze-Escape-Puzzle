@@ -1,0 +1,14 @@
+name: arrow_maze_escape_puzzle
+description: Arrow Maze Escape Puzzle - Puzzle game built with Clean Architecture.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  meta: ^1.11.0
+
+dev_dependencies:
+  lints: ^3.0.0
+  test: ^1.24.0

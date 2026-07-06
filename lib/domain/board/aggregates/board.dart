@@ -1,0 +1,143 @@
+import 'package:meta/meta.dart';
+
+import '../../shared/value_objects/identifier.dart';
+import '../../shared/value_objects/position.dart';
+import '../value_objects/board_dimension.dart';
+import 'arrow.dart';
+import 'cell.dart';
+import '../value_objects/arrow_state.dart';
+import '../../shared/exceptions/cell_occupied_exception.dart';
+import '../../shared/exceptions/domain_exception.dart';
+
+/// Agregado raíz que representa el tablero de juego.
+///
+/// Encapsula la colección de [Cell] y [Arrow], garantizando invariantes
+/// como la no superposición de flechas. Es el punto de entrada para
+/// mutaciones del estado del grid.
+@immutable
+class Board {
+  /// Crea un tablero con [id], [dimension] y colecciones iniciales.
+  Board({
+    required this.id,
+    required this.dimension,
+    required List<Cell> cells,
+    required List<Arrow> arrows,
+  })  : _cells = List.unmodifiable(cells),
+        _arrows = List.unmodifiable(arrows) {
+    _validateInvariants();
+  }
+
+  /// Identificador único del tablero.
+  final Identifier id;
+
+  /// Dimensiones del grid.
+  final BoardDimension dimension;
+
+  final List<Cell> _cells;
+  final List<Arrow> _arrows;
+
+  /// Vista de solo lectura de todas las celdas.
+  List<Cell> get cells => _cells;
+
+  /// Vista de solo lectura de todas las flechas.
+  List<Arrow> get arrows => _arrows;
+
+  /// Flechas que aún permanecen activas en el tablero.
+  List<Arrow> get activeArrows =>
+      _arrows.where((arrow) => arrow.state == ArrowState.active).toList();
+
+  /// Indica si todas las flechas han sido extraídas (condición de victoria).
+  bool get isCleared => activeArrows.isEmpty;
+
+  /// Obtiene la celda en [position] o lanza [DomainException] si no existe.
+  Cell cellAt(Position position) {
+    return _cells.firstWhere(
+      (cell) => cell.position == position,
+      orElse: () => throw DomainException('No cell at position $position.'),
+    );
+  }
+
+  /// Obtiene la flecha con [arrowId] o lanza [DomainException] si no existe.
+  Arrow arrowById(Identifier arrowId) {
+    return _arrows.firstWhere(
+      (arrow) => arrow.id == arrowId,
+      orElse: () => throw DomainException('Arrow $arrowId not found on board.'),
+    );
+  }
+
+  /// Coloca una [arrow] en el tablero si la celda destino está vacía.
+  ///
+  /// Retorna un nuevo [Board] inmutable con el estado actualizado.
+  /// Lanza [CellOccupiedException] si la posición ya está ocupada.
+  Board placeArrow(Arrow arrow) {
+    final targetCell = cellAt(arrow.position);
+    if (!targetCell.isEmpty) {
+      throw CellOccupiedException(
+        row: arrow.position.row,
+        column: arrow.position.column,
+      );
+    }
+
+    arrow.position.ensureWithinBounds(
+      rows: dimension.rows,
+      columns: dimension.columns,
+    );
+
+    final updatedCells = _cells
+        .map((cell) => cell.position == arrow.position ? cell.occupyWith(arrow) : cell)
+        .toList();
+
+    return Board(
+      id: id,
+      dimension: dimension,
+      cells: updatedCells,
+      arrows: [..._arrows, arrow],
+    );
+  }
+
+  /// Actualiza el estado de una flecha y su celda asociada.
+  Board applyArrowUpdate(Arrow updatedArrow, {bool clearCell = false}) {
+    final updatedArrows = _arrows
+        .map((arrow) => arrow.id == updatedArrow.id ? updatedArrow : arrow)
+        .toList();
+
+    final updatedCells = _cells.map((cell) {
+      if (cell.arrowId == updatedArrow.id && clearCell) {
+        return cell.clear();
+      }
+      return cell;
+    }).toList();
+
+    return Board(
+      id: id,
+      dimension: dimension,
+      cells: updatedCells,
+      arrows: updatedArrows,
+    );
+  }
+
+  void _validateInvariants() {
+    final occupiedPositions = <Position>{};
+    for (final arrow in _arrows.where((a) => !a.isExtracted)) {
+      if (!occupiedPositions.add(arrow.position)) {
+        throw DomainException(
+          'Invariant violation: multiple arrows at position ${arrow.position}.',
+        );
+      }
+    }
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Board &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          dimension == other.dimension;
+
+  @override
+  int get hashCode => Object.hash(id, dimension);
+
+  @override
+  String toString() => 'Board(id: $id, dimension: $dimension, arrows: ${_arrows.length})';
+}
