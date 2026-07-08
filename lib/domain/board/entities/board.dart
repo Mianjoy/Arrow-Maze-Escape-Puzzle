@@ -17,13 +17,18 @@ import '../../shared/exceptions/domain_exception.dart';
 @immutable
 class Board {
   /// Crea un tablero con [id], [dimension] y colecciones iniciales.
+  ///
+  /// [domainEvents] son los eventos de dominio pendientes de consumir
+  /// (ver [pullDomainEvents]); por defecto no hay ninguno pendiente.
   Board({
     required this.id,
     required this.dimension,
     required List<Cell> cells,
     required List<Arrow> arrows,
+    List<Object> domainEvents = const [],
   })  : _cells = List.unmodifiable(cells),
-        _arrows = List.unmodifiable(arrows) {
+        _arrows = List.unmodifiable(arrows),
+        _domainEvents = List.unmodifiable(domainEvents) {
     _validateInvariants();
   }
 
@@ -35,12 +40,50 @@ class Board {
 
   final List<Cell> _cells;
   final List<Arrow> _arrows;
+  final List<Object> _domainEvents;
 
   /// Vista de solo lectura de todas las celdas.
   List<Cell> get cells => _cells;
 
   /// Vista de solo lectura de todas las flechas.
   List<Arrow> get arrows => _arrows;
+
+  /// Eventos de dominio pendientes de consumir (p. ej. ArrowBlockedEvent,
+  /// ArrowExtractedEvent, emitidos por ArrowMovementEngine).
+  ///
+  /// Portado desde el dominio en español (`Tablero.consumirEventosDominio()`
+  /// en la rama `Integracion`). Como [Board] es inmutable, "consumir" se
+  /// modela en dos pasos: leer [domainEvents] y luego pedir una copia sin
+  /// ellos con [pullDomainEvents].
+  List<Object> get domainEvents => _domainEvents;
+
+  /// Retorna una copia de este tablero con [event] agregado a los eventos
+  /// de dominio pendientes.
+  Board withDomainEvent(Object event) {
+    return Board(
+      id: id,
+      dimension: dimension,
+      cells: _cells,
+      arrows: _arrows,
+      domainEvents: [..._domainEvents, event],
+    );
+  }
+
+  /// Retorna (eventos pendientes, tablero con los eventos ya vaciados).
+  ///
+  /// Equivalente inmutable de "drenar" la cola de eventos: quien llama
+  /// obtiene la lista actual y debe quedarse con el tablero devuelto para
+  /// no procesar los mismos eventos dos veces.
+  ({List<Object> events, Board board}) pullDomainEvents() {
+    final events = _domainEvents;
+    final cleared = Board(
+      id: id,
+      dimension: dimension,
+      cells: _cells,
+      arrows: _arrows,
+    );
+    return (events: events, board: cleared);
+  }
 
   /// Flechas que aún permanecen activas en el tablero.
   List<Arrow> get activeArrows =>
@@ -55,6 +98,16 @@ class Board {
       (cell) => cell.position == position,
       orElse: () => throw DomainException('No cell at position $position.'),
     );
+  }
+
+  /// Devuelve el [Identifier] de la flecha en [position], o `null` si la
+  /// celda está vacía.
+  ///
+  /// Agregado durante la fusión de dominio de Sprint 1 para soportar el
+  /// caso "sin flecha" portado desde la rama `Integracion` (ver
+  /// [ArrowMovementEngine.attemptMoveAt]).
+  Identifier? arrowIdAt(Position position) {
+    return cellAt(position).arrowId;
   }
 
   /// Obtiene la flecha con [arrowId] o lanza [DomainException] si no existe.
@@ -92,6 +145,7 @@ class Board {
       dimension: dimension,
       cells: updatedCells,
       arrows: [..._arrows, arrow],
+      domainEvents: _domainEvents,
     );
   }
 
@@ -113,6 +167,7 @@ class Board {
       dimension: dimension,
       cells: updatedCells,
       arrows: updatedArrows,
+      domainEvents: _domainEvents,
     );
   }
 

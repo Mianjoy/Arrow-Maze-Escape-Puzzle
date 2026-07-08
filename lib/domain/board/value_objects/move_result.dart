@@ -32,6 +32,18 @@ class MoveResult {
   /// Indica si el movimiento fue bloqueado por otra flecha.
   bool get isBlocked => type == MoveResultType.blocked;
 
+  /// Indica si se intentó mover una celda que no contenía ninguna flecha.
+  bool get isNoArrowAtCell => type == MoveResultType.noArrowAtCell;
+
+  /// Factory para cuando se toca una celda sin flecha.
+  ///
+  /// Portado desde el dominio en español (`ResultadoMovimiento.sinFlecha`
+  /// en la rama `Integracion`): permite responder de forma controlada en
+  /// vez de lanzar una excepción cuando el jugador toca una celda vacía.
+  factory MoveResult.noArrowAtCell() {
+    return const MoveResult(type: MoveResultType.noArrowAtCell);
+  }
+
   /// Factory para un movimiento exitoso de extracción.
   factory MoveResult.extracted({required Identifier arrowId}) {
     return MoveResult(type: MoveResultType.extracted, arrowId: arrowId);
@@ -65,4 +77,7 @@ enum MoveResultType {
 
   /// El movimiento no es válido (regla de negocio).
   invalid,
+
+  /// La celda tocada no contenía ninguna flecha.
+  noArrowAtCell,
 }
