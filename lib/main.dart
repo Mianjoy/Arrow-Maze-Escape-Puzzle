@@ -6,7 +6,13 @@ void main() {
   runApp(const ArrowMazeApp());
 }
 
+/// Widget raíz de la aplicación Arrow-Maze.
+///
+/// Por ahora solo muestra una pantalla de marcador de posición; las
+/// pantallas reales (inicio, selección de nivel, juego, victoria,
+/// derrota) se agregan en Sprint 2.
 class ArrowMazeApp extends StatelessWidget {
+  /// Crea el widget raíz de la aplicación.
   const ArrowMazeApp({super.key});
 
   @override

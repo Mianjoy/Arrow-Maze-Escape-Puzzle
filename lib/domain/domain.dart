@@ -2,7 +2,7 @@
 ///
 /// Importar este archivo expone todas las entidades, agregados,
 /// value objects, servicios y contratos de repositorio del dominio.
-library domain;
+library;
 
 // Shared
 export 'shared/enums/arrow_direction.dart';

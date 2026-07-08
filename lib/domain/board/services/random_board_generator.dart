@@ -3,7 +3,6 @@ import 'dart:math';
 import '../../shared/enums/arrow_direction.dart';
 import '../../shared/value_objects/direction.dart';
 import '../../shared/value_objects/identifier.dart';
-import '../../shared/value_objects/position.dart';
 import '../entities/board.dart';
 import '../entities/arrow.dart';
 import '../factories/board_factory.dart';

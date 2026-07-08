@@ -1,5 +1,4 @@
 import '../entities/board.dart';
-import '../entities/arrow.dart';
 import '../events/arrow_blocked_event.dart';
 import '../events/arrow_extracted_event.dart';
 import '../value_objects/arrow_state.dart';
