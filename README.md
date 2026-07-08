@@ -1,95 +1,169 @@
 # Arrow Maze Escape Puzzle
 
-Juego de puzzle tipo *Arrow Maze* donde el jugador debe extraer todas las flechas del tablero
-moviéndolas en la dirección que apuntan, sin colisiones.
+![CI](https://github.com/Mianjoy/Arrow-Maze-Escape-Puzzle/actions/workflows/ci.yml/badge.svg)
+![Flutter](https://img.shields.io/badge/Flutter-3.24-blue)
+![Dart](https://img.shields.io/badge/Dart-3.5-blue)
 
-## Arquitectura
+## Description
 
-El proyecto sigue **Clean Architecture** con separación estricta de capas:
+*Arrow Maze Escape Puzzle* is a mobile puzzle game where the player extracts all the
+arrows from a board by moving them in the direction they point, without colliding
+with other arrows. Built with **Clean Architecture** and **SOLID** principles.
 
-| Capa | Responsabilidad | Estado |
-|------|-----------------|--------|
-| **Domain** | Entidades, agregados, value objects, servicios de dominio, eventos e interfaces de repositorio | ✅ Implementada |
-| Application | Casos de uso y orquestación | Pendiente |
-| Infrastructure | Persistencia, APIs, adaptadores | Pendiente |
-| Presentation | UI (Flutter) | Pendiente |
+As of Sprint 1, the domain layer is complete and unified (see
+[Sprint 1 status](#sprint-1-status) below) and the app boots to a placeholder screen.
+Real screens, the 15 levels, audio and i18n are Sprint 2/3 work.
 
-## Capa de Dominio
+## Demo / Screenshots
+
+_TBD — Sprint 2/3, once real screens (home, level select, gameplay, victory, defeat)
+replace the current placeholder screen._
+
+## Architecture
+
+Four Clean Architecture layers, dependencies pointing inward (outer layers depend on
+inner ones, never the reverse):
+
+```mermaid
+flowchart TB
+    subgraph L4["Presentation"]
+        direction TB
+        UI["Flutter widgets / screens (Sprint 2+)"]
+    end
+    subgraph L3["Infrastructure & Interface Adapters"]
+        direction TB
+        Adapters["lib/interface_adapters (Sprint 2): translates StructuredLevelJsonDto to domain entities"]
+    end
+    subgraph L2["Application"]
+        direction TB
+        UseCases["Use cases (Sprint 2): move/rotate arrow, load level, save progress"]
+    end
+    subgraph L1["Domain"]
+        direction TB
+        Entities["Board, Game, Level, Player, Progress (bounded contexts)"]
+    end
+
+    L4 --> L3 --> L2 --> L1
+```
+
+Source: [`docs/architecture/clean-architecture.mmd`](docs/architecture/clean-architecture.mmd)
+(placeholder for Sprint 1 — will be refined by Sprint 3).
+
+| Layer | Responsibility | Status |
+|---|---|---|
+| **Domain** | Entities, aggregates, value objects, domain services, events, repository ports | ✅ Implemented |
+| Application | Use cases and orchestration | 🔜 Sprint 2 |
+| Infrastructure / Interface Adapters | Local persistence, backend API client, DTO↔domain mapping | 🔜 Sprint 2 |
+| Presentation | Flutter UI | 🔜 Sprint 2 |
+
+### Domain layer
 
 ```
 lib/domain/
-├── shared/           # Value objects, enums y excepciones transversales
-├── player/           # Jugador y perfil
-├── board/            # Board, Cell, Arrow (entidades de estado)
-├── level/            # Level (agregado), carga JSON, estrellas
-├── game/             # Game (agregado de sesión activa)
-├── progress/         # Progreso del jugador por nivel
-└── repositories/     # Contratos de persistencia (interfaces)
+├── shared/           # Cross-cutting value objects, enums and exceptions
+├── player/           # Player and profile
+├── board/            # Board, Cell, Arrow (state entities), domain events
+├── level/            # Level (aggregate), JSON loading, star rating, generation presets
+├── game/             # Game (active session aggregate): moves, pause/resume, score
+├── progress/         # Player progress per level
+└── repositories/     # Persistence contracts (interfaces)
 ```
 
-### Agregados raíz
+### Aggregate roots
 
-| Agregado | Responsabilidad |
-|----------|-----------------|
-| **Level** | Definición del nivel desde JSON, tablero inicial y ruta óptima |
-| **Game** | Coordina movimientos, victoria, derrota y estrellas durante la partida |
-| **PlayerProfile** | Perfil y estadísticas del jugador |
-| **PlayerProgress** | Progreso y mejores estrellas por nivel |
+| Aggregate | Responsibility |
+|---|---|
+| **Level** | Level definition from JSON, initial board, optimal path |
+| **Game** | Coordinates moves, pause/resume, score, win/loss and star rating during a session |
+| **PlayerProfile** | Player profile and statistics |
+| **PlayerProgress** | Progress and best stars per level |
 
-### Entidades (no agregados)
+### Level contract with the backend
 
-- **Board** — Estado del tablero (celdas y flechas); no orquesta reglas de juego.
-- **Cell**, **Arrow**, **Player** — Entidades de soporte.
+Levels are loaded from the [BackEnd-ArrowMaze](https://github.com/Georopeza/BackEnd-ArrowMaze)
+API using the shared `StructuredLevelJsonDto` contract (source of truth lives in the
+backend repo, at `docs/contract/level.contract.ts`). The domain layer stays unaware of
+this wire format: an adapter under `lib/interface_adapters` (Sprint 2) will translate
+it into `Board`/`Arrow`/`Level` entities.
 
-### Carga de niveles desde JSON
+## Design Patterns
 
-Cada nivel se define en un archivo JSON con este esquema:
+| Pattern | Category | Where |
+|---|---|---|
+| **Aggregate Root** | — (DDD) | `Level`, `Game`, `PlayerProfile`, `PlayerProgress` |
+| **Value Object** | — (DDD) | `Position`, `Direction`, `StarRating`, `LevelBoardDefinition`, etc. |
+| **Factory** | Creational | `LevelFactory`, `BoardFactory`, `CellFactory` |
+| **Domain Service** | Behavioral | `ShortestPathCalculator`, `StarRatingCalculator`, `ArrowMovementEngine`, `CollisionValidator` |
+| **Repository** | Structural (DIP) | Interfaces in `repositories/` |
+| **Domain Event** | Behavioral | `GameWonEvent`, `ArrowExtractedEvent`, `ArrowBlockedEvent` (now actually raised via `Board.pullDomainEvents()`, ported in Sprint 1) |
 
-```json
-{
-  "id": "level-001",
-  "difficulty": "easy",
-  "board": {
-    "rows": 3,
-    "cols": 3,
-    "cells": [
-      { "row": 0, "col": 0, "direction": "right" }
-    ]
-  },
-  "playerStart": { "row": 1, "col": 1 },
-  "parMoves": 6,
-  "timeLimit": 120
-}
+## SOLID Principles
+
+- **SRP** — `Board` only manages board state; `Game` coordinates session rules;
+  `LevelFactory` only builds levels from JSON.
+- **OCP** — new `Cell` subtypes or domain events can be added without changing
+  `Board`/`Game`; `LevelGenerationConfig.fromDifficulty()` adds new difficulty presets
+  without touching `LevelFactory`.
+- **LSP** — every `Cell` subtype is substitutable wherever `Cell` is expected.
+- **ISP** — repository ports (`IGameRepository`, `IPlayerProfileRepository`,
+  `IPlayerProgressRepository`) are split by aggregate.
+- **DIP** — `ArrowMovementEngine` depends on `ICollisionValidator`, not on a concrete
+  validator; `LevelFactory` depends on `ShortestPathCalculator`/`BoardFactory` via
+  constructor injection.
+
+## AOP
+
+Sprint 1 ports the first cross-cutting behavior into the domain: **domain events**.
+`Board.withDomainEvent()` / `Board.pullDomainEvents()` let `ArrowMovementEngine` raise
+`ArrowBlockedEvent`/`ArrowExtractedEvent` on every move, without `Game` or the future
+UI layer having to compute them separately. Presentation-level cross-cutting concerns
+(logging, error reporting) will be added in Sprint 2 once real screens exist.
+
+## Getting Started
+
+```bash
+flutter pub get
+flutter run          # or: flutter run -d chrome
 ```
 
-Ver ejemplo en [`docs/levels/example_level.json`](docs/levels/example_level.json).
+## Running Tests
 
-`LevelFactory` parsea el JSON, calcula la ruta óptima con `ShortestPathCalculator` y produce un agregado `Level` listo para jugar.
+```bash
+flutter analyze
+flutter test
+```
 
-### Sistema de estrellas
+Current test suite (pure-Dart domain tests, `package:test`):
+`test/domain/board/arrow_test.dart`, `test/domain/board/board_events_test.dart`,
+`test/domain/game/game_test.dart`. CI (`.github/workflows/ci.yml`) runs
+`pub get`, `analyze` and `test` on every PR/push to `main`.
 
-| Movimientos usados | Estrellas |
-|--------------------|-----------|
-| ≤ ruta óptima | ⭐⭐⭐ (3) |
-| Intermedio (entre óptimo y par) | ⭐⭐ (2) |
-| = parMoves (máximo sin perder) | ⭐ (1) |
-| > parMoves | Derrota |
+## AI Usage Documentation
 
-Si el jugador agota `parMoves` sin completar el nivel, `Game` transiciona a `GameStatus.lost` con el mensaje configurado en `GameLossMessage.movesExceeded`.
+See [AI_USAGE.md](AI_USAGE.md) for the full log of AI-assisted tasks (tool, prompt,
+result, team adjustments, lessons learned).
 
-### Patrones de diseño aplicados
+## Sprint 1 status
 
-- **Aggregate Root** — `Level`, `Game`, `PlayerProfile`, `PlayerProgress`
-- **Value Object** — `Position`, `StarRating`, `LevelBoardDefinition`, etc.
-- **Factory** — `LevelFactory`, `BoardFactory`, `CellFactory`
-- **Domain Service** — `ShortestPathCalculator`, `StarRatingCalculator`, `ArrowMovementEngine`
-- **Repository** — Interfaces en `repositories/`
-- **Domain Event** — `GameWonEvent`, `ArrowExtractedEvent`, etc.
+- ✅ Merged the two divergent domain branches (`Develop` + `Integracion`) into one
+  English-named domain with a working Flutter app shell.
+- ✅ Ported 6 behaviors that only existed in the Spanish domain: pause/resume, score,
+  arrow reset, "no arrow at cell" move result, board domain events, difficulty-based
+  generation presets.
+- ✅ First AAA unit tests for the ported behaviors; CI running on every PR.
+- 🔜 Sprint 2: use cases (movement/rotation with State + Factory patterns), interface
+  adapters for the backend contract, and the first real screens.
 
-## Uso de IA
+## Contributing
 
-Consulta el archivo [IA_USAGE.md](IA_USAGE.md) para el registro de interacciones con herramientas de IA durante el desarrollo.
+1. Create a branch off `main` (e.g. `feature/<short-description>`).
+2. Follow [Conventional Commits](https://www.conventionalcommits.org/) for commit
+   messages (enforced via `commitlint`).
+3. Run `flutter analyze && flutter test` before opening a PR.
+4. Open a PR against `main`; CI must pass and at least one teammate must approve
+   before merging.
 
-## Requisitos
+## License
 
-- Dart SDK >= 3.0.0
+Academic project for Desarrollo de Software (UCAB). No license has been chosen yet;
+all rights reserved by the team until one is added.
