@@ -6,6 +6,12 @@ enum GameStatus {
   /// Partida en progreso.
   inProgress,
 
+  /// Partida en pausa; no acepta movimientos hasta reanudarse.
+  ///
+  /// Portado desde el dominio en español (`EstatusJuego.pausado` en la rama
+  /// `Integracion`) durante la fusión de dominio de Sprint 1.
+  paused,
+
   /// El jugador completó el nivel (todas las flechas extraídas).
   won,
 

@@ -25,12 +25,14 @@ class Game {
     required this.board,
     this.status = GameStatus.ready,
     this.moveCount = 0,
+    this.score = 0,
     this.starsEarned,
     this.lossMessage,
     this.startedAt,
     this.finishedAt,
     StarRatingCalculator? starRatingCalculator,
   })  : assert(moveCount >= 0, 'moveCount must be non-negative'),
+        assert(score >= 0, 'score must be non-negative'),
         _starRatingCalculator = starRatingCalculator ?? const StarRatingCalculator();
 
   final StarRatingCalculator _starRatingCalculator;
@@ -52,6 +54,16 @@ class Game {
 
   /// Cantidad de movimientos realizados.
   final int moveCount;
+
+  /// Puntaje acumulado en la partida.
+  ///
+  /// Portado desde el dominio en español (`EstadoPartida.puntuacion` en la
+  /// rama `Integracion`): se suman [_pointsPerExtractedArrow] puntos cada
+  /// vez que una flecha es extraída con éxito.
+  final int score;
+
+  /// Puntos otorgados por cada flecha extraída exitosamente.
+  static const int _pointsPerExtractedArrow = 100;
 
   /// Estrellas obtenidas al ganar (1–3); `null` si no ha ganado.
   final StarRating? starsEarned;
@@ -77,6 +89,17 @@ class Game {
   /// Movimientos restantes antes de agotar el par del nivel.
   int get remainingMoves => (level.parMoves - moveCount).clamp(0, level.parMoves);
 
+  /// Porcentaje de flechas extraídas respecto al total del tablero (0–100).
+  ///
+  /// Portado desde el dominio en español (`EstadoPartida.porcentajeCompletado()`
+  /// en la rama `Integracion`).
+  double completionPercentage() {
+    final total = board.arrows.length;
+    if (total == 0) return 0;
+    final extracted = board.arrows.where((arrow) => arrow.isExtracted).length;
+    return (extracted / total) * 100;
+  }
+
   /// Crea una partida lista para iniciar desde un [level] cargado.
   factory Game.fromLevel({
     required Identifier gameId,
@@ -100,6 +123,28 @@ class Game {
       status: GameStatus.inProgress,
       startedAt: DateTime.now().toUtc(),
     );
+  }
+
+  /// Pausa una partida en curso, transicionando a [GameStatus.paused].
+  ///
+  /// Portado desde el dominio en español (`Partida.pausar()` en la rama
+  /// `Integracion`). Solo es válido pausar una partida que está en progreso.
+  Game pause() {
+    if (status != GameStatus.inProgress) {
+      throw InvalidMoveException('Game $id cannot be paused from status $status.');
+    }
+    return copyWith(status: GameStatus.paused);
+  }
+
+  /// Reanuda una partida pausada, volviendo a [GameStatus.inProgress].
+  ///
+  /// Portado desde el dominio en español (`Partida.reanudar()` en la rama
+  /// `Integracion`). Solo es válido reanudar una partida que está pausada.
+  Game resume() {
+    if (status != GameStatus.paused) {
+      throw InvalidMoveException('Game $id cannot be resumed from status $status.');
+    }
+    return copyWith(status: GameStatus.inProgress);
   }
 
   /// Ejecuta un movimiento sobre una flecha usando el [movementEngine].
@@ -128,6 +173,9 @@ class Game {
 
     final updatedBoard = moveOutcome.board;
     final newMoveCount = moveCount + 1;
+    final newScore = moveOutcome.result.isExtracted
+        ? score + _pointsPerExtractedArrow
+        : score;
     final cleared = updatedBoard.isCleared;
 
     if (cleared) {
@@ -141,6 +189,7 @@ class Game {
         game: copyWith(
           board: updatedBoard,
           moveCount: newMoveCount,
+          score: newScore,
           status: GameStatus.won,
           starsEarned: stars,
           finishedAt: DateTime.now().toUtc(),
@@ -154,6 +203,7 @@ class Game {
         game: copyWith(
           board: updatedBoard,
           moveCount: newMoveCount,
+          score: newScore,
           status: GameStatus.lost,
           lossMessage: GameLossMessage.movesExceeded,
           finishedAt: DateTime.now().toUtc(),
@@ -166,6 +216,7 @@ class Game {
       game: copyWith(
         board: updatedBoard,
         moveCount: newMoveCount,
+        score: newScore,
       ),
       result: moveOutcome.result,
     );
@@ -196,6 +247,7 @@ class Game {
     Board? board,
     GameStatus? status,
     int? moveCount,
+    int? score,
     StarRating? starsEarned,
     GameLossMessage? lossMessage,
     bool clearLossMessage = false,
@@ -209,6 +261,7 @@ class Game {
       board: board ?? this.board,
       status: status ?? this.status,
       moveCount: moveCount ?? this.moveCount,
+      score: score ?? this.score,
       starsEarned: starsEarned ?? this.starsEarned,
       lossMessage: clearLossMessage ? null : (lossMessage ?? this.lossMessage),
       startedAt: startedAt ?? this.startedAt,
@@ -231,5 +284,5 @@ class Game {
 
   @override
   String toString() =>
-      'Game(id: $id, status: $status, moves: $moveCount, stars: ${starsEarned?.value})';
+      'Game(id: $id, status: $status, moves: $moveCount, score: $score, stars: ${starsEarned?.value})';
 }
