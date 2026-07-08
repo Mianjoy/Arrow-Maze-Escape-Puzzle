@@ -263,3 +263,42 @@ El equipo habia realizado partes del proyecto y se creó el mismo dominio dos ve
 No se pudo ejecutar `flutter pub get && flutter analyze && flutter test` en el entorno donde se hizo la fusión (no había Flutter/Dart SDK instalado). El código se revisó manualmente contra las convenciones ya usadas en el repo; el equipo debe correr esos comandos localmente antes de abrir el PR para confirmar que compila y que las pruebas nuevas (`test/domain/board/arrow_test.dart`, `test/domain/board/board_events_test.dart`, `test/domain/game/game_test.dart`) pasan.
 
 ---
+
+## Consulta #4 — Verificación real con Flutter SDK y scaffold de plataformas
+
+**Tarea o problema abordado.**
+
+Cerrar la limitación de la Consulta #3: instalar Flutter de verdad y correr `pub get`/`analyze`/`test`/`build` sobre `feature/merge-domain-and-shell` para confirmar que la fusión de dominio realmente compila y corre, no solo que se revisó a mano.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5, ejecutado como agente con acceso a la terminal.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Instala Flutter en este entorno y corre la verificación real (pub get, analyze, test, build) sobre la rama fusionada antes de abrir el PR.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+- Se instaló Flutter 3.44.5 (stable) vía Homebrew (`brew install --cask flutter`).
+- `flutter pub get`: resolvió las 60 dependencias sin problema.
+- `flutter analyze` (primera corrida) encontró 5 problemas reales que la revisión manual no había detectado:
+  - 2 imports sin usar (`arrow_movement_engine.dart` importaba `Arrow`, `random_board_generator.dart` importaba `Position`, ninguno de los dos se referenciaba por nombre en el archivo, solo vía variables con tipo inferido).
+  - `library domain;` marcado como innecesario por el linter (`unnecessary_library_name`).
+  - 2 casos de documentación faltante en `ArrowMazeApp` (`lib/main.dart`, heredado de `Integracion`), exigidos por la regla `public_member_api_docs` ya configurada en `analysis_options.yaml`.
+- **Hallazgo más importante**: el proyecto fusionado no tenía carpetas de plataforma (`android/`, `ios/`, `web/`, etc.) — nunca se había corrido `flutter create` sobre él. `Integracion` solo aportó `pubspec.yaml`/`main.dart` con la dependencia de Flutter declarada, pero sin el scaffold real, así que `flutter run`/`flutter build` no tenían dónde ejecutar.
+
+**Modificaciones realizadas por el equipo al resultado de la IA:**
+
+- Se corrigieron los 5 hallazgos de `flutter analyze` (imports, nombre de library, documentación faltante) hasta dejarlo en "No issues found!".
+- Se corrió `flutter create .` para generar android/ios/web/linux/macos/windows sin tocar el dominio ya fusionado; se confirmó que no sobrescribió `pubspec.yaml` ni `lib/main.dart` existentes.
+- Se eliminó `test/widget_test.dart` (el test por defecto del template, que referenciaba un widget `MyApp` inexistente en este proyecto).
+- Verificación final: `flutter analyze` sin problemas, `flutter test` con los 12 tests en verde, `flutter build web` exitoso.
+
+**Lecciones aprendidas o limitaciones identificadas:**
+
+- Una revisión manual de código, por cuidadosa que sea, no sustituye correr las herramientas reales: 5 de 5 hallazgos de `flutter analyze` no se habían detectado a mano en la Consulta #3.
+- Que un `pubspec.yaml` declare la dependencia de Flutter no implica que el proyecto tenga scaffold de plataforma; hay que confirmarlo explícitamente con `flutter run`/`flutter build`, no asumirlo.
+- Solo se generó el scaffold de plataformas (no se decidió aún cuáles se usarán en producción — Android/iOS/Web); esa decisión y la configuración específica de cada una quedan para cuando el equipo lo defina.
+
+---
