@@ -37,6 +37,7 @@ export 'level/aggregates/level.dart';
 export 'level/value_objects/level_board_definition.dart';
 export 'level/value_objects/level_cell_data.dart';
 export 'level/value_objects/level_difficulty.dart';
+export 'level/value_objects/level_generation_config.dart';
 export 'level/value_objects/player_start.dart';
 export 'level/value_objects/star_rating.dart';
 export 'level/factories/level_factory.dart';

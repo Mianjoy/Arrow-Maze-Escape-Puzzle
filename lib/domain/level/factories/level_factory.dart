@@ -1,9 +1,11 @@
 import '../../board/factories/board_factory.dart';
+import '../../board/value_objects/board_generation_config.dart';
 import '../../shared/exceptions/domain_exception.dart';
 import '../aggregates/level.dart';
 import '../services/shortest_path_calculator.dart';
 import '../value_objects/level_board_definition.dart';
 import '../value_objects/level_difficulty.dart';
+import '../value_objects/level_generation_config.dart';
 import '../value_objects/player_start.dart';
 import '../../shared/value_objects/identifier.dart';
 
@@ -50,6 +52,18 @@ class LevelFactory {
       optimalMoves: optimalMoves,
       timeLimit: provisional.timeLimit,
     );
+  }
+
+  /// Obtiene el [BoardGenerationConfig] preestablecido para [difficulty].
+  ///
+  /// Portado desde el dominio en español (`ConfiguracionNivel.desdeDificultad`
+  /// en la rama `Integracion`). Se deja como una utilidad separada de
+  /// [fromJson] (en vez de construir un [Level] completo) porque generar un
+  /// nivel jugable de forma procedural requiere además derivar su
+  /// [LevelBoardDefinition] a partir del tablero generado, lo cual queda
+  /// fuera del alcance de Sprint 1 (solo se sientan las bases del preset).
+  BoardGenerationConfig boardGenerationConfigFor(LevelDifficulty difficulty) {
+    return LevelGenerationConfig.fromDifficulty(difficulty).toBoardGenerationConfig();
   }
 
   Level _parseProvisional(Map<String, dynamic> json) {
