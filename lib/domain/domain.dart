@@ -62,5 +62,6 @@ export 'progress/value_objects/level_progress_status.dart';
 
 // Repositories
 export 'repositories/i_game_repository.dart';
+export 'repositories/i_level_repository.dart';
 export 'repositories/i_player_profile_repository.dart';
 export 'repositories/i_player_progress_repository.dart';

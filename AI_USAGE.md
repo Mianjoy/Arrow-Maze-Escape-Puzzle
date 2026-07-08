@@ -302,3 +302,42 @@ Cerrar la limitación de la Consulta #3: instalar Flutter de verdad y correr `pu
 - Solo se generó el scaffold de plataformas (no se decidió aún cuáles se usarán en producción — Android/iOS/Web); esa decisión y la configuración específica de cada una quedan para cuando el equipo lo defina.
 
 ---
+
+## Consulta #5 — Primera versión jugable: capas de aplicación, infraestructura y presentación
+
+**Tarea o problema abordado.**
+
+Hasta ahora el repo solo tenía la capa de dominio y un `main.dart` de marcador de posición (un `Scaffold` con texto estático); no había nada jugable. Este era el mayor riesgo del proyecto frente a la rúbrica (criterio "Funcionalidad del Juego", 4 de 20 pts — el ítem individual de mayor peso — en ~0%). El objetivo fue una primera rebanada jugable de punta a punta: composition root, pantalla de selección de nivel, y el motor de juego básico (renderizar el tablero, tocar para disparar una flecha, detectar victoria), reutilizando el dominio Dart tal cual.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Opus 4.8 (parte de la sesión con Sonnet 5), ejecutado como agente con acceso a la terminal y al sistema de archivos, en modo de planificación con aprobación explícita del plan antes de implementar.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Avancemos con el frontend Flutter. Empezar por el composition root + la pantalla de selección de nivel + el motor de juego básico (tablero + disparo de flechas), reutilizando el dominio Dart existente, y dejando pantallas de inicio/audio/i18n para después.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+- Nuevo puerto de dominio `lib/domain/repositories/i_level_repository.dart` (`ILevelRepository`), que faltaba (los niveles solo se cargaban ad hoc vía `LevelFactory.fromJson`).
+- Capa de aplicación nueva (`lib/application/use_cases/`): `LoadLevelsUseCase`, `StartGameUseCase`, `FireArrowUseCase` — cada uno dependiendo solo de puertos (DIP). `FireArrowUseCase` resuelve el `arrowId` de la celda tocada y trata tanto "celda vacía" como "flecha ya bloqueada/no movible" como no-op, para que la excepción `InvalidMoveException` del dominio no llegue a la UI.
+- Capa de infraestructura nueva (`lib/infrastructure/`): `JsonAssetLevelRepository` (carga niveles desde assets JSON vía `rootBundle` + `LevelFactory`), e implementaciones en memoria de `IGameRepository`/`IPlayerProgressRepository`.
+- 3 niveles de ejemplo en `assets/levels/` (esquema JSON que el dominio ya parsea; NO es el requisito de 15 niveles, solo para ejercitar el pipeline).
+- Capa de presentación nueva (`lib/presentation/`): `LevelSelectController`/`LevelSelectScreen` y `GameController`/`GameScreen`/`BoardView`, usando `ChangeNotifier` + `ListenableBuilder` + `Navigator` (sin dependencias nuevas de gestión de estado, decisión explícita del equipo).
+- `lib/main.dart` reescrito como composition root (`AppContainer`) con rutas nombradas, mismo rol que `container.ts` en el backend.
+- Tests nuevos: unitarios de los 3 casos de uso (`package:test`, patrón AAA, con fakes de repositorios), widget tests de ambas pantallas (`flutter_test` — los primeros del repo), y un test que valida que los 3 JSON de niveles reales parsean y son resolubles vía `LevelFactory` (leyéndolos con `dart:io`, cerrando el hueco de que los widget tests usan un `FakeLevelRepository`).
+
+**Modificaciones realizadas por el equipo al resultado de la IA:**
+
+- Se instaló Flutter en el entorno Windows del equipo (3.35.6 stable, vs. el 3.44.5 vía Homebrew de la Consulta #4 que era el entorno macOS de otro integrante); la descarga desde Google Storage fue muy lenta y se diagnosticó que no era problema de la red del equipo sino del enrutamiento a ese servidor.
+- Igual que en la Consulta #4, `flutter analyze` volvió a atrapar lo que la revisión a mano no vio: 34 avisos de `public_member_api_docs` (documentación faltante en miembros públicos de las capas nuevas), que se corrigieron hasta dejar "No issues found!".
+- Verificación real completa: `flutter analyze` sin issues, `flutter test` con 25 tests en verde (13 de dominio previos + 12 nuevos), y `flutter build web` exitoso.
+
+**Lecciones aprendidas o limitaciones identificadas:**
+
+- Se confirma por segunda consulta consecutiva (ver Consulta #4) que correr `flutter analyze` de verdad atrapa problemas reales invisibles a la revisión manual; el equipo trata "escribí el código" y "el código pasa analyze/test" como dos hitos distintos.
+- Los widget tests con repositorios fake no ejercitan la carga real de assets; se agregó un test dedicado que corre los JSON reales por `LevelFactory` para no dejar ese camino sin cubrir.
+- Alcance deliberadamente acotado: quedan pendientes como follow-up las pantallas de inicio/ajustes, audio, i18n, persistencia de progreso/bloqueo de niveles, los 15 niveles requeridos (hoy hay 3), y el adaptador que consuma el contrato `StructuredLevelJsonDto` del backend real (el esquema JSON local del dominio y el contrato del backend aún difieren; ese puente es trabajo aparte).
+- Falta la prueba manual en navegador (click-through en vivo): el build web compila y los widget tests manejan las pantallas reales, pero no se hizo una corrida interactiva en Chrome en esta sesión.
+
+---
