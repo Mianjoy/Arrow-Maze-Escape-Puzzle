@@ -37,6 +37,16 @@ class Arrow {
   /// Indica si la flecha ya fue extraída del tablero.
   bool get isExtracted => state == ArrowState.extracted;
 
+  /// Reinicia la flecha a su [originalPosition], dejándola activa de nuevo.
+  ///
+  /// Portado desde el dominio en español (`Flecha.reiniciar()` en la rama
+  /// `Integracion`), usado al reiniciar un nivel. Como [Arrow] es inmutable
+  /// y no conserva su posición original, quien reinicia el nivel (la capa
+  /// que orquesta el reinicio) debe proveerla explícitamente.
+  Arrow reset({required Position originalPosition}) {
+    return copyWith(position: originalPosition, state: ArrowState.active);
+  }
+
   /// Retorna una copia con los campos indicados reemplazados.
   Arrow copyWith({
     Identifier? id,
