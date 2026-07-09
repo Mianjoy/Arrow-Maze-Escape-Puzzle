@@ -4,7 +4,6 @@ import '../../application/use_cases/ensure_initial_progress_use_case.dart';
 import '../../application/use_cases/get_player_progress_use_case.dart';
 import '../../application/use_cases/load_levels_use_case.dart';
 import '../../domain/domain.dart';
-import '../../domain/progress/value_objects/level_progress_status.dart';
 
 /// Controlador de selección de nivel con progreso local (bloqueos y estrellas).
 class LevelSelectController extends ChangeNotifier {

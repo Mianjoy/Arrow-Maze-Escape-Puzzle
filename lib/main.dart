@@ -20,7 +20,6 @@ import 'application/use_cases/restore_auth_session_use_case.dart';
 import 'application/use_cases/start_game_use_case.dart';
 import 'domain/domain.dart';
 import 'infrastructure/audio/app_audio_service.dart';
-import 'infrastructure/audio/no_op_audio_service.dart';
 import 'infrastructure/auth/in_memory_token_storage.dart';
 import 'infrastructure/auth/shared_preferences_token_storage.dart';
 import 'infrastructure/game/in_memory_game_repository.dart';
@@ -139,20 +138,39 @@ class AppContainer {
         : null;
   }
 
+  /// Configuración del cliente HTTP hacia el backend.
   final ApiConfig apiConfig;
   final http.Client _httpClient;
   final bool _enableProgressSync;
 
+  /// Almacenamiento del token de sesión.
   final ITokenStorage tokenStorage;
+
+  /// Preferencias de la app (idioma, mute).
   final IAppSettings appSettings;
 
+  /// Cliente HTTP de autenticación.
   late final AuthApiClient authApiClient;
+
+  /// Cliente HTTP de sincronización de progreso.
   late final ProgressApiClient progressApiClient;
+
+  /// Cliente HTTP de la tabla de clasificación.
   late final LeaderboardApiClient leaderboardApiClient;
+
+  /// Controlador de ajustes de la app.
   late final AppSettingsController appSettingsController;
+
+  /// Servicio de audio (efectos y música de fondo).
   late final IAudioService audioService;
+
+  /// Controlador de la sesión de autenticación.
   late final AuthSessionController authSessionController;
+
+  /// Caso de uso para consultar el progreso del jugador.
   late final GetPlayerProgressUseCase getPlayerProgressUseCase;
+
+  /// Caso de uso para asegurar el progreso inicial de un jugador.
   late final EnsureInitialProgressUseCase ensureInitialProgressUseCase;
 
   /// Caso de uso de victoria + sync; `null` si [enableProgressSync] es false.
@@ -162,8 +180,13 @@ class AppContainer {
   /// inicialización.
   late final RecordVictoryUseCase? recordVictoryUseCase;
 
+  /// Puerto de carga de niveles.
   final ILevelRepository levelRepository;
+
+  /// Puerto de persistencia de partidas.
   final IGameRepository gameRepository;
+
+  /// Puerto de persistencia del progreso del jugador.
   final IPlayerProgressRepository progressRepository;
 
   /// Restaura sesión y preferencias; inicia música si no está silenciada.
@@ -204,16 +227,20 @@ class AppContainer {
     );
   }
 
+  /// Crea el controlador de la pantalla de inicio de sesión.
   LoginController buildLoginController() =>
       LoginController(authSessionController: authSessionController);
 
+  /// Crea el controlador de la pantalla de registro.
   RegisterController buildRegisterController() =>
       RegisterController(authSessionController: authSessionController);
 
+  /// Crea el controlador de la pantalla de clasificación.
   LeaderboardController buildLeaderboardController() => LeaderboardController(
         getLeaderboardUseCase: GetLeaderboardUseCase(leaderboardApiClient: leaderboardApiClient),
       );
 
+  /// Crea el controlador de la pantalla de juego.
   GameController buildGameController() => GameController(
         startGameUseCase: StartGameUseCase(gameRepository: gameRepository),
         fireArrowUseCase: FireArrowUseCase(gameRepository: gameRepository),
@@ -225,8 +252,10 @@ class AppContainer {
 
 /// Raíz de la app con localización, rutas y música de fondo.
 class ArrowMazeApp extends StatefulWidget {
+  /// Crea la app con el [container] de composición ya construido.
   const ArrowMazeApp({super.key, required this.container});
 
+  /// Contenedor de dependencias de la aplicación.
   final AppContainer container;
 
   @override

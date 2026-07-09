@@ -13,38 +13,94 @@ abstract class AppStrings {
     return locale.languageCode == 'es' ? const AppStringsEs() : const AppStringsEn();
   }
 
+  /// Título de la aplicación.
   String get appTitle;
+
+  /// Etiqueta del botón "Jugar" en la pantalla de inicio.
   String get homePlay;
+
+  /// Etiqueta del botón "Ajustes" en la pantalla de inicio.
   String get homeSettings;
+
+  /// Título de la pantalla de ajustes.
   String get settingsTitle;
+
+  /// Etiqueta del interruptor de silenciar audio.
   String get settingsMute;
+
+  /// Etiqueta de la sección de idioma en ajustes.
   String get settingsLanguage;
+
+  /// Etiqueta de la opción de idioma inglés.
   String get settingsLanguageEn;
+
+  /// Etiqueta de la opción de idioma español.
   String get settingsLanguageEs;
+
+  /// Título de la pantalla de selección de nivel.
   String get levelSelectTitle;
+
+  /// Etiqueta que indica que un nivel está bloqueado.
   String get levelLocked;
+
+  /// Etiqueta que indica que un nivel ya fue completado.
   String get levelCompleted;
+
+  /// Etiqueta del contador de movimientos.
   String get movesLabel;
+
+  /// Etiqueta del puntaje.
   String get scoreLabel;
+
+  /// Título de la pantalla de victoria.
   String get victoryTitle;
+
+  /// Mensaje de la pantalla de victoria.
   String get victoryMessage;
+
+  /// Etiqueta del botón "Siguiente nivel".
   String get nextLevel;
+
+  /// Título de la pantalla de derrota.
   String get defeatTitle;
+
+  /// Mensaje de la pantalla de derrota.
   String get defeatMessage;
+
+  /// Etiqueta del botón "Reintentar".
   String get retry;
+
+  /// Etiqueta del botón "Volver a niveles".
   String get backToLevels;
+
+  /// Etiqueta de la pantalla/botón de clasificación (leaderboard).
   String get leaderboard;
+
+  /// Mensaje de confirmación de progreso guardado.
   String get progressSaved;
+
+  /// Mensaje de error al sincronizar el progreso.
   String get progressSyncFailed;
+
+  /// Etiqueta del botón "Iniciar sesión".
   String get signIn;
+
+  /// Etiqueta del botón "Cerrar sesión".
   String get signOut;
+
+  /// Etiqueta de dificultad, con [name] interpolado.
   String difficultyLabel(String name);
+
+  /// Etiqueta de movimientos par, con [par] interpolado.
   String parMovesLabel(int par);
+
+  /// Etiqueta de estrellas obtenidas, con [stars] interpolado.
   String starsLabel(int stars);
 }
 
 /// Cadenas en inglés (idioma por defecto).
 class AppStringsEn extends AppStrings {
+  /// Crea la instancia const de cadenas en inglés.
   const AppStringsEn();
 
   @override
@@ -134,6 +190,7 @@ class AppStringsEn extends AppStrings {
 
 /// Cadenas en español.
 class AppStringsEs extends AppStrings {
+  /// Crea la instancia const de cadenas en español.
   const AppStringsEs();
 
   @override

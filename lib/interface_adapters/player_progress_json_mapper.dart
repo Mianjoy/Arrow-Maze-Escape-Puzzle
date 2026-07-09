@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import '../../domain/domain.dart';
-import '../../domain/progress/value_objects/level_progress_status.dart';
 
 /// Traduce [PlayerProgress] a JSON persistible y viceversa.
 class PlayerProgressJsonMapper {

@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:arrow_maze_escape_puzzle/application/models/auth_session.dart';
 import 'package:arrow_maze_escape_puzzle/domain/domain.dart';
-import 'package:arrow_maze_escape_puzzle/domain/progress/value_objects/level_progress_status.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/audio/no_op_audio_service.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/auth/in_memory_token_storage.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/http/api_config.dart';

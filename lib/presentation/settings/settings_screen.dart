@@ -31,21 +31,23 @@ class SettingsScreen extends StatelessWidget {
               ListTile(
                 title: Text(strings.settingsLanguage),
               ),
-              RadioListTile<Locale>(
-                title: Text(strings.settingsLanguageEn),
-                value: const Locale('en'),
+              RadioGroup<Locale>(
                 groupValue: settingsController.locale,
                 onChanged: (locale) {
                   if (locale != null) settingsController.setLocale(locale);
                 },
-              ),
-              RadioListTile<Locale>(
-                title: Text(strings.settingsLanguageEs),
-                value: const Locale('es'),
-                groupValue: settingsController.locale,
-                onChanged: (locale) {
-                  if (locale != null) settingsController.setLocale(locale);
-                },
+                child: Column(
+                  children: [
+                    RadioListTile<Locale>(
+                      title: Text(strings.settingsLanguageEn),
+                      value: const Locale('en'),
+                    ),
+                    RadioListTile<Locale>(
+                      title: Text(strings.settingsLanguageEs),
+                      value: const Locale('es'),
+                    ),
+                  ],
+                ),
               ),
             ],
           );

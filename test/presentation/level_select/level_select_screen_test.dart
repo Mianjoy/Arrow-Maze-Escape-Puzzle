@@ -1,13 +1,7 @@
-import 'dart:convert';
-
-import 'package:arrow_maze_escape_puzzle/application/models/auth_session.dart';
 import 'package:arrow_maze_escape_puzzle/application/use_cases/ensure_initial_progress_use_case.dart';
 import 'package:arrow_maze_escape_puzzle/application/use_cases/get_player_progress_use_case.dart';
 import 'package:arrow_maze_escape_puzzle/application/use_cases/load_levels_use_case.dart';
 import 'package:arrow_maze_escape_puzzle/domain/domain.dart';
-import 'package:arrow_maze_escape_puzzle/domain/progress/value_objects/level_progress_status.dart';
-import 'package:arrow_maze_escape_puzzle/infrastructure/http/api_config.dart';
-import 'package:arrow_maze_escape_puzzle/infrastructure/http/progress_api_client.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/progress/in_memory_player_progress_repository.dart';
 import 'package:arrow_maze_escape_puzzle/l10n/app_strings.dart';
 import 'package:arrow_maze_escape_puzzle/presentation/level_select/level_select_controller.dart';

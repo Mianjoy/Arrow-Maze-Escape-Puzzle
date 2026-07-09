@@ -5,6 +5,7 @@ import '../../application/ports/i_app_settings.dart';
 
 /// Preferencias de app (idioma y mute) en [SharedPreferences].
 class SharedPreferencesAppSettings implements IAppSettings {
+  /// Crea el servicio de preferencias respaldado por [_prefs].
   SharedPreferencesAppSettings(this._prefs);
 
   final SharedPreferences _prefs;

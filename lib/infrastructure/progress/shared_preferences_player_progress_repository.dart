@@ -1,4 +1,3 @@
-import '../../application/ports/i_app_settings.dart';
 import '../../domain/domain.dart';
 import '../../interface_adapters/player_progress_json_mapper.dart';
 import 'package:shared_preferences/shared_preferences.dart';

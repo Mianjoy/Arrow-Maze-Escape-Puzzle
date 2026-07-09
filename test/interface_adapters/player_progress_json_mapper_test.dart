@@ -1,5 +1,4 @@
 import 'package:arrow_maze_escape_puzzle/domain/domain.dart';
-import 'package:arrow_maze_escape_puzzle/domain/progress/value_objects/level_progress_status.dart';
 import 'package:arrow_maze_escape_puzzle/interface_adapters/player_progress_json_mapper.dart';
 import 'package:flutter_test/flutter_test.dart';
 

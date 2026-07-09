@@ -809,3 +809,34 @@ Además, al correr `flutter test` completo antes de fusionar, aparecieron 4 fall
 - La política de autoplay de audio en navegadores es un caso recurrente de "funciona en desarrollo local sin pensarlo, rompe la app en web" — cualquier inicialización que dependa de una API sujeta a gesto del usuario no debe bloquear el arranque de la UI.
 
 ---
+
+## Consulta #15 — CI del PR hacia `main` en rojo por deuda de lint preexistente (sesión autónoma)
+
+**Tarea o problema abordado.**
+
+Al abrir el Pull Request de este repo hacia `main` (consolidando todo el trabajo del proyecto), el check de CI (`flutter analyze` + `flutter test`) falló con 65 issues — deuda de lint acumulada del equipo (imports sin usar/innecesarios, documentación pública faltante) que `flutter analyze` local ya había señalado antes en este mismo repo (ver Consultas #4 y #5) pero que no se había terminado de limpiar, más 4 avisos de deprecación real del SDK de Flutter (`Radio.groupValue`/`onChanged`, reemplazados por `RadioGroup` en Flutter 3.32+).
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Claude Opus 4.8, agente con acceso a terminal, en modo autónomo (continuación de la sesión de la Consulta #14, autorizada explícitamente por el equipo para operar sin supervisión).
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+Continuación de: "Ok, fusionemos las ramas [...] te voy a dejar en modo automático". Sin instrucción específica sobre el CI del PR — el agente detectó el fallo al verificar el estado del PR recién abierto y lo resolvió como parte de dejar la fusión realmente lista para revisión, no solo abierta.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+- 61 de los 65 issues eran mecánicos: imports sin usar o redundantes (7 archivos de `lib/` y `test/`), y documentación `///` faltante en miembros públicos (mayormente los 27 getters abstractos de `AppStrings` y varios campos/métodos de `AppContainer` en `main.dart`) — corregidos sin cambiar ningún comportamiento.
+- Los 4 restantes eran una deprecación real de la API de Flutter: `RadioListTile`/`Radio` con `groupValue`/`onChanged` propios está deprecado desde Flutter 3.32 a favor de envolver el grupo en un `RadioGroup<T>` ancestro que centraliza el estado. Se verificó la firma exacta leyendo el código fuente del SDK instalado (`radio_group.dart`) en vez de asumirla, y se migró `settings_screen.dart` al patrón nuevo.
+- Verificación final: `flutter analyze` → "No issues found!", `flutter test` → 53/53 en verde (mismo conteo que antes de esta limpieza, confirmando que no se rompió nada), CI de GitHub Actions verde sobre el commit final del PR.
+
+**Modificaciones realizadas por el equipo al resultado de la IA:**
+
+- Ninguna intervención directa (sesión autónoma, equipo desconectado); el alcance se mantuvo deliberadamente acotado a limpieza mecánica de lint (imports/docs) y a la migración de una API deprecada del SDK, sin tocar lógica de negocio.
+
+**Lecciones aprendidas o limitaciones identificadas:**
+
+- La deuda de lint que localmente parece "menor" (`flutter analyze` en verde antes de abrir el PR, en las Consultas #4/#5) puede acumularse silenciosamente entre archivos que distintos integrantes tocan en paralelo sin que nadie corra `flutter analyze` sobre el estado combinado hasta que un PR real lo expone.
+- Antes de "adivinar" cómo migrar una API deprecada (el mensaje de `flutter analyze` sugiere la alternativa pero no siempre la firma exacta), leer el código fuente del SDK instalado localmente evita una migración plausible-pero-incorrecta.
+
+---

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../domain/domain.dart';
 import '../../l10n/app_strings.dart';
 import '../result/result_screen_args.dart';
 
