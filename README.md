@@ -108,6 +108,241 @@ rejecting unsolvable levels before they ever reach the UI.
   level-list load and merges it into local progress (`PlayerProgress.mergeRemoteLevel`,
   best score/moves/time per level, never downgrading completion status).
 
+### Class Diagram
+
+Main classes across all four layers (color-coded), their relationships
+(inheritance, interface implementation, association/composition), and the
+design patterns applied. Low-level UI widgets are intentionally excluded;
+screen controllers (presenters) are included. Editable source:
+[`docs/architecture/class-diagram.mmd`](docs/architecture/class-diagram.mmd).
+
+```mermaid
+classDiagram
+    direction TB
+    class Cell { <<abstract>> }
+    class Board {
+        +Identifier id
+        +BoardDimension dimension
+        +Cell[] cells
+        +Arrow[] arrows
+        +cellAt(position) Cell
+        +arrowIdAt(position) Identifier
+        +placeArrowSegments(arrow) Board
+        +applyArrowUpdate(arrow) Board
+        +isCleared() bool
+        +withDomainEvent(event) Board
+        +pullDomainEvents() Board
+    }
+    class Arrow {
+        +Identifier id
+        +Position position
+        +ArrowDirection direction
+        +ArrowState state
+        +Position[] body
+        +occupies(position) bool
+    }
+    Board "1" o-- "0..*" Arrow
+    Board ..> Cell
+
+    class ArrowMovementEngine { +attemptMove(board, arrowId) MoveResult }
+    class ICollisionValidator {
+        <<interface>>
+        +isBlocked(board, arrow) bool
+    }
+    class CollisionValidator
+    ICollisionValidator <|.. CollisionValidator
+    ArrowMovementEngine ..> ICollisionValidator
+
+    class CellFactory { +createCell(type) Cell }
+    class BoardFactory { +createBoard(definition) Board }
+    CellFactory ..> Cell : creates (Factory Method)
+    BoardFactory ..> CellFactory
+    BoardFactory ..> Board : creates (Factory Method)
+
+    class LevelDifficulty {
+        <<enumeration>>
+        easy
+        medium
+        hard
+        expert
+    }
+    class Level {
+        +Identifier id
+        +int levelNumber
+        +LevelDifficulty difficulty
+        +LevelBoardDefinition boardDefinition
+        +int parMoves
+        +int optimalMoves
+        +buildInitialBoard(factory) Board
+    }
+    Level --> LevelDifficulty
+    Level ..> BoardFactory
+    class LevelFactory { +fromJson(json) Level }
+    class ShortestPathCalculator { +calculateMinimumMoves(board) int }
+    class StarRatingCalculator { +calculate(moves, optimalMoves) StarRating }
+    LevelFactory ..> Level : creates (Factory Method)
+    LevelFactory ..> ShortestPathCalculator
+
+    class GameStatus {
+        <<enumeration>>
+        ready
+        inProgress
+        won
+        lost
+        paused
+    }
+    class Game {
+        +Identifier id
+        +Identifier playerId
+        +Level level
+        +Board board
+        +GameStatus status
+        +int moveCount
+        +int score
+        +StarRating starsEarned
+        +performMove(arrowId, engine) MoveResult
+        +pause() Game
+        +resume() Game
+        +isWon() bool
+        +isLost() bool
+    }
+    Game "1" *-- "1" Board
+    Game "1" *-- "1" Level
+    Game --> GameStatus
+    Game ..> ArrowMovementEngine
+    Game ..> StarRatingCalculator
+
+    class PlayerProfile
+    class PlayerStatistics
+    PlayerProfile "1" *-- "1" PlayerStatistics
+
+    class LevelProgressStatus {
+        <<enumeration>>
+        locked
+        unlocked
+        completed
+    }
+    class LevelProgress {
+        +Identifier levelId
+        +LevelProgressStatus status
+        +int bestMoveCount
+        +StarRating bestStars
+        +recordCompletion(moves, time, stars) LevelProgress
+        +unlock() LevelProgress
+    }
+    class PlayerProgress {
+        +Identifier playerId
+        +Map~Identifier,LevelProgress~ levels
+        +completeLevel(levelId, ...) PlayerProgress
+        +unlockLevel(levelId) PlayerProgress
+        +mergeRemoteLevel(levelId, remoteMoves, remoteTime, remoteCompleted) PlayerProgress
+    }
+    PlayerProgress "1" *-- "many" LevelProgress
+    LevelProgress --> LevelProgressStatus
+
+    class ILevelRepository {
+        <<interface>>
+        +findAll() Level[]
+        +findById(id) Level
+    }
+    class IGameRepository {
+        <<interface>>
+        +save(game) void
+        +findById(id) Game
+    }
+    class IPlayerProgressRepository {
+        <<interface>>
+        +save(progress) void
+        +findByPlayerId(id) PlayerProgress
+    }
+    class IPendingSyncRepository {
+        <<interface>>
+        +add(entry) void
+        +loadAll() PendingSyncEntry[]
+        +saveAll(entries) void
+    }
+
+    class LoadLevelsUseCase { +execute() Level[] }
+    class StartGameUseCase { +execute(gameId, playerId, level) Game }
+    class FireArrowUseCase { +execute(game, position) MoveOutcome }
+    class RecordVictoryUseCase { +execute(game, session) RecordVictoryResult }
+    class SyncPendingProgressUseCase { +execute(session) void }
+    class PullRemoteProgressUseCase { +execute(session) PlayerProgress }
+    class LoginUserUseCase
+    class RegisterUserUseCase
+    class EnsureInitialProgressUseCase
+
+    LoadLevelsUseCase ..> ILevelRepository
+    StartGameUseCase ..> IGameRepository
+    FireArrowUseCase ..> IGameRepository
+    FireArrowUseCase ..> ArrowMovementEngine
+    RecordVictoryUseCase ..> IPlayerProgressRepository
+    RecordVictoryUseCase ..> ILevelRepository
+    RecordVictoryUseCase ..> IPendingSyncRepository
+    SyncPendingProgressUseCase ..> IPendingSyncRepository
+    PullRemoteProgressUseCase ..> IPlayerProgressRepository
+    PullRemoteProgressUseCase ..> ILevelRepository
+    PullRemoteProgressUseCase ..> PlayerProgress : uses mergeRemoteLevel
+
+    class LevelDtoMapper {
+        +fromDto(dto) Level
+        +fromJson(json) Level
+    }
+    LevelDtoMapper ..> Level : adapts (Adapter)
+    LoadLevelsUseCase ..> LevelDtoMapper
+
+    class RemoteLevelRepository
+    class CachedLevelRepository { +findAll() Level[] }
+    class SharedPreferencesPlayerProgressRepository
+    class SharedPreferencesPendingSyncRepository
+    ILevelRepository <|.. RemoteLevelRepository
+    ILevelRepository <|.. CachedLevelRepository
+    CachedLevelRepository ..> RemoteLevelRepository : wraps (Decorator)
+    CachedLevelRepository ..> LevelDtoMapper
+    IPlayerProgressRepository <|.. SharedPreferencesPlayerProgressRepository
+    IPendingSyncRepository <|.. SharedPreferencesPendingSyncRepository
+
+    class GameController {
+        +startGame(level) void
+        +onCellTapped(position) void
+    }
+    class LevelSelectController {
+        +load() void
+        +isOffline bool
+    }
+    class AuthSessionController {
+        +login(username, password) bool
+        +register(username, password) bool
+    }
+    GameController ..> StartGameUseCase
+    GameController ..> FireArrowUseCase
+    GameController ..> RecordVictoryUseCase
+    LevelSelectController ..> LoadLevelsUseCase
+    LevelSelectController ..> SyncPendingProgressUseCase
+    LevelSelectController ..> PullRemoteProgressUseCase
+    AuthSessionController ..> LoginUserUseCase
+    AuthSessionController ..> RegisterUserUseCase
+
+    class AppContainer { <<composition root>> }
+    AppContainer ..> CachedLevelRepository
+    AppContainer ..> SharedPreferencesPlayerProgressRepository
+    AppContainer ..> SharedPreferencesPendingSyncRepository
+    AppContainer ..> GameController
+    AppContainer ..> LevelSelectController
+    AppContainer ..> AuthSessionController
+
+    classDef domain fill:#e8f4ea,stroke:#2e7d32,color:#1b3a1e
+    classDef application fill:#e8eef8,stroke:#1565c0,color:#0d2a4d
+    classDef adapters fill:#fdf3e2,stroke:#ef6c00,color:#5c3600
+    classDef infrastructure fill:#f8e8ee,stroke:#ad1457,color:#4d0d24
+    classDef presentation fill:#efe6fa,stroke:#6a1b9a,color:#33064d
+    cssClass "Cell,Board,Arrow,ArrowMovementEngine,ICollisionValidator,CollisionValidator,CellFactory,BoardFactory,LevelDifficulty,Level,LevelFactory,ShortestPathCalculator,StarRatingCalculator,GameStatus,Game,PlayerProfile,PlayerStatistics,LevelProgressStatus,LevelProgress,PlayerProgress,ILevelRepository,IGameRepository,IPlayerProgressRepository,IPendingSyncRepository" domain
+    cssClass "LoadLevelsUseCase,StartGameUseCase,FireArrowUseCase,RecordVictoryUseCase,SyncPendingProgressUseCase,PullRemoteProgressUseCase,LoginUserUseCase,RegisterUserUseCase,EnsureInitialProgressUseCase" application
+    cssClass "LevelDtoMapper" adapters
+    cssClass "RemoteLevelRepository,CachedLevelRepository,SharedPreferencesPlayerProgressRepository,SharedPreferencesPendingSyncRepository,AppContainer" infrastructure
+    cssClass "GameController,LevelSelectController,AuthSessionController" presentation
+```
+
 ## Design Patterns
 
 | Pattern | Category | Where |
