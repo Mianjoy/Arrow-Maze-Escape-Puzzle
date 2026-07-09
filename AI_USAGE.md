@@ -341,3 +341,39 @@ Hasta ahora el repo solo tenía la capa de dominio y un `main.dart` de marcador 
 - Falta la prueba manual en navegador (click-through en vivo): el build web compila y los widget tests manejan las pantallas reales, pero no se hizo una corrida interactiva en Chrome en esta sesión.
 
 ---
+
+## Consulta #6 — Corrección de un bug de lógica de juego detectado al probar la app en navegador
+
+**Tarea o problema abordado.**
+
+Al servir el build web y jugar los 3 niveles, el equipo detectó que un nivel podía "terminarse" con flechas todavía en el tablero. Diagnóstico: eran tres síntomas de una misma causa raíz en el dominio (código heredado de la fusión de la Consulta #3) — el estado `blocked` de una flecha se trataba como si la flecha ya no estuviera en el tablero.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Opus 4.8, agente con acceso a terminal y navegador.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> El front se muestra y se puede interactuar con los 3 niveles, pero tiene errores de lógica: en el nivel 3 el nivel termina cuando aún hay flechas en el tablero. (Además el equipo decidió: un toque a una flecha bloqueada sí debe gastar un movimiento.)
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+Tres bugs del dominio, misma raíz (`blocked` = "fuera del tablero"), corregidos:
+1. `Arrow.isMovable` era `state == active`, así que una flecha bloqueada quedaba **congelada para siempre** (no se podía re-disparar ni después de despejar lo que la bloqueaba). Cambiado a `state != extracted`: el bloqueo es una condición del intento anterior, no una propiedad permanente.
+2. `Board.isCleared`/`activeArrows` filtraban por `state == active`, así que **una flecha bloqueada no contaba como presente**: el nivel se declaraba resuelto (o terminaba) con flechas aún en el tablero. Redefinido `activeArrows` como "no extraídas" (que además es lo que decía su propio comentario).
+3. `CollisionValidator` usaba `activeArrows`, así que una flecha bloqueada **dejaba de bloquear a otras**; la misma corrección de (2) lo arregla.
+- El costo de movimiento de un toque bloqueado se dejó como está (sí cuenta), por decisión explícita del equipo.
+
+**Modificaciones realizadas por el equipo al resultado de la IA:**
+
+- El equipo decidió que un toque bloqueado sí gasta movimiento (en vez de ser gratis), así que solo se corrigió el congelamiento, no el conteo.
+- Se actualizó un test que asumía el comportamiento viejo ("re-tocar una flecha bloqueada es no-op") y se agregó una prueba de regresión clave: flecha bloqueada → se despeja el bloqueador → se puede extraer → nivel ganado.
+- Verificación: `flutter analyze` sin issues, `flutter test` con 26 tests en verde (el test de assets confirma que los 3 niveles siguen siendo resolubles con la lógica de colisión ya corregida).
+
+**Lecciones aprendidas o limitaciones identificadas:**
+
+- El bug solo se manifestó **jugando la app real en el navegador**, no en los tests que existían: confirma que la prueba manual (pendiente en la Consulta #5) sí aportaba algo que la suite no cubría. Se cerró además con un test de regresión para que no vuelva.
+- Un mismo error conceptual ("un estado transitorio se modela como permanente") se propagó a tres lugares (`isMovable`, `isCleared`, colisión); arreglar la definición compartida (`activeArrows`) en vez de parchear cada síntoma resolvió dos de los tres de una sola vez.
+- Sigue pendiente la expansión del dominio al formato completo del backend (muros, salida, flechas multi-celda), acordada con el equipo como el siguiente trabajo mayor.
+
+---

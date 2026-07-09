@@ -32,7 +32,13 @@ class Arrow {
   final ArrowState state;
 
   /// Indica si la flecha puede ser seleccionada para un movimiento.
-  bool get isMovable => state == ArrowState.active;
+  ///
+  /// Una flecha `blocked` (bloqueada por otra en su trayectoria) SÍ es
+  /// movible: el bloqueo es una condición del intento anterior, no una
+  /// propiedad permanente — una vez que se despeja la flecha que la bloquea,
+  /// debe poder dispararse. Solo una flecha ya `extracted` deja de ser
+  /// movible (ya salió del tablero).
+  bool get isMovable => state != ArrowState.extracted;
 
   /// Indica si la flecha ya fue extraída del tablero.
   bool get isExtracted => state == ArrowState.extracted;

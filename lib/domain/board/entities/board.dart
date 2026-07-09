@@ -5,7 +5,6 @@ import '../../shared/value_objects/position.dart';
 import '../value_objects/board_dimension.dart';
 import 'arrow.dart';
 import 'cell.dart';
-import '../value_objects/arrow_state.dart';
 import '../../shared/exceptions/cell_occupied_exception.dart';
 import '../../shared/exceptions/domain_exception.dart';
 
@@ -85,9 +84,18 @@ class Board {
     return (events: events, board: cleared);
   }
 
-  /// Flechas que aún permanecen activas en el tablero.
+  /// Flechas que aún permanecen en el tablero (todas las que no han sido
+  /// extraídas).
+  ///
+  /// Incluye tanto las `active` como las `blocked`: una flecha bloqueada
+  /// sigue ocupando físicamente su celda, así que sigue bloqueando a otras
+  /// (ver [CollisionValidator]) y el nivel NO está resuelto mientras quede
+  /// alguna. Solo una flecha `extracted` deja de contar. (Antes este getter
+  /// filtraba por `state == active`, lo que hacía que una flecha bloqueada
+  /// "desapareciera" del tablero: dejaba de bloquear y el nivel se declaraba
+  /// resuelto con flechas aún presentes.)
   List<Arrow> get activeArrows =>
-      _arrows.where((arrow) => arrow.state == ArrowState.active).toList();
+      _arrows.where((arrow) => !arrow.isExtracted).toList();
 
   /// Indica si todas las flechas han sido extraídas.
   bool get isCleared => activeArrows.isEmpty;

@@ -4,15 +4,13 @@ import '../../domain/domain.dart';
 ///
 /// Si la celda está vacía, no muta el dominio (retorna el mismo [Game] con
 /// [MoveResult.noArrowAtCell]) — evita que la capa de presentación tenga que
-/// conocer la diferencia entre "toqué una celda vacía" y "el movimiento fue
-/// bloqueado", ambos casos válidos de UI pero solo el segundo es un
-/// movimiento real de juego.
+/// distinguir "toqué una celda vacía" de un movimiento real.
 ///
-/// Una flecha con estado `blocked` permanece en su celda (su `arrowId` sigue
-/// resolviéndose ahí) pero [Arrow.isMovable] es `false` para siempre: un
-/// segundo toque sobre ella haría que [Game.performMove] lance
-/// [InvalidMoveException]. Se trata igual que "sin flecha" en vez de dejar
-/// que la excepción llegue a la capa de presentación.
+/// Si la celda tiene una flecha (incluida una previamente bloqueada, que
+/// sigue siendo movible), delega en [Game.performMove], que evalúa la
+/// colisión de nuevo: la flecha se extrae si su trayectoria ya está libre, o
+/// vuelve a quedar bloqueada si no. En ambos casos cuenta como un
+/// movimiento (regla de juego del equipo).
 class FireArrowUseCase {
   /// Crea el caso de uso con el [gameRepository] donde persistir la partida
   /// y, opcionalmente, un [movementEngine] (por defecto uno con validación
@@ -34,7 +32,7 @@ class FireArrowUseCase {
     required Position position,
   }) async {
     final arrowId = game.board.arrowIdAt(position);
-    if (arrowId == null || !game.board.arrowById(arrowId).isMovable) {
+    if (arrowId == null) {
       return (game: game, result: MoveResult.noArrowAtCell());
     }
 
