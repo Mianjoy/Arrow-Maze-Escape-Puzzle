@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 ///
 /// Expone textos de todas las pantallas obligatorias del enunciado académico.
 abstract class AppStrings {
+  /// Constructor const para permitir que las subclases (`AppStringsEn`,
+  /// `AppStringsEs`) sean instancias `const`.
+  const AppStrings();
+
   /// Obtiene las cadenas para el [locale] indicado (`en` o `es`).
   static AppStrings forLocale(Locale locale) {
     return locale.languageCode == 'es' ? const AppStringsEs() : const AppStringsEn();

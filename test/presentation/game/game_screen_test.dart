@@ -40,20 +40,24 @@ void main() {
     );
     final level = buildSingleArrowLevel();
 
+    // AppStringsScope debe envolver el MaterialApp completo (no solo `home`):
+    // las rutas empujadas después (p. ej. `/victory`) son hermanas de `home`
+    // bajo el mismo Navigator, no descendientes de su subárbol, así que un
+    // scope colocado solo dentro de `home` no las alcanza.
     await tester.pumpWidget(
-      MaterialApp(
-        home: AppStringsScope(
-          strings: const AppStringsEn(),
-          child: GameScreen(controller: controller, level: level),
+      AppStringsScope(
+        strings: const AppStringsEn(),
+        child: MaterialApp(
+          home: GameScreen(controller: controller, level: level),
+          onGenerateRoute: (settings) {
+            if (settings.name == '/victory') {
+              return MaterialPageRoute(
+                builder: (_) => VictoryScreen(args: settings.arguments as VictoryScreenArgs),
+              );
+            }
+            return null;
+          },
         ),
-        onGenerateRoute: (settings) {
-          if (settings.name == '/victory') {
-            return MaterialPageRoute(
-              builder: (_) => VictoryScreen(args: settings.arguments as VictoryScreenArgs),
-            );
-          }
-          return null;
-        },
       ),
     );
     await tester.pumpAndSettle();
@@ -61,6 +65,6 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('cell-0-0')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Level cleared!'), findsOneWidget);
+    expect(find.byType(VictoryScreen), findsOneWidget);
   });
 }

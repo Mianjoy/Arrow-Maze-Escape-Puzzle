@@ -2,6 +2,7 @@ import 'package:arrow_maze_escape_puzzle/domain/domain.dart';
 import 'package:arrow_maze_escape_puzzle/l10n/app_strings.dart';
 import 'package:arrow_maze_escape_puzzle/presentation/game/game_screen.dart';
 import 'package:arrow_maze_escape_puzzle/presentation/level_select/level_select_screen.dart';
+import 'package:arrow_maze_escape_puzzle/presentation/result/defeat_screen.dart';
 import 'package:arrow_maze_escape_puzzle/presentation/result/result_screen_args.dart';
 import 'package:arrow_maze_escape_puzzle/presentation/result/victory_screen.dart';
 import 'package:flutter/material.dart';
@@ -21,34 +22,54 @@ Future<void> scrollToLevel(WidgetTester tester, String levelId) async {
 
 /// Flujo E2E de UI: lista remota → selección → juego → victoria/derrota.
 void main() {
-  /// Construye [MaterialApp] con las mismas rutas que [ArrowMazeApp] para E2E.
+  /// Construye la app E2E con las mismas rutas que [ArrowMazeApp].
+  ///
+  /// `AppStringsScope` envuelve el `MaterialApp` completo (no `home`/una
+  /// pantalla suelta): las rutas empujadas después son hermanas bajo el
+  /// mismo `Navigator`, no descendientes de un scope colocado más adentro,
+  /// así que cualquier pantalla que use textos localizados (todas) necesita
+  /// el scope como ancestro real de la app, igual que en `main.dart`.
   Widget buildE2eApp() {
     final container = E2eAppFactory.createWithFullSeedCatalog();
-    return MaterialApp(
-      initialRoute: '/levels',
-      onGenerateRoute: (settings) {
-        switch (settings.name) {
-          case '/game':
-            final level = settings.arguments as Level;
-            return MaterialPageRoute(
-              builder: (_) => GameScreen(
-                controller: container.buildGameController(),
-                level: level,
-              ),
-            );
-          case '/victory':
-            final args = settings.arguments as VictoryScreenArgs;
-            return MaterialPageRoute(builder: (_) => VictoryScreen(args: args));
-          case '/levels':
-          default:
-            return MaterialPageRoute(
-              builder: (_) => LevelSelectScreen(
-                controller: container.buildLevelSelectController(),
-                authSessionController: container.authSessionController,
-              ),
-            );
-        }
-      },
+    return AppStringsScope(
+      strings: const AppStringsEn(),
+      child: MaterialApp(
+        initialRoute: '/levels',
+        onGenerateRoute: (settings) {
+          switch (settings.name) {
+            case '/game':
+              final level = settings.arguments as Level;
+              return MaterialPageRoute(
+                settings: settings,
+                builder: (_) => GameScreen(
+                  controller: container.buildGameController(),
+                  level: level,
+                ),
+              );
+            case '/victory':
+              final args = settings.arguments as VictoryScreenArgs;
+              return MaterialPageRoute(settings: settings, builder: (_) => VictoryScreen(args: args));
+            case '/defeat':
+              final navArgs = settings.arguments as DefeatNavigationArgs;
+              return MaterialPageRoute(
+                settings: settings,
+                builder: (_) => DefeatScreen(
+                  args: navArgs.screenArgs,
+                  gameController: navArgs.gameController,
+                ),
+              );
+            case '/levels':
+            default:
+              return MaterialPageRoute(
+                settings: settings,
+                builder: (_) => LevelSelectScreen(
+                  controller: container.buildLevelSelectController(),
+                  authSessionController: container.authSessionController,
+                ),
+              );
+          }
+        },
+      ),
     );
   }
 
@@ -73,7 +94,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('cell-0-0')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Level cleared!'), findsOneWidget);
+    expect(find.byType(VictoryScreen), findsOneWidget);
   });
 
   testWidgets('E2E UI: derrota en level-09 al agotar parMoves', (tester) async {
@@ -92,6 +113,6 @@ void main() {
     }
     await tester.pumpAndSettle();
 
-    expect(find.text('Level failed'), findsOneWidget);
+    expect(find.byType(DefeatScreen), findsOneWidget);
   });
 }

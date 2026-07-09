@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -106,7 +108,7 @@ class AppContainer {
     leaderboardApiClient = LeaderboardApiClient(config: this.apiConfig, httpClient: _httpClient);
 
     appSettingsController = AppSettingsController(settings: this.appSettings);
-    audioService = audioService ?? AppAudioService(settings: this.appSettings);
+    this.audioService = audioService ?? AppAudioService(settings: this.appSettings);
 
     authSessionController = AuthSessionController(
       loginUserUseCase: LoginUserUseCase(
@@ -165,12 +167,18 @@ class AppContainer {
   final IPlayerProgressRepository progressRepository;
 
   /// Restaura sesión y preferencias; inicia música si no está silenciada.
+  ///
+  /// `startBackgroundMusic` NO se espera (`unawaited`): en Flutter Web, los
+  /// navegadores bloquean `AudioContext` hasta que hay un gesto real del
+  /// usuario (política de autoplay), así que su `Future` puede no resolver
+  /// nunca hasta el primer clic. Si `initialize()` lo esperara, `runApp()`
+  /// jamás se llamaría y la app quedaría en blanco para siempre.
   Future<void> initialize() async {
     await appSettingsController.load();
     if (authSessionController.session == null) {
       await authSessionController.restoreSession();
     }
-    await audioService.startBackgroundMusic();
+    unawaited(audioService.startBackgroundMusic());
   }
 
   static ILevelRepository _buildLevelRepository({
@@ -276,27 +284,33 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
     switch (settings.name) {
       case '/home':
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => HomeScreen(authSessionController: container.authSessionController),
         );
       case '/settings':
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => SettingsScreen(settingsController: container.appSettingsController),
         );
       case '/login':
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => LoginScreen(controller: container.buildLoginController()),
         );
       case '/register':
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => RegisterScreen(controller: container.buildRegisterController()),
         );
       case '/levels':
         if (!container.authSessionController.isAuthenticated) {
           return MaterialPageRoute(
+            settings: settings,
             builder: (_) => LoginScreen(controller: container.buildLoginController()),
           );
         }
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => LevelSelectScreen(
             controller: container.buildLevelSelectController(),
             authSessionController: container.authSessionController,
@@ -305,6 +319,7 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
       case '/leaderboard':
         final levelId = settings.arguments as String;
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => LeaderboardScreen(
             controller: container.buildLeaderboardController(),
             levelId: levelId,
@@ -313,6 +328,7 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
       case '/game':
         final level = settings.arguments as Level;
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => GameScreen(
             controller: container.buildGameController(),
             level: level,
@@ -320,10 +336,11 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
         );
       case '/victory':
         final args = settings.arguments as VictoryScreenArgs;
-        return MaterialPageRoute(builder: (_) => VictoryScreen(args: args));
+        return MaterialPageRoute(settings: settings, builder: (_) => VictoryScreen(args: args));
       case '/defeat':
         final navArgs = settings.arguments as DefeatNavigationArgs;
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => DefeatScreen(
             args: navArgs.screenArgs,
             gameController: navArgs.gameController,
@@ -331,6 +348,7 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
         );
       default:
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => HomeScreen(authSessionController: container.authSessionController),
         );
     }

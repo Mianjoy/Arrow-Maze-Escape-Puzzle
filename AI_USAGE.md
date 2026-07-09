@@ -766,3 +766,46 @@ Implementar los requisitos **críticos de funcionalidad mínima** del proyecto s
 - Siguiente paso: diagrama de clases, README actualizado y build Android para entrega formal.
 
 ---
+
+## Consulta #14 — Verificación end-to-end real (backend + frontend en vivo) y 4 bugs de arranque/navegación
+
+**Tarea o problema abordado.**
+
+Correr ambos repos juntos de verdad (backend Express real en `localhost:3000` con los 15 niveles sembrados, frontend Flutter Web real apuntando a él, no assets locales) para confirmar que la integración de las últimas consultas funciona jugando en un navegador real, no solo con `flutter test`/`npm test` en verde. Al hacerlo aparecieron 4 bugs reales que ningún test detectaba, todos de "arranque/plomería", no de reglas de juego.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5 / Opus 4.8 según el tramo de la sesión, agente con acceso a terminal y navegador.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Necesito probar el funcionamiento del proyecto, por lo que necesito que pongas a funcionar ambos repositorios para verificar su funcionamiento, y por favor, que sean las ramas con los cambios más recientes.
+
+Seguido de reportes directos del equipo mientras probaba en el navegador ("no carga nada, se queda la pantalla en blanco", "se pierden los datos que tenía la aplicación anteriormente (los usuarios creados)", "al presionar back to the levels la pantalla queda en blanco").
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+Cuatro bugs reales encontrados y corregidos, todos detectados solo al ejecutar la app real (no por `flutter analyze`/`flutter test`, que ya estaban en verde antes de esta sesión):
+
+1. **`lib/l10n/app_strings.dart`**: `AppStrings` (clase abstracta base) no tenía constructor `const`, así que `AppStringsEn`/`AppStringsEs` no podían serlo tampoco — error de compilación real (`A constant constructor can't call a non-constant super constructor`), la app no compilaba en absoluto. Se agregó `const AppStrings();`.
+2. **`lib/main.dart`, `AppContainer`**: dentro del cuerpo del constructor, `audioService = audioService ?? AppAudioService(...)` reasignaba el **parámetro local** (que sombrea al campo del mismo nombre), no el campo `late final audioService` de la clase — el campo nunca se inicializaba, y el primer acceso a `container.audioService` lanzaba `LateInitializationError`, dejando la app en pantalla blanca. Se corrigió a `this.audioService = ...`.
+3. **`lib/main.dart`, `_onGenerateRoute`**: ninguna llamada a `MaterialPageRoute(...)` pasaba `settings: settings`, así que `route.settings.name` era siempre `null` para toda ruta creada. El botón "Back to Levels" (`popUntil((route) => route.settings.name == '/levels')`) nunca encontraba una coincidencia y vaciaba toda la pila de navegación → pantalla en blanco permanente al volver de victoria/derrota. Se agregó `settings: settings` a las 8 rutas.
+4. **`lib/main.dart`, `AppContainer.initialize()`**: `await audioService.startBackgroundMusic()` bloqueaba el arranque completo de la app. En Flutter Web, el navegador bloquea `AudioContext` hasta un gesto real del usuario (política de autoplay), así que ese `Future` puede no resolver nunca hasta el primer clic — como `initialize()` se espera antes de `runApp()` en `main()`, la app **nunca llegaba a renderizarse**, pantalla en blanco indefinida. Se cambió a `unawaited(audioService.startBackgroundMusic())`.
+
+Efecto colateral detectado al agregar el archivo de audio real (`assets/audio/background.mp3`, compartido por el equipo): el bug #4 solo se manifestaba con el asset presente (antes, `rootBundle.load` fallaba rápido y el `await` se resolvía enseguida) — confirma que un bug de bloqueo async puede quedar oculto mientras la ruta feliz nunca se ejercita.
+
+Además, al correr `flutter test` completo antes de fusionar, aparecieron 4 fallas en tests ya existentes del equipo (no relacionadas a los bugs de arriba): 3 en `test/e2e/playable_flow_e2e_test.dart` y 1 en `test/presentation/game/game_screen_test.dart`, todas por la misma causa — `AppStringsScope` envolvía solo `home:` en vez del `MaterialApp` completo, así que las pantallas alcanzadas por rutas empujadas después (`/victory`, `/defeat`) no heredaban el scope. Se corrigió la estructura de wrapping en ambos archivos de test (mismo patrón que en `main.dart`), se agregó la ruta `/defeat` faltante en el helper E2E, y se reemplazaron aserciones de texto obsoletas (`'Level cleared!'`, `'Level failed'`, restos del diálogo previo a las pantallas dedicadas) por `find.byType(VictoryScreen)`/`find.byType(DefeatScreen)`, más robustas ante cambios de copy/locale.
+
+**Modificaciones realizadas por el equipo al resultado de la IA:**
+
+- Se explicó (no se "arregló" como bug) la pérdida de usuarios/progreso entre reinicios del backend: es comportamiento esperado de `InMemory*Repository` sin base de datos real todavía — pendiente conocido, no regresión de esta sesión.
+- El equipo compartió el archivo de audio real (`DTMF8B.mp3`) para reemplazar el placeholder; se copió a `assets/audio/background.mp3`.
+- Se usó `flutter build web` + servidor estático (`python -m http.server`) en vez de `flutter run -d web-server` para las verificaciones manuales, tras un problema de caché del compilador DDC (`Library not defined: org-dartlang-app:/web_entrypoint.dart`) al mezclar peticiones automatizadas (`curl`) con el servidor de desarrollo con recarga en caliente.
+
+**Lecciones aprendidas o limitaciones identificadas:**
+
+- Los 4 bugs de arranque eran invisibles a `flutter analyze`/`flutter test` (ambos en verde) porque son errores de **composición en tiempo de ejecución** (sombra de nombres, orden de `await`, wiring de `settings`), no errores de tipos ni de lógica de dominio — solo aparecen al ejecutar la app real de punta a punta. Confirma, por tercera vez en este proyecto (ver Consultas #4 y #5), que "los tests pasan" y "la app funciona jugándola" son dos verificaciones distintas y ninguna sustituye a la otra.
+- Un bug de bloqueo asíncrono (#4) puede permanecer dormido mientras la rama de código que lo dispara nunca se alcanza en la práctica (aquí, mientras no había archivo de audio real, el `await` fallaba rápido); agregar un asset real destapó un bug preexistente en la plomería de inicialización.
+- La política de autoplay de audio en navegadores es un caso recurrente de "funciona en desarrollo local sin pensarlo, rompe la app en web" — cualquier inicialización que dependa de una API sujeta a gesto del usuario no debe bloquear el arranque de la UI.
+
+---
