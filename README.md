@@ -350,7 +350,7 @@ classDiagram
 | **Aggregate Root** | — (DDD) | `Level`, `Game`, `PlayerProfile`, `PlayerProgress` |
 | **Value Object** | — (DDD) | `Position`, `Direction`, `StarRating`, `LevelBoardDefinition`, etc. |
 | **Factory Method** | Creational | `LevelFactory`, `BoardFactory`, `CellFactory` |
-| **Decorator** | Structural | `CachedLevelRepository` wraps the remote source with a write-through local cache behind the same `ILevelRepository` port |
+| **Decorator** | Structural | `CachedLevelRepository` wraps the remote source with a write-through local cache behind the same `ILevelRepository` port; `LoggingFireArrowUseCaseDecorator` wraps `FireArrowUseCase` behind `IFireArrowUseCase` to add logging (AOP) |
 | **Adapter** | Structural | `LevelDtoMapper` (wire format ↔ domain), `PlayerProgressJsonMapper` |
 | **Repository (DIP)** | Structural | Interfaces in `lib/domain/repositories/` and `lib/application/ports/` |
 | **Domain Event** | Behavioral | `GameWonEvent`, `ArrowExtractedEvent`, `ArrowBlockedEvent`, raised via `Board.pullDomainEvents()` |
@@ -387,16 +387,25 @@ classDiagram
 
 ## AOP
 
-Cross-cutting concerns are kept out of business logic via composition, without any use
-case importing a logger or catching network errors on its own:
+Cross-cutting concerns are kept out of business logic via composition (the Decorator
+pattern applied to SOLID's DIP, no AOP library), without any use case importing a
+logger or catching network errors on its own:
 
-1. **Domain events** — `Board.withDomainEvent()` / `Board.pullDomainEvents()` let
+1. **Logging & tracing** — [`LoggingFireArrowUseCaseDecorator`](lib/application/use_cases/logging_fire_arrow_use_case_decorator.dart)
+   wraps [`FireArrowUseCase`](lib/application/use_cases/fire_arrow_use_case.dart) behind
+   the extracted `IFireArrowUseCase` port and logs the board state (arrows remaining,
+   move count, game status) before and after every shot, plus elapsed time and failures
+   — `FireArrowUseCase` itself contains zero logging code, and `GameController` depends
+   only on the `IFireArrowUseCase` interface, unaware it's talking to a decorated
+   instance. Wired in the composition root (`AppContainer.buildGameController()`), with
+   `IUseCaseLogger` as the swappable logging port (`ConsoleUseCaseLogger` by default).
+2. **Domain events** — `Board.withDomainEvent()` / `Board.pullDomainEvents()` let
    `ArrowMovementEngine` raise `ArrowBlockedEvent`/`ArrowExtractedEvent` on every move,
    decoupling notification from the movement logic itself.
-2. **Offline resilience as a decorator** — `CachedLevelRepository` transparently adds
+3. **Offline resilience as a decorator** — `CachedLevelRepository` transparently adds
    caching/fallback behavior around the remote level source; no use case or screen
    needs to know whether data came from the network or the cache.
-3. **Best-effort sync retry** — `SyncPendingProgressUseCase` and `PullRemoteProgressUseCase`
+4. **Best-effort sync retry** — `SyncPendingProgressUseCase` and `PullRemoteProgressUseCase`
    run as a side effect of `LevelSelectController.load()` and swallow their own
    failures, so a flaky connection never surfaces as a crash or a blocked screen — the
    UI just shows an "offline" notice instead of an error.

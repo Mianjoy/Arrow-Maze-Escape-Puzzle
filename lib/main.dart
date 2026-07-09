@@ -9,11 +9,13 @@ import 'application/ports/i_app_settings.dart';
 import 'application/ports/i_audio_service.dart';
 import 'application/ports/i_pending_sync_repository.dart';
 import 'application/ports/i_token_storage.dart';
+import 'application/ports/i_use_case_logger.dart';
 import 'application/use_cases/ensure_initial_progress_use_case.dart';
 import 'application/use_cases/fire_arrow_use_case.dart';
 import 'application/use_cases/get_leaderboard_use_case.dart';
 import 'application/use_cases/get_player_progress_use_case.dart';
 import 'application/use_cases/load_levels_use_case.dart';
+import 'application/use_cases/logging_fire_arrow_use_case_decorator.dart';
 import 'application/use_cases/login_user_use_case.dart';
 import 'application/use_cases/logout_user_use_case.dart';
 import 'application/use_cases/pull_remote_progress_use_case.dart';
@@ -33,6 +35,7 @@ import 'infrastructure/http/leaderboard_api_client.dart';
 import 'infrastructure/http/level_api_client.dart';
 import 'infrastructure/http/progress_api_client.dart';
 import 'infrastructure/level/cached_level_repository.dart';
+import 'infrastructure/logging/console_use_case_logger.dart';
 import 'infrastructure/progress/in_memory_pending_sync_repository.dart';
 import 'infrastructure/progress/in_memory_player_progress_repository.dart';
 import 'infrastructure/progress/shared_preferences_pending_sync_repository.dart';
@@ -92,10 +95,12 @@ class AppContainer {
     IAudioService? audioService,
     ApiConfig? apiConfig,
     http.Client? httpClient,
+    IUseCaseLogger? useCaseLogger,
     AuthSession? initialAuthSession,
     bool enableProgressSync = true,
   })  : apiConfig = apiConfig ?? ApiConfig.fromEnvironment,
         _httpClient = httpClient ?? http.Client(),
+        useCaseLogger = useCaseLogger ?? ConsoleUseCaseLogger(),
         tokenStorage = tokenStorage ?? InMemoryTokenStorage(),
         appSettings = appSettings ?? InMemoryAppSettings(),
         levelRepository = levelRepository ??
@@ -167,6 +172,10 @@ class AppContainer {
   final ApiConfig apiConfig;
   final http.Client _httpClient;
   final bool _enableProgressSync;
+
+  /// Aspecto AOP de logging/trazabilidad para casos de uso (ver
+  /// [LoggingFireArrowUseCaseDecorator]).
+  final IUseCaseLogger useCaseLogger;
 
   /// Almacenamiento del token de sesión.
   final ITokenStorage tokenStorage;
@@ -292,9 +301,17 @@ class AppContainer {
       );
 
   /// Crea el controlador de la pantalla de juego.
+  ///
+  /// `fireArrowUseCase` se envuelve con [LoggingFireArrowUseCaseDecorator]
+  /// (aspecto AOP de logging/trazabilidad): registra el estado del tablero
+  /// antes/después de cada disparo sin que `FireArrowUseCase` ni
+  /// `GameController` conozcan el logger.
   GameController buildGameController() => GameController(
         startGameUseCase: StartGameUseCase(gameRepository: gameRepository),
-        fireArrowUseCase: FireArrowUseCase(gameRepository: gameRepository),
+        fireArrowUseCase: LoggingFireArrowUseCaseDecorator(
+          inner: FireArrowUseCase(gameRepository: gameRepository),
+          logger: useCaseLogger,
+        ),
         authSessionController: authSessionController,
         audioService: audioService,
         recordVictoryUseCase: recordVictoryUseCase,
