@@ -6,11 +6,21 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'support/e2e_app_factory.dart';
 
+/// Desplaza la lista hasta que [levelId] sea visible (ListView virtualiza ítems).
+Future<void> scrollToLevel(WidgetTester tester, String levelId) async {
+  await tester.scrollUntilVisible(
+    find.text(levelId),
+    120,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.pumpAndSettle();
+}
+
 /// Flujo E2E de UI: lista remota → selección → juego → victoria/derrota.
 void main() {
   /// Construye [MaterialApp] con las mismas rutas que [ArrowMazeApp] para E2E.
-  Widget buildE2eApp(E2eAppFactory factory) {
-    final container = factory.createWithFullSeedCatalog();
+  Widget buildE2eApp() {
+    final container = E2eAppFactory.createWithFullSeedCatalog();
     return MaterialApp(
       initialRoute: '/',
       onGenerateRoute: (settings) {
@@ -35,12 +45,18 @@ void main() {
     );
   }
 
-  testWidgets('E2E UI: lista 15 niveles remotos y gana level-02', (tester) async {
-    await tester.pumpWidget(buildE2eApp(E2eAppFactory()));
+  testWidgets('E2E UI: lista incluye level-02 y level-15 tras cargar API', (tester) async {
+    await tester.pumpWidget(buildE2eApp());
     await tester.pumpAndSettle();
 
     expect(find.text('level-02'), findsOneWidget);
+    await scrollToLevel(tester, 'level-15');
     expect(find.text('level-15'), findsOneWidget);
+  });
+
+  testWidgets('E2E UI: gana level-02 con un disparo', (tester) async {
+    await tester.pumpWidget(buildE2eApp());
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('level-02'));
     await tester.pumpAndSettle();
@@ -54,9 +70,10 @@ void main() {
   });
 
   testWidgets('E2E UI: derrota en level-09 al agotar parMoves', (tester) async {
-    await tester.pumpWidget(buildE2eApp(E2eAppFactory()));
+    await tester.pumpWidget(buildE2eApp());
     await tester.pumpAndSettle();
 
+    await scrollToLevel(tester, 'level-09');
     await tester.tap(find.text('level-09'));
     await tester.pumpAndSettle();
 

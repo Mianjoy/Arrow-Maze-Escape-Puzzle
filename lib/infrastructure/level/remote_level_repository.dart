@@ -45,7 +45,9 @@ class RemoteLevelRepository implements ILevelRepository {
       }
     }
 
-    levels.sort((a, b) => a.levelNumber.compareTo(b.levelNumber));
+    levels.sort(
+      (a, b) => (a.levelNumber ?? 0).compareTo(b.levelNumber ?? 0),
+    );
     _cache = List.unmodifiable(levels);
     return _cache!;
   }

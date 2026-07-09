@@ -8,6 +8,18 @@
 // `lib/interface_adapters/level_dto_mapper.dart` traduce estos DTOs
 // a entidades de dominio. Ver también `docs/contract/README.md`.
 
+/// Exige un entero en [json][key]; lanza [FormatException] si falta o el tipo no coincide.
+int _requireInt(Map<String, dynamic> json, String key) {
+  final value = json[key];
+  if (value is int) {
+    return value;
+  }
+  if (value is num) {
+    return value.toInt();
+  }
+  throw FormatException('Expected int for "$key".');
+}
+
 /// Dificultad de un nivel en el wire format (siempre en MAYÚSCULAS en JSON).
 ///
 /// Valores permitidos: `EASY`, `MEDIUM`, `HARD`, `EXPERT`.
@@ -257,13 +269,4 @@ class StructuredLevelJsonDto {
         if (walls != null && walls!.isNotEmpty) 'walls': walls!.map((w) => w.toJson()).toList(),
         'arrows': arrows.map((a) => a.toJson()).toList(),
       };
-
-  /// Exige un entero en [json][key]; lanza [FormatException] si falta o el tipo no coincide.
-  static int _requireInt(Map<String, dynamic> json, String key) {
-    final value = json[key];
-    if (value is! int) {
-      throw FormatException('Expected int for "$key".');
-    }
-    return value;
-  }
 }

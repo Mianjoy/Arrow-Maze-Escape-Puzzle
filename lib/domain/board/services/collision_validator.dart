@@ -21,15 +21,18 @@ class CollisionValidator implements ICollisionValidator {
     var current = arrow.position;
 
     while (true) {
-      final next = arrow.direction.nextPositionFrom(current);
+      final nextRow = current.row + arrow.direction.deltaRow;
+      final nextCol = current.column + arrow.direction.deltaColumn;
 
       // Salir del tablero = trayectoria despejada (extracción permitida).
-      if (!next.isWithinBounds(
-        rows: board.dimension.rows,
-        columns: board.dimension.columns,
-      )) {
+      if (nextRow < 0 ||
+          nextCol < 0 ||
+          nextRow >= board.dimension.rows ||
+          nextCol >= board.dimension.columns) {
         return null;
       }
+
+      final next = Position(row: nextRow, column: nextCol);
 
       final cell = board.cellAt(next);
       // Muro del contrato wire: bloquea igual que otra flecha.
