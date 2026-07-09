@@ -12,7 +12,13 @@ class MockHttpClient extends http.BaseClient {
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    final response = await _handler(http.Request(request.method, request.url));
+    // `http.Client.get/post/put` siempre construyen un [http.Request] real
+    // (con headers y body ya adjuntos) antes de llamar a `send`; hay que
+    // reenviarlo tal cual al handler en vez de reconstruir uno vacío, o se
+    // pierden headers (p. ej. `Authorization`) y el body de la petición.
+    final forwardedRequest =
+        request is http.Request ? request : http.Request(request.method, request.url);
+    final response = await _handler(forwardedRequest);
     return http.StreamedResponse(
       Stream.value(response.bodyBytes),
       response.statusCode,
