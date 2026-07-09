@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:arrow_maze_escape_puzzle/application/models/auth_session.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/http/api_config.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/http/auth_api_client.dart';
 import 'package:flutter_test/flutter_test.dart';

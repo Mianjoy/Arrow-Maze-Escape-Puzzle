@@ -137,7 +137,11 @@ class AppContainer {
   late final AuthSessionController authSessionController;
 
   /// Caso de uso de victoria + sync; `null` si [enableProgressSync] es false.
-  final RecordVictoryUseCase? recordVictoryUseCase;
+  ///
+  /// `late` porque se asigna en el cuerpo del constructor (depende de
+  /// [progressApiClient], ensamblado ahí mismo), no en la lista de
+  /// inicialización.
+  late final RecordVictoryUseCase? recordVictoryUseCase;
 
   /// Puerto de carga de niveles.
   final ILevelRepository levelRepository;

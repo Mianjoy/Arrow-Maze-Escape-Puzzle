@@ -7,6 +7,7 @@ import '../../application/ports/i_token_storage.dart';
 ///
 /// Usado en producción para restaurar la sesión sin pedir login en cada arranque.
 class SharedPreferencesTokenStorage implements ITokenStorage {
+  /// Crea el almacén a partir de una instancia ya inicializada de [SharedPreferences].
   SharedPreferencesTokenStorage(this._prefs);
 
   final SharedPreferences _prefs;
