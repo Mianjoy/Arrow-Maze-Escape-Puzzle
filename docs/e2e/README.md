@@ -30,12 +30,17 @@ npm run dev
 curl http://localhost:3000/levels | jq length   # 15
 ```
 
-### 2. Frontend (solo API, sin fallback a assets)
+### 2. Frontend
 
 ```bash
 cd Arrow-Maze-Escape-Puzzle
-flutter run -d chrome --dart-define=ASSET_FALLBACK=false
+flutter run -d chrome
 ```
+
+El catálogo siempre se obtiene de `GET /levels`; `CachedLevelRepository` lo persiste
+en `SharedPreferences` en cada carga exitosa y solo recurre a esa copia si la
+petición falla (sin red, backend caído, etc.) — ya no existe un fallback a assets
+empaquetados en la app.
 
 Opcional: `--dart-define=API_BASE_URL=http://10.0.2.2:3000` en emulador Android.
 
