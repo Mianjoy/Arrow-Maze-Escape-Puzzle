@@ -31,23 +31,35 @@ class SettingsScreen extends StatelessWidget {
               ListTile(
                 title: Text(strings.settingsLanguage),
               ),
-              RadioGroup<Locale>(
+              // `Radio`/`RadioListTile` con `groupValue`/`onChanged` propios
+              // está deprecado desde Flutter 3.32 a favor de `RadioGroup<T>`,
+              // pero el CI de este proyecto está fijado a Flutter 3.24.5
+              // (ver .github/workflows/*.yml), donde `RadioGroup` todavía no
+              // existe — usarlo rompe el análisis estático ahí (`undefined_method`).
+              // Se mantiene la API clásica a propósito, silenciando el aviso
+              // de deprecación solo para quien analice con un SDK más nuevo;
+              // migrar cuando el proyecto actualice su versión fijada de Flutter.
+              // ignore: deprecated_member_use
+              RadioListTile<Locale>(
+                title: Text(strings.settingsLanguageEn),
+                value: const Locale('en'),
+                // ignore: deprecated_member_use
                 groupValue: settingsController.locale,
+                // ignore: deprecated_member_use
                 onChanged: (locale) {
                   if (locale != null) settingsController.setLocale(locale);
                 },
-                child: Column(
-                  children: [
-                    RadioListTile<Locale>(
-                      title: Text(strings.settingsLanguageEn),
-                      value: const Locale('en'),
-                    ),
-                    RadioListTile<Locale>(
-                      title: Text(strings.settingsLanguageEs),
-                      value: const Locale('es'),
-                    ),
-                  ],
-                ),
+              ),
+              // ignore: deprecated_member_use
+              RadioListTile<Locale>(
+                title: Text(strings.settingsLanguageEs),
+                value: const Locale('es'),
+                // ignore: deprecated_member_use
+                groupValue: settingsController.locale,
+                // ignore: deprecated_member_use
+                onChanged: (locale) {
+                  if (locale != null) settingsController.setLocale(locale);
+                },
               ),
             ],
           );

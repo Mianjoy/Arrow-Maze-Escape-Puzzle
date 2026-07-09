@@ -827,16 +827,17 @@ Continuación de: "Ok, fusionemos las ramas [...] te voy a dejar en modo automá
 **Resultado obtenido (fragmento de código, diseño, explicación).**
 
 - 61 de los 65 issues eran mecánicos: imports sin usar o redundantes (7 archivos de `lib/` y `test/`), y documentación `///` faltante en miembros públicos (mayormente los 27 getters abstractos de `AppStrings` y varios campos/métodos de `AppContainer` en `main.dart`) — corregidos sin cambiar ningún comportamiento.
-- Los 4 restantes eran una deprecación real de la API de Flutter: `RadioListTile`/`Radio` con `groupValue`/`onChanged` propios está deprecado desde Flutter 3.32 a favor de envolver el grupo en un `RadioGroup<T>` ancestro que centraliza el estado. Se verificó la firma exacta leyendo el código fuente del SDK instalado (`radio_group.dart`) en vez de asumirla, y se migró `settings_screen.dart` al patrón nuevo.
-- Verificación final: `flutter analyze` → "No issues found!", `flutter test` → 53/53 en verde (mismo conteo que antes de esta limpieza, confirmando que no se rompió nada), CI de GitHub Actions verde sobre el commit final del PR.
+- Los 4 restantes eran una deprecación de la API de Flutter: `RadioListTile`/`Radio` con `groupValue`/`onChanged` propios está deprecado desde Flutter 3.32 a favor de envolver el grupo en un `RadioGroup<T>` ancestro. **Primer intento fallido**: se migró `settings_screen.dart` a `RadioGroup<T>` (firma verificada leyendo `radio_group.dart` del SDK instalado localmente, 3.35.6) y `flutter analyze` local quedó en "No issues found!" — pero al pushear, el CI real del proyecto **falló peor** (`undefined_method 'RadioGroup'`, `missing_required_argument`), porque el workflow de CI está fijado a **Flutter 3.24.5** (`subosito/flutter-action`), una versión anterior a que `RadioGroup` existiera. El SDK local recién instalado en esta sesión (3.35.6, ver Consulta #5) no coincide con la versión que el proyecto realmente fija en CI. **Corrección**: se revirtió a la API clásica (`groupValue`/`onChanged` en cada `RadioListTile`) con comentarios `// ignore: deprecated_member_use` puntuales, válida en ambas versiones — silencia el aviso en SDKs nuevos sin romper SDKs viejos.
+- Verificación final: `flutter analyze` local (3.35.6) → "No issues found!", `flutter test` → 53/53 en verde, y — verificado explícitamente esta vez contra el runner real, no solo local — CI de GitHub Actions (Flutter 3.24.5) verde sobre el commit final del PR.
 
 **Modificaciones realizadas por el equipo al resultado de la IA:**
 
-- Ninguna intervención directa (sesión autónoma, equipo desconectado); el alcance se mantuvo deliberadamente acotado a limpieza mecánica de lint (imports/docs) y a la migración de una API deprecada del SDK, sin tocar lógica de negocio.
+- Ninguna intervención directa (sesión autónoma, equipo desconectado); el alcance se mantuvo deliberadamente acotado a limpieza mecánica de lint (imports/docs) y al fix de la API de `Radio`, sin tocar lógica de negocio.
 
 **Lecciones aprendidas o limitaciones identificadas:**
 
 - La deuda de lint que localmente parece "menor" (`flutter analyze` en verde antes de abrir el PR, en las Consultas #4/#5) puede acumularse silenciosamente entre archivos que distintos integrantes tocan en paralelo sin que nadie corra `flutter analyze` sobre el estado combinado hasta que un PR real lo expone.
+- **Lección más importante de esta consulta**: "`flutter analyze` local en verde" no es suficiente cuando el SDK local no coincide con el que fija el CI real del proyecto — el mismo código puede ser "correcto" en una versión y "un error de compilación" en otra. Antes de dar por resuelto un fallo de CI, hay que confirmar contra el runner real (`gh run watch`), no solo replicar el comando localmente y confiar en el resultado.
 - Antes de "adivinar" cómo migrar una API deprecada (el mensaje de `flutter analyze` sugiere la alternativa pero no siempre la firma exacta), leer el código fuente del SDK instalado localmente evita una migración plausible-pero-incorrecta.
 
 ---
