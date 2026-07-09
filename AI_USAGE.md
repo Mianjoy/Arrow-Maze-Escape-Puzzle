@@ -1060,3 +1060,39 @@ Corrección: ambos controladores ahora se suscriben en el constructor (`_authSes
 
 - **Caso de la IA equivocándose primero, documentado con honestidad**: mi primer diagnóstico (caché del service worker) era plausible pero incorrecto — Flutter Web en modo `debug` (`flutter run`, no `flutter build web`) no registra un service worker agresivo como en release, así que esa hipótesis nunca debió tener tanto peso. El equipo insistiendo en que probaba la instancia correcta, en vez de aceptar mi explicación, fue lo que forzó revisar el log de compilación y luego el código real — una lección de que "refresca el caché" es una respuesta cómoda que puede enmascarar un bug de wiring real si se acepta sin verificar.
 - Patrón a vigilar en el resto del código: cualquier `ChangeNotifier` que envuelve a otro `ChangeNotifier` (como `LoginController`/`RegisterController` envolviendo `AuthSessionController`) debe reenviar explícitamente las notificaciones o la UI que escucha al envoltorio nunca se entera de cambios en el envuelto. Vale la pena auditar si existe el mismo patrón en otros controladores de pantalla que compongan sobre `AuthSessionController` u otros controladores compartidos.
+
+---
+
+## Consulta #22 — Aspecto AOP de logging/trazabilidad sobre `FireArrowUseCase`
+
+**Tarea o problema abordado.**
+
+El único aspecto transversal documentado en el cliente eran los domain events; faltaba algo más cercano al ejemplo literal del enunciado ("interceptar `MovePlayerUseCase.execute()` para registrar el estado del tablero antes y después del movimiento"). Se pidió agregar un aspecto de logging real, sin usar una librería de AOP.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Claude Sonnet 5, agente con acceso a terminal.
+
+**Prompt o instrucción proporcionada.**
+
+"Sí, dale con el aspecto AOP."
+
+**Resultado obtenido.**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Puerto extraído | `IFireArrowUseCase` en `lib/application/use_cases/fire_arrow_use_case.dart` | Permite decorar el caso de uso sin que `GameController` dependa de la clase concreta |
+| Puerto de logging | `lib/application/ports/i_use_case_logger.dart` (`IUseCaseLogger`) | Abstrae el mecanismo de logging (AOP: el caso de uso no lo conoce) |
+| Decorador | `lib/application/use_cases/logging_fire_arrow_use_case_decorator.dart` | Registra estado del tablero (flechas restantes, movimientos, estado) antes/después de cada disparo, duración, y errores (relanzados, nunca silenciados) |
+| Implementación | `lib/infrastructure/logging/console_use_case_logger.dart` | Logging real vía `dart:developer` |
+| Wiring | `AppContainer.buildGameController()` en `lib/main.dart` | Envuelve `FireArrowUseCase` con el decorador; `FireArrowUseCase` sigue sin ninguna línea de logging |
+| Tests | `test/application/use_cases/logging_fire_arrow_use_case_decorator_test.dart` (3 casos) | Transparencia del resultado, mensajes antes/después, relanzamiento de errores |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna corrección posterior; `flutter analyze` limpio y suite completa en verde (82/82) tras el cambio.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Extraer una interfaz de un caso de uso ya en uso (`FireArrowUseCase` → `IFireArrowUseCase`) fue un cambio de bajo riesgo porque `GameController` ya lo recibía por constructor (inyección de dependencias existente) — solo cambió el tipo del parámetro, cero cambios de lógica en `GameController` ni en las pantallas.
+- Reutilizar el patrón Decorator (ya usado en `CachedLevelRepository`) para el aspecto AOP, en vez de introducir un mecanismo distinto, mantiene la arquitectura consistente y es más fácil de defender en la sustentación: "usamos el mismo patrón para dos problemas distintos —caché e instrumentación— porque ambos son, estructuralmente, 'añadir comportamiento a una implementación existente sin modificarla'".
