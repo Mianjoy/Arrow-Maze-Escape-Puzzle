@@ -698,13 +698,21 @@ logout                         POST /progress/sync (Bearer)
 
 **Modificaciones realizadas por el equipo al resultado de la IA.**
 
-- (Pendiente de revisión tras merge.)
+Se corrió `flutter analyze`/`flutter test` de verdad tras el merge (no solo revisión manual) y aparecieron 6 problemas reales, corregidos con Claude Code:
+
+- `game_controller.dart`: `GameController extends ChangeNotifier` sin importar `package:flutter/foundation.dart` — provocaba 5 errores en cascada (`notifyListeners` indefinido, `extends_non_class`). Se agregó el import faltante.
+- `main.dart`: `recordVictoryUseCase` declarado `final` pero asignado en el cuerpo del constructor (depende de `progressApiClient`, ensamblado ahí mismo) — eso exige `late final`, no `final`. Corregido.
+- 2 imports sin usar (`level_select_screen.dart`, `auth_api_client_test.dart`) y 1 doc faltante (`shared_preferences_token_storage.dart`, regla `public_member_api_docs`).
+- **Bug real en el helper de tests `test/support/mock_http_client.dart`**: `send()` reconstruía un `http.Request` vacío en vez de reenviar la petición real, descartando headers y body. Esto hacía fallar en silencio cualquier test que verificara headers/body; se detectó porque `record_victory_use_case_test.dart` esperaba `Authorization: Bearer tok` y recibía `null`. Se corrigió para reenviar la petición original.
+
+Con estos 6 arreglos: `flutter analyze` → *No issues found!*, `flutter test` → **52/52 en verde**.
 
 **Lecciones aprendidas o limitaciones identificadas.**
 
 - El registro en el backend no devuelve JWT; el caso de uso encadena `register` + `login` automáticamente.
 - La sincronización de progreso ocurre antes de mostrar el diálogo de victoria para reflejar éxito/error de sync.
 - Los tests E2E precargan sesión (`E2eAppFactory.e2eSession`) para no romper la suite sin pantalla de login.
+- Un helper de test mal implementado (`MockHttpClient`) puede enmascarar bugs reales en el código de producción durante meses si ningún test llega a verificar headers/body — vale la pena revisar los helpers compartidos de tests con el mismo rigor que el código de producción.
 - Siguiente paso del plan (Día 5 / cierre): pulir UX (sesión expirada, errores de red), prueba en emulador Android y preparación de entrega.
 
 ---
