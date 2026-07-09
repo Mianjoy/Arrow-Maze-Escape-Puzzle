@@ -37,7 +37,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (!mounted) return;
     if (success) {
-      Navigator.of(context).pushReplacementNamed('/');
+      Navigator.of(context).pushReplacementNamed('/levels');
     }
   }
 

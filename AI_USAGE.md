@@ -716,3 +716,53 @@ Con estos 6 arreglos: `flutter analyze` → *No issues found!*, `flutter test` �
 - Siguiente paso del plan (Día 5 / cierre): pulir UX (sesión expirada, errores de red), prueba en emulador Android y preparación de entrega.
 
 ---
+
+## Consulta #13 — Funcionalidad mínima del enunciado académico (PDF)
+
+**Tarea o problema abordado.**
+
+Implementar los requisitos **críticos de funcionalidad mínima** del proyecto semestral (sección 5.1 del enunciado): pantalla de inicio y ajustes, i18n (es/en), audio con mute, persistencia local de progreso, selección de niveles con bloqueos, pantallas dedicadas de victoria/derrota con siguiente nivel, y documentación en `AI_USAGE.md`.
+
+**Herramienta de IA utilizada.**
+
+- Cursor AI (asistente integrado en el IDE).
+
+**Prompt o instrucción proporcionada.**
+
+> Implementar la funcionalidad mínima crítica del enunciado académico en `Arrow-Maze-Escape-Puzzle`: pantalla de inicio y ajustes, internacionalización español/inglés, efectos de sonido y música con opción de silenciar, persistencia local del progreso del jugador, indicadores de niveles bloqueados en la selección, pantallas dedicadas de victoria y derrota con navegación al siguiente nivel; documentar el código con comentarios explicativos y registrar la consulta en `AI_USAGE.md` con redacción técnica profesional.
+
+**Resultado obtenido.**
+
+| Entregable PDF | Implementación |
+|----------------|----------------|
+| Pantalla de inicio | `HomeScreen` — `/home` con Jugar y Ajustes |
+| Ajustes (mute + idioma) | `SettingsScreen` + `SharedPreferencesAppSettings` |
+| i18n es/en | `lib/l10n/app_strings.dart` + `AppStringsScope` |
+| Audio + mute | `AppAudioService` (`SystemSound` + `audioplayers` opcional BGM) |
+| Persistencia local progreso | `SharedPreferencesPlayerProgressRepository` + `PlayerProgressJsonMapper` |
+| Niveles bloqueados / progreso | `EnsureInitialProgressUseCase`, `LevelSelectController` |
+| Pantalla victoria + siguiente nivel | `VictoryScreen` + `RecordVictoryResult.nextLevel` |
+| Pantalla derrota + reintentar | `DefeatScreen` |
+
+**Archivos principales.**
+
+| Capa | Archivos |
+|------|----------|
+| L10n | `app_strings.dart` |
+| Settings/Audio | `shared_preferences_app_settings.dart`, `app_audio_service.dart` |
+| Progreso | `shared_preferences_player_progress_repository.dart`, `player_progress_json_mapper.dart` |
+| Casos de uso | `ensure_initial_progress_use_case.dart`, `get_player_progress_use_case.dart` |
+| UI | `home_screen.dart`, `settings_screen.dart`, `victory_screen.dart`, `defeat_screen.dart` |
+| Tests | `player_progress_json_mapper_test.dart`, actualización E2E/widget |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- (Pendiente de revisión tras merge.)
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- La música de fondo requiere `assets/audio/background.mp3`; sin el archivo, los efectos usan `SystemSound` y la app no falla.
+- El release APK para GitHub Releases sigue siendo un paso manual del equipo.
+- Siguiente paso: diagrama de clases, README actualizado y build Android para entrega formal.
+
+---

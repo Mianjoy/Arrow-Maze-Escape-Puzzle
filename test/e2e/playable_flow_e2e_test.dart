@@ -1,6 +1,9 @@
 import 'package:arrow_maze_escape_puzzle/domain/domain.dart';
+import 'package:arrow_maze_escape_puzzle/l10n/app_strings.dart';
 import 'package:arrow_maze_escape_puzzle/presentation/game/game_screen.dart';
 import 'package:arrow_maze_escape_puzzle/presentation/level_select/level_select_screen.dart';
+import 'package:arrow_maze_escape_puzzle/presentation/result/result_screen_args.dart';
+import 'package:arrow_maze_escape_puzzle/presentation/result/victory_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -22,7 +25,7 @@ void main() {
   Widget buildE2eApp() {
     final container = E2eAppFactory.createWithFullSeedCatalog();
     return MaterialApp(
-      initialRoute: '/',
+      initialRoute: '/levels',
       onGenerateRoute: (settings) {
         switch (settings.name) {
           case '/game':
@@ -33,7 +36,10 @@ void main() {
                 level: level,
               ),
             );
-          case '/':
+          case '/victory':
+            final args = settings.arguments as VictoryScreenArgs;
+            return MaterialPageRoute(builder: (_) => VictoryScreen(args: args));
+          case '/levels':
           default:
             return MaterialPageRoute(
               builder: (_) => LevelSelectScreen(

@@ -37,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted) return;
     if (success) {
-      Navigator.of(context).pushReplacementNamed('/');
+      Navigator.of(context).pushReplacementNamed('/levels');
     }
   }
 

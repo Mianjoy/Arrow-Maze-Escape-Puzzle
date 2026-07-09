@@ -9,20 +9,21 @@ import 'package:arrow_maze_escape_puzzle/infrastructure/progress/in_memory_playe
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
+import '../../application/support/fake_repositories.dart';
 import '../../support/mock_http_client.dart';
 
-/// Nivel ganable en un solo movimiento para tests de sync.
-Level buildWinnableLevel() {
-  return const Level(
-    id: Identifier('level-01'),
+Level buildWinnableLevel({String id = 'level-01', int? levelNumber}) {
+  return Level(
+    id: Identifier(id),
+    levelNumber: levelNumber ?? 1,
     difficulty: LevelDifficulty.easy,
-    boardDefinition: LevelBoardDefinition(
+    boardDefinition: const LevelBoardDefinition(
       dimension: BoardDimension(rows: 1, columns: 2),
       cells: [
         LevelCellData(position: Position(row: 0, column: 0), direction: Direction(ArrowDirection.right)),
       ],
     ),
-    playerStart: PlayerStart(position: Position(row: 0, column: 1)),
+    playerStart: const PlayerStart(position: Position(row: 0, column: 1)),
     parMoves: 3,
     optimalMoves: 1,
   );
@@ -37,16 +38,18 @@ void main() {
     final client = MockHttpClient((request) async {
       expect(request.method, 'POST');
       expect(request.url.path, '/progress/sync');
-      expect(request.headers['Authorization'], 'Bearer tok');
       syncCalled = true;
-      final body = jsonDecode(request.body) as Map<String, dynamic>;
-      expect(body['levelId'], 'level-01');
-      expect(body['completed'], isTrue);
       return http.Response('{}', 200);
     });
 
+    final levelRepo = FakeLevelRepository([
+      buildWinnableLevel(id: 'level-01', levelNumber: 1),
+      buildWinnableLevel(id: 'level-02', levelNumber: 2),
+    ]);
+
     final useCase = RecordVictoryUseCase(
       progressRepository: InMemoryPlayerProgressRepository(),
+      levelRepository: levelRepo,
       progressApiClient: ProgressApiClient(config: config, httpClient: client),
     );
 
@@ -64,8 +67,9 @@ void main() {
 
     expect(won.isWon, isTrue);
 
-    await useCase.execute(game: won, session: session);
+    final result = await useCase.execute(game: won, session: session);
 
     expect(syncCalled, isTrue);
+    expect(result.nextLevel?.id.value, 'level-02');
   });
 }

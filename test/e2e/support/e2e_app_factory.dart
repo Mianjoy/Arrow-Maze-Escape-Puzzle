@@ -1,10 +1,15 @@
 import 'dart:convert';
 
 import 'package:arrow_maze_escape_puzzle/application/models/auth_session.dart';
+import 'package:arrow_maze_escape_puzzle/domain/domain.dart';
+import 'package:arrow_maze_escape_puzzle/domain/progress/value_objects/level_progress_status.dart';
+import 'package:arrow_maze_escape_puzzle/infrastructure/audio/no_op_audio_service.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/auth/in_memory_token_storage.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/http/api_config.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/http/level_api_client.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/level/remote_level_repository.dart';
+import 'package:arrow_maze_escape_puzzle/infrastructure/progress/in_memory_player_progress_repository.dart';
+import 'package:arrow_maze_escape_puzzle/infrastructure/settings/in_memory_app_settings.dart';
 import 'package:arrow_maze_escape_puzzle/main.dart';
 import 'package:http/http.dart' as http;
 
@@ -12,93 +17,63 @@ import '../../support/mock_http_client.dart';
 import 'seed_catalog_fixture.dart';
 
 /// Fábrica de dependencias para la suite E2E (sin fallback a assets locales).
-///
-/// Simula el backend con [MockHttpClient], incluye sesión precargada y mocks
-/// de auth/progreso/leaderboard para que la UI no requiera login manual en CI.
 class E2eAppFactory {
-  /// URL ficticia usada en tests; el mock no realiza red real.
   static const ApiConfig apiConfig = ApiConfig(baseUrl: 'http://e2e-test');
 
-  /// Sesión precargada para pruebas E2E sin pantalla de login.
   static const AuthSession e2eSession = AuthSession(
     token: 'e2e-test-token',
     userId: 'e2e-user-id',
     username: 'e2e_player',
   );
 
-  /// Crea un [AppContainer] cableado solo al catálogo [catalog] simulado.
+  /// Crea un [AppContainer] cableado al catálogo [catalog] simulado.
   static AppContainer createAppContainer({
     required List<Map<String, dynamic>> catalog,
     AuthSession? session,
   }) {
     final leaderboardStore = <String, List<Map<String, dynamic>>>{};
+    final progressRepo = InMemoryPlayerProgressRepository();
+    final activeSession = session ?? e2eSession;
 
     final client = MockHttpClient((request) async {
       if (request.method == 'GET' && request.url.path == '/levels') {
-        return http.Response(
-          jsonEncode(catalog),
-          200,
-          headers: {'content-type': 'application/json'},
-        );
+        return http.Response(jsonEncode(catalog), 200, headers: {'content-type': 'application/json'});
       }
 
       if (request.method == 'GET' && request.url.path.startsWith('/levels/')) {
         final id = Uri.decodeComponent(request.url.pathSegments.last);
-        Map<String, dynamic>? match;
         for (final level in catalog) {
           if (level['id'] == id) {
-            match = level;
-            break;
+            return http.Response(jsonEncode(level), 200);
           }
         }
-        if (match == null) {
-          return http.Response('{"error":"not found"}', 404);
-        }
-        return http.Response(jsonEncode(match), 200);
+        return http.Response('{"error":"not found"}', 404);
       }
 
       if (request.method == 'POST' && request.url.path == '/progress/sync') {
         final auth = request.headers['Authorization'] ?? request.headers['authorization'];
         if (auth != 'Bearer ${e2eSession.token}') {
-          return http.Response(
-            jsonEncode({'error': {'message': 'Unauthorized'}}),
-            401,
-          );
+          return http.Response(jsonEncode({'error': {'message': 'Unauthorized'}}), 401);
         }
         final body = jsonDecode(request.body) as Map<String, dynamic>;
         final levelId = body['levelId'] as String;
-        final entry = {
+        leaderboardStore.putIfAbsent(levelId, () => []).add({
           'username': e2eSession.username,
           'highScore': body['score'],
           'minMoves': body['moves'],
           'minTimeInSeconds': body['timeInSeconds'],
-        };
-        leaderboardStore.putIfAbsent(levelId, () => []).add(entry);
-        return http.Response(
-          jsonEncode({
-            'userId': body['userId'],
-            'levelId': levelId,
-            'highScore': body['score'],
-            'minMoves': body['moves'],
-            'minTimeInSeconds': body['timeInSeconds'],
-            'isCompleted': body['completed'],
-          }),
-          200,
-        );
+        });
+        return http.Response(jsonEncode({...body, 'highScore': body['score'], 'isCompleted': true}), 200);
       }
 
       if (request.method == 'GET' && request.url.path.startsWith('/leaderboard/')) {
         final levelId = Uri.decodeComponent(request.url.pathSegments.last);
-        final entries = leaderboardStore[levelId] ?? [];
-        return http.Response(jsonEncode(entries), 200);
+        return http.Response(jsonEncode(leaderboardStore[levelId] ?? []), 200);
       }
 
       if (request.method == 'POST' && request.url.path == '/auth/register') {
         return http.Response(
-          jsonEncode({
-            'userId': e2eSession.userId,
-            'username': e2eSession.username,
-          }),
+          jsonEncode({'userId': e2eSession.userId, 'username': e2eSession.username}),
           201,
         );
       }
@@ -121,17 +96,35 @@ class E2eAppFactory {
       apiClient: LevelApiClient(config: apiConfig, httpClient: client),
     );
 
+    _seedAllLevelsUnlocked(progressRepo, catalog, activeSession.playerId);
+
     return AppContainer(
       levelRepository: remote,
+      progressRepository: progressRepo,
       tokenStorage: InMemoryTokenStorage(),
+      appSettings: InMemoryAppSettings(),
+      audioService: NoOpAudioService(),
       apiConfig: apiConfig,
       httpClient: client,
       fallbackToAssets: false,
-      initialAuthSession: session ?? e2eSession,
+      initialAuthSession: activeSession,
     );
   }
 
-  /// Crea un contenedor con el fixture completo de 15 niveles del seed.
+  /// Desbloquea todos los niveles del catálogo para pruebas E2E de UI.
+  static void _seedAllLevelsUnlocked(
+    InMemoryPlayerProgressRepository repo,
+    List<Map<String, dynamic>> catalog,
+    Identifier playerId,
+  ) {
+    final levels = <Identifier, LevelProgress>{};
+    for (final item in catalog) {
+      final id = Identifier(item['id'] as String);
+      levels[id] = LevelProgress(levelId: id, status: LevelProgressStatus.unlocked);
+    }
+    repo.save(PlayerProgress(playerId: playerId, levels: levels));
+  }
+
   static AppContainer createWithFullSeedCatalog() {
     return createAppContainer(catalog: SeedCatalogFixture.load());
   }
