@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_strings.dart';
+import 'auth_error_message.dart';
 import 'register_controller.dart';
 
 /// Pantalla de registro de usuario nuevo en el backend.
@@ -74,7 +76,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   if (widget.controller.error != null) ...[
                     const SizedBox(height: 16),
                     Text(
-                      widget.controller.error.toString(),
+                      authErrorMessage(AppStringsScope.of(context), widget.controller.error),
                       style: TextStyle(color: Theme.of(context).colorScheme.error),
                     ),
                   ],
