@@ -1,0 +1,302 @@
+import 'package:flutter/material.dart';
+
+/// Contrato de cadenas localizadas de la interfaz (español e inglés).
+///
+/// Expone textos de todas las pantallas obligatorias del enunciado académico.
+abstract class AppStrings {
+  /// Constructor const para permitir que las subclases (`AppStringsEn`,
+  /// `AppStringsEs`) sean instancias `const`.
+  const AppStrings();
+
+  /// Obtiene las cadenas para el [locale] indicado (`en` o `es`).
+  static AppStrings forLocale(Locale locale) {
+    return locale.languageCode == 'es' ? const AppStringsEs() : const AppStringsEn();
+  }
+
+  /// Título de la aplicación.
+  String get appTitle;
+
+  /// Etiqueta del botón "Jugar" en la pantalla de inicio.
+  String get homePlay;
+
+  /// Etiqueta del botón "Ajustes" en la pantalla de inicio.
+  String get homeSettings;
+
+  /// Título de la pantalla de ajustes.
+  String get settingsTitle;
+
+  /// Etiqueta del interruptor de silenciar audio.
+  String get settingsMute;
+
+  /// Etiqueta de la sección de idioma en ajustes.
+  String get settingsLanguage;
+
+  /// Etiqueta de la opción de idioma inglés.
+  String get settingsLanguageEn;
+
+  /// Etiqueta de la opción de idioma español.
+  String get settingsLanguageEs;
+
+  /// Título de la pantalla de selección de nivel.
+  String get levelSelectTitle;
+
+  /// Etiqueta que indica que un nivel está bloqueado.
+  String get levelLocked;
+
+  /// Etiqueta que indica que un nivel ya fue completado.
+  String get levelCompleted;
+
+  /// Etiqueta del contador de movimientos.
+  String get movesLabel;
+
+  /// Etiqueta del puntaje.
+  String get scoreLabel;
+
+  /// Título de la pantalla de victoria.
+  String get victoryTitle;
+
+  /// Mensaje de la pantalla de victoria.
+  String get victoryMessage;
+
+  /// Etiqueta del botón "Siguiente nivel".
+  String get nextLevel;
+
+  /// Título de la pantalla de derrota.
+  String get defeatTitle;
+
+  /// Mensaje de la pantalla de derrota.
+  String get defeatMessage;
+
+  /// Etiqueta del botón "Reintentar".
+  String get retry;
+
+  /// Etiqueta del botón "Volver a niveles".
+  String get backToLevels;
+
+  /// Etiqueta de la pantalla/botón de clasificación (leaderboard).
+  String get leaderboard;
+
+  /// Mensaje de confirmación de progreso guardado.
+  String get progressSaved;
+
+  /// Mensaje de error al sincronizar el progreso.
+  String get progressSyncFailed;
+
+  /// Etiqueta del botón "Iniciar sesión".
+  String get signIn;
+
+  /// Etiqueta del botón "Cerrar sesión".
+  String get signOut;
+
+  /// Etiqueta de dificultad, con [name] interpolado.
+  String difficultyLabel(String name);
+
+  /// Etiqueta de movimientos par, con [par] interpolado.
+  String parMovesLabel(int par);
+
+  /// Etiqueta de estrellas obtenidas, con [stars] interpolado.
+  String starsLabel(int stars);
+}
+
+/// Cadenas en inglés (idioma por defecto).
+class AppStringsEn extends AppStrings {
+  /// Crea la instancia const de cadenas en inglés.
+  const AppStringsEn();
+
+  @override
+  String get appTitle => 'Arrow Maze Escape';
+
+  @override
+  String get homePlay => 'Play';
+
+  @override
+  String get homeSettings => 'Settings';
+
+  @override
+  String get settingsTitle => 'Settings';
+
+  @override
+  String get settingsMute => 'Mute audio';
+
+  @override
+  String get settingsLanguage => 'Language';
+
+  @override
+  String get settingsLanguageEn => 'English';
+
+  @override
+  String get settingsLanguageEs => 'Spanish';
+
+  @override
+  String get levelSelectTitle => 'Select Level';
+
+  @override
+  String get levelLocked => 'Locked';
+
+  @override
+  String get levelCompleted => 'Completed';
+
+  @override
+  String get movesLabel => 'Moves';
+
+  @override
+  String get scoreLabel => 'Score';
+
+  @override
+  String get victoryTitle => 'Level cleared!';
+
+  @override
+  String get victoryMessage => 'Great job! Your progress was saved.';
+
+  @override
+  String get nextLevel => 'Next level';
+
+  @override
+  String get defeatTitle => 'Level failed';
+
+  @override
+  String get defeatMessage => 'You ran out of moves or time. Try again!';
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String get backToLevels => 'Back to levels';
+
+  @override
+  String get leaderboard => 'Leaderboard';
+
+  @override
+  String get progressSaved => 'Progress saved.';
+
+  @override
+  String get progressSyncFailed => 'Progress sync failed';
+
+  @override
+  String get signIn => 'Sign in';
+
+  @override
+  String get signOut => 'Sign out';
+
+  @override
+  String difficultyLabel(String name) => 'Difficulty: $name';
+
+  @override
+  String parMovesLabel(int par) => 'Par: $par moves';
+
+  @override
+  String starsLabel(int stars) => 'Stars: $stars';
+}
+
+/// Cadenas en español.
+class AppStringsEs extends AppStrings {
+  /// Crea la instancia const de cadenas en español.
+  const AppStringsEs();
+
+  @override
+  String get appTitle => 'Arrow Maze Escape';
+
+  @override
+  String get homePlay => 'Jugar';
+
+  @override
+  String get homeSettings => 'Ajustes';
+
+  @override
+  String get settingsTitle => 'Ajustes';
+
+  @override
+  String get settingsMute => 'Silenciar audio';
+
+  @override
+  String get settingsLanguage => 'Idioma';
+
+  @override
+  String get settingsLanguageEn => 'Inglés';
+
+  @override
+  String get settingsLanguageEs => 'Español';
+
+  @override
+  String get levelSelectTitle => 'Seleccionar nivel';
+
+  @override
+  String get levelLocked => 'Bloqueado';
+
+  @override
+  String get levelCompleted => 'Completado';
+
+  @override
+  String get movesLabel => 'Movimientos';
+
+  @override
+  String get scoreLabel => 'Puntuación';
+
+  @override
+  String get victoryTitle => '¡Nivel superado!';
+
+  @override
+  String get victoryMessage => '¡Bien hecho! Tu progreso fue guardado.';
+
+  @override
+  String get nextLevel => 'Siguiente nivel';
+
+  @override
+  String get defeatTitle => 'Nivel fallido';
+
+  @override
+  String get defeatMessage => 'Agotaste movimientos o tiempo. ¡Inténtalo de nuevo!';
+
+  @override
+  String get retry => 'Reintentar';
+
+  @override
+  String get backToLevels => 'Volver a niveles';
+
+  @override
+  String get leaderboard => 'Clasificación';
+
+  @override
+  String get progressSaved => 'Progreso guardado.';
+
+  @override
+  String get progressSyncFailed => 'Error al sincronizar progreso';
+
+  @override
+  String get signIn => 'Iniciar sesión';
+
+  @override
+  String get signOut => 'Cerrar sesión';
+
+  @override
+  String difficultyLabel(String name) => 'Dificultad: $name';
+
+  @override
+  String parMovesLabel(int par) => 'Par: $par movimientos';
+
+  @override
+  String starsLabel(int stars) => 'Estrellas: $stars';
+}
+
+/// Provee [AppStrings] a descendientes del árbol de widgets vía `of(context)`.
+class AppStringsScope extends InheritedWidget {
+  /// Envuelve [child] con las cadenas [strings] activas.
+  const AppStringsScope({
+    super.key,
+    required this.strings,
+    required super.child,
+  });
+
+  /// Cadenas localizadas vigentes.
+  final AppStrings strings;
+
+  /// Resuelve las cadenas del contexto; lanza si falta el scope.
+  static AppStrings of(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<AppStringsScope>();
+    assert(scope != null, 'AppStringsScope not found in widget tree');
+    return scope!.strings;
+  }
+
+  @override
+  bool updateShouldNotify(AppStringsScope oldWidget) => strings != oldWidget.strings;
+}

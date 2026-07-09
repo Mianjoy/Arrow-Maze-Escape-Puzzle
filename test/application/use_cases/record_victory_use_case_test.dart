@@ -1,0 +1,73 @@
+import 'package:arrow_maze_escape_puzzle/application/models/auth_session.dart';
+import 'package:arrow_maze_escape_puzzle/application/use_cases/record_victory_use_case.dart';
+import 'package:arrow_maze_escape_puzzle/domain/domain.dart';
+import 'package:arrow_maze_escape_puzzle/infrastructure/http/api_config.dart';
+import 'package:arrow_maze_escape_puzzle/infrastructure/http/progress_api_client.dart';
+import 'package:arrow_maze_escape_puzzle/infrastructure/progress/in_memory_player_progress_repository.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+
+import '../../application/support/fake_repositories.dart';
+import '../../support/mock_http_client.dart';
+
+Level buildWinnableLevel({String id = 'level-01', int? levelNumber}) {
+  return Level(
+    id: Identifier(id),
+    levelNumber: levelNumber ?? 1,
+    difficulty: LevelDifficulty.easy,
+    boardDefinition: const LevelBoardDefinition(
+      dimension: BoardDimension(rows: 1, columns: 2),
+      cells: [
+        LevelCellData(position: Position(row: 0, column: 0), direction: Direction(ArrowDirection.right)),
+      ],
+    ),
+    playerStart: const PlayerStart(position: Position(row: 0, column: 1)),
+    parMoves: 3,
+    optimalMoves: 1,
+  );
+}
+
+void main() {
+  const session = AuthSession(token: 'tok', userId: 'u1', username: 'p1');
+  const config = ApiConfig(baseUrl: 'http://test');
+
+  test('RecordVictoryUseCase guarda progreso local y llama POST /progress/sync', () async {
+    var syncCalled = false;
+    final client = MockHttpClient((request) async {
+      expect(request.method, 'POST');
+      expect(request.url.path, '/progress/sync');
+      syncCalled = true;
+      return http.Response('{}', 200);
+    });
+
+    final levelRepo = FakeLevelRepository([
+      buildWinnableLevel(id: 'level-01', levelNumber: 1),
+      buildWinnableLevel(id: 'level-02', levelNumber: 2),
+    ]);
+
+    final useCase = RecordVictoryUseCase(
+      progressRepository: InMemoryPlayerProgressRepository(),
+      levelRepository: levelRepo,
+      progressApiClient: ProgressApiClient(config: config, httpClient: client),
+    );
+
+    final level = buildWinnableLevel();
+    final started = Game.fromLevel(
+      gameId: const Identifier('g1'),
+      playerId: session.playerId,
+      level: level,
+    ).start();
+
+    final won = started.performMove(
+      arrowId: started.board.arrows.first.id,
+      movementEngine: const ArrowMovementEngine(collisionValidator: CollisionValidator()),
+    ).game;
+
+    expect(won.isWon, isTrue);
+
+    final result = await useCase.execute(game: won, session: session);
+
+    expect(syncCalled, isTrue);
+    expect(result.nextLevel?.id.value, 'level-02');
+  });
+}

@@ -1,0 +1,15 @@
+{
+  "id": "level-03",
+  "difficulty": "hard",
+  "parMoves": 5,
+  "board": {
+    "rows": 4,
+    "cols": 4,
+    "cells": [
+      { "row": 0, "col": 0, "direction": "right" },
+      { "row": 2, "col": 0, "direction": "down" },
+      { "row": 0, "col": 3, "direction": "down" }
+    ]
+  },
+  "playerStart": { "row": 3, "col": 3 }
+}

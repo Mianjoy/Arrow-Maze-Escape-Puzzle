@@ -1,0 +1,69 @@
+import 'dart:convert';
+
+import '../../domain/domain.dart';
+
+/// Traduce [PlayerProgress] a JSON persistible y viceversa.
+class PlayerProgressJsonMapper {
+  /// Crea el mapper sin estado interno.
+  const PlayerProgressJsonMapper();
+  /// Serializa el agregado [progress] a un mapa JSON.
+  Map<String, dynamic> toJson(PlayerProgress progress) {
+    return {
+      'playerId': progress.playerId.value,
+      'levels': progress.levels.map(
+        (id, lp) => MapEntry(id.value, _levelProgressToJson(lp)),
+      ),
+    };
+  }
+
+  /// Reconstruye [PlayerProgress] desde un mapa JSON.
+  PlayerProgress fromJson(Map<String, dynamic> json) {
+    final playerId = Identifier(json['playerId'] as String);
+    final levelsRaw = json['levels'] as Map<String, dynamic>? ?? {};
+    final levels = <Identifier, LevelProgress>{};
+
+    for (final entry in levelsRaw.entries) {
+      levels[Identifier(entry.key)] = _levelProgressFromJson(
+        Identifier(entry.key),
+        Map<String, dynamic>.from(entry.value as Map),
+      );
+    }
+
+    return PlayerProgress(playerId: playerId, levels: levels);
+  }
+
+  /// Codifica el progreso como cadena JSON.
+  String encode(PlayerProgress progress) => jsonEncode(toJson(progress));
+
+  /// Decodifica una cadena JSON a [PlayerProgress].
+  PlayerProgress decode(String raw) => fromJson(jsonDecode(raw) as Map<String, dynamic>);
+
+  /// Convierte [LevelProgress] a mapa JSON.
+  Map<String, dynamic> _levelProgressToJson(LevelProgress lp) {
+    return {
+      'status': lp.status.name,
+      if (lp.bestMoveCount != null) 'bestMoveCount': lp.bestMoveCount,
+      if (lp.bestTimeSeconds != null) 'bestTimeSeconds': lp.bestTimeSeconds,
+      if (lp.bestStars != null) 'bestStars': lp.bestStars!.value,
+      'completionCount': lp.completionCount,
+    };
+  }
+
+  /// Reconstruye [LevelProgress] desde JSON.
+  LevelProgress _levelProgressFromJson(Identifier levelId, Map<String, dynamic> json) {
+    final statusName = json['status'] as String? ?? 'locked';
+    final status = LevelProgressStatus.values.firstWhere(
+      (s) => s.name == statusName,
+      orElse: () => LevelProgressStatus.locked,
+    );
+    final starsRaw = json['bestStars'];
+    return LevelProgress(
+      levelId: levelId,
+      status: status,
+      bestMoveCount: json['bestMoveCount'] as int?,
+      bestTimeSeconds: json['bestTimeSeconds'] as int?,
+      bestStars: starsRaw != null ? StarRating(starsRaw as int) : null,
+      completionCount: json['completionCount'] as int? ?? 0,
+    );
+  }
+}

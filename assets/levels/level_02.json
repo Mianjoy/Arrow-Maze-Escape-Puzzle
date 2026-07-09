@@ -1,0 +1,14 @@
+{
+  "id": "level-02",
+  "difficulty": "medium",
+  "parMoves": 4,
+  "board": {
+    "rows": 3,
+    "cols": 3,
+    "cells": [
+      { "row": 0, "col": 0, "direction": "right" },
+      { "row": 0, "col": 2, "direction": "down" }
+    ]
+  },
+  "playerStart": { "row": 2, "col": 1 }
+}

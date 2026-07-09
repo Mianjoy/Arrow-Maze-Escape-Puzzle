@@ -1,0 +1,35 @@
+flowchart TB
+    %% Diagrama de capas - Clean Architecture (frontend Arrow Maze).
+    %% Placeholder de Sprint 1: las flechas van de afuera hacia adentro
+    %% (las capas externas dependen de las internas, nunca al reves).
+    %% Se refinara en Sprint 3 con las pantallas y adaptadores reales
+    %% una vez existan (Sprint 2).
+    subgraph L4["Capa 4 - Presentation"]
+        direction TB
+        UI["Widgets y pantallas de Flutter (Sprint 2+)"]
+    end
+    subgraph L3["Capa 3 - Infrastructure e Interface Adapters"]
+        direction TB
+        Adapters["lib/interface_adapters (Sprint 2): traduce StructuredLevelJsonDto a entidades de dominio"]
+    end
+    subgraph L2["Capa 2 - Application"]
+        direction TB
+        UseCases["Casos de uso Sprint 2: mover o rotar flecha, cargar nivel, guardar progreso"]
+    end
+    subgraph L1["Capa 1 - Domain"]
+        direction TB
+        Entities["Board, Game, Level, Player, Progress (bounded contexts)"]
+    end
+
+    L4 -->|depende de| L3
+    L3 -->|depende de| L2
+    L2 -->|depende de| L1
+
+    classDef domain fill:#e8f4ea,stroke:#2e7d32
+    classDef app fill:#e8eef8,stroke:#1565c0
+    classDef adapters fill:#fdf3e2,stroke:#ef6c00
+    classDef presentation fill:#f8e8ee,stroke:#ad1457
+    class Entities domain
+    class UseCases app
+    class Adapters adapters
+    class UI presentation
