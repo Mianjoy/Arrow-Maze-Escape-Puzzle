@@ -106,7 +106,11 @@ class GameController extends ChangeNotifier {
 
     try {
       _lastVictoryResult = await recordVictory.execute(game: wonGame, session: session);
+      _syncError = _lastVictoryResult?.syncError;
     } catch (error) {
+      // Solo alcanza este catch si falló algo local (repositorio de progreso,
+      // cálculo del siguiente nivel) — la sincronización remota ya se maneja
+      // dentro de `execute` y nunca llega a lanzar por sí sola.
       _syncError = error;
     } finally {
       _isSyncingProgress = false;

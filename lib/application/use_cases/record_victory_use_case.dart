@@ -1,7 +1,9 @@
 import '../../domain/domain.dart';
 import '../../infrastructure/http/progress_api_client.dart';
 import '../models/auth_session.dart';
+import '../models/pending_sync_entry.dart';
 import '../models/record_victory_result.dart';
+import '../ports/i_pending_sync_repository.dart';
 
 /// Caso de uso: registrar victoria localmente, desbloquear siguiente nivel y sincronizar.
 ///
@@ -13,13 +15,16 @@ class RecordVictoryUseCase {
     required IPlayerProgressRepository progressRepository,
     required ILevelRepository levelRepository,
     required ProgressApiClient progressApiClient,
+    required IPendingSyncRepository pendingSyncRepository,
   })  : _progressRepository = progressRepository,
         _levelRepository = levelRepository,
-        _progressApiClient = progressApiClient;
+        _progressApiClient = progressApiClient,
+        _pendingSyncRepository = pendingSyncRepository;
 
   final IPlayerProgressRepository _progressRepository;
   final ILevelRepository _levelRepository;
   final ProgressApiClient _progressApiClient;
+  final IPendingSyncRepository _pendingSyncRepository;
 
   /// Persiste la victoria de [game], desbloquea el siguiente nivel y sincroniza con la API.
   Future<RecordVictoryResult> execute({
@@ -43,16 +48,33 @@ class RecordVictoryUseCase {
     }
     await _progressRepository.save(progress);
 
-    await _progressApiClient.syncProgress(
-      session: session,
-      levelId: game.level.id.value,
-      score: game.score,
-      moves: game.moveCount,
-      timeInSeconds: game.elapsedSeconds,
-      completed: true,
-    );
+    // La sincronización remota es best-effort: sin red, el progreso local y
+    // el desbloqueo del siguiente nivel ya ocurrieron y no deben perderse ni
+    // impedir que el jugador siga avanzando.
+    Object? syncError;
+    try {
+      await _progressApiClient.syncProgress(
+        session: session,
+        levelId: game.level.id.value,
+        score: game.score,
+        moves: game.moveCount,
+        timeInSeconds: game.elapsedSeconds,
+        completed: true,
+      );
+    } catch (error) {
+      syncError = error;
+      await _pendingSyncRepository.add(
+        PendingSyncEntry(
+          playerId: session.playerId,
+          levelId: game.level.id,
+          score: game.score,
+          moves: game.moveCount,
+          timeInSeconds: game.elapsedSeconds,
+        ),
+      );
+    }
 
-    return RecordVictoryResult(progress: progress, nextLevel: nextLevel);
+    return RecordVictoryResult(progress: progress, nextLevel: nextLevel, syncError: syncError);
   }
 
   /// Obtiene el nivel inmediatamente posterior a [completedLevel] en el catálogo.

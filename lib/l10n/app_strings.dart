@@ -82,6 +82,18 @@ abstract class AppStrings {
   /// Mensaje de error al sincronizar el progreso.
   String get progressSyncFailed;
 
+  /// Aviso de que se está jugando sin conexión y el progreso se sincronizará luego.
+  String get offlinePlayNotice;
+
+  /// Error de login: usuario o contraseña incorrectos.
+  String get invalidCredentialsError;
+
+  /// Error de registro: el nombre de usuario ya está en uso.
+  String get usernameAlreadyExistsError;
+
+  /// Error de red al intentar autenticarse (sin conexión, servidor caído).
+  String get authConnectionError;
+
   /// Etiqueta del botón "Iniciar sesión".
   String get signIn;
 
@@ -173,6 +185,20 @@ class AppStringsEn extends AppStrings {
   String get progressSyncFailed => 'Progress sync failed';
 
   @override
+  String get offlinePlayNotice =>
+      "You're currently playing offline. Your progress is saved on this device and "
+      'will sync with the server once you have a connection or the server is available.';
+
+  @override
+  String get invalidCredentialsError => 'Incorrect username or password.';
+
+  @override
+  String get usernameAlreadyExistsError => 'That username is already taken.';
+
+  @override
+  String get authConnectionError => "Couldn't reach the server. Check your connection and try again.";
+
+  @override
   String get signIn => 'Sign in';
 
   @override
@@ -261,6 +287,21 @@ class AppStringsEs extends AppStrings {
 
   @override
   String get progressSyncFailed => 'Error al sincronizar progreso';
+
+  @override
+  String get offlinePlayNotice =>
+      'Actualmente te encuentras jugando sin conexión. Tu progreso se guarda en este '
+      'dispositivo y se sincronizará con el servidor cuando tengas conexión o el '
+      'servidor esté disponible.';
+
+  @override
+  String get invalidCredentialsError => 'Usuario o contraseña incorrectos.';
+
+  @override
+  String get usernameAlreadyExistsError => 'Ese nombre de usuario ya está en uso.';
+
+  @override
+  String get authConnectionError => 'No se pudo conectar con el servidor. Verifica tu conexión e intenta de nuevo.';
 
   @override
   String get signIn => 'Iniciar sesión';

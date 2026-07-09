@@ -67,7 +67,13 @@ class VictoryScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: () => Navigator.of(context).popUntil((route) => route.settings.name == '/levels'),
+              // `pushNamedAndRemoveUntil` (no `popUntil`) fuerza una ruta
+              // `/levels` nueva con un `LevelSelectController` recién creado,
+              // así el progreso recién ganado se refleja sin volver al home.
+              onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil(
+                '/levels',
+                (route) => route.settings.name == '/home',
+              ),
               child: Text(strings.backToLevels),
             ),
           ],
@@ -77,9 +83,13 @@ class VictoryScreen extends StatelessWidget {
   }
 
   /// Construye el mensaje de progreso local/remoto según [args.syncError].
+  ///
+  /// Ante un fallo de sincronización se muestra el aviso amable de "modo sin
+  /// conexión" (el progreso ya quedó guardado localmente y se reintentará),
+  /// no el error técnico de red.
   String _syncMessage(AppStrings strings) {
     if (args.syncError != null) {
-      return '${strings.progressSyncFailed}: ${args.syncError}';
+      return strings.offlinePlayNotice;
     }
     return strings.progressSaved;
   }

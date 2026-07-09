@@ -65,6 +65,12 @@ class E2eAppFactory {
         return http.Response(jsonEncode({...body, 'highScore': body['score'], 'isCompleted': true}), 200);
       }
 
+      if (request.method == 'GET' && request.url.path == '/progress') {
+        // Progreso remoto vacío por defecto en E2E; el progreso se siembra
+        // localmente vía `_seedAllLevelsUnlocked`.
+        return http.Response(jsonEncode({'userId': e2eSession.userId, 'levels': []}), 200);
+      }
+
       if (request.method == 'GET' && request.url.path.startsWith('/leaderboard/')) {
         final levelId = Uri.decodeComponent(request.url.pathSegments.last);
         return http.Response(jsonEncode(leaderboardStore[levelId] ?? []), 200);
@@ -105,7 +111,6 @@ class E2eAppFactory {
       audioService: NoOpAudioService(),
       apiConfig: apiConfig,
       httpClient: client,
-      fallbackToAssets: false,
       initialAuthSession: activeSession,
     );
   }
