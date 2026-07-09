@@ -9,6 +9,8 @@ import 'package:arrow_maze_escape_puzzle/infrastructure/level/remote_level_repos
 import 'package:http/http.dart' as http;
 import 'package:test/test.dart';
 
+import '../../support/mock_http_client.dart';
+
 /// Pruebas de [RemoteLevelRepository] y [LevelApiClient] con HTTP simulado.
 void main() {
   late Map<String, dynamic> simple1Json;
@@ -22,7 +24,7 @@ void main() {
 
   group('LevelApiClient', () {
     test('fetchAllLevels lanza si el cuerpo no es un array', () async {
-      final mockClient = MockClient((request) async {
+      final mockClient = MockHttpClient((request) async {
         return http.Response('{"id":"x"}', 200);
       });
 
@@ -40,7 +42,7 @@ void main() {
 
   group('RemoteLevelRepository — con MockClient', () {
     test('findAll mapea niveles del GET /levels y ordena por levelNumber', () async {
-      final mockClient = MockClient((request) async {
+      final mockClient = MockHttpClient((request) async {
         expect(request.url.path, '/levels');
         return http.Response(
           jsonEncode([
@@ -68,7 +70,7 @@ void main() {
     });
 
     test('findById devuelve null ante 404', () async {
-      final mockClient = MockClient((request) async {
+      final mockClient = MockHttpClient((request) async {
         return http.Response('{"error":"not found"}', 404);
       });
 
@@ -84,7 +86,7 @@ void main() {
     });
 
     test('findById mapea el cuerpo de GET /levels/:id', () async {
-      final mockClient = MockClient((request) async {
+      final mockClient = MockHttpClient((request) async {
         expect(request.url.path, '/levels/simple-1');
         return http.Response(jsonEncode(simple1Json), 200);
       });
@@ -102,7 +104,7 @@ void main() {
     });
 
     test('propaga LevelRepositoryException si GET /levels no es 200', () async {
-      final mockClient = MockClient((request) async {
+      final mockClient = MockHttpClient((request) async {
         return http.Response('error', 500);
       });
 
@@ -119,22 +121,4 @@ void main() {
       );
     });
   });
-}
-
-/// Cliente HTTP de prueba que ejecuta un [handler] por petición.
-class MockClient extends http.BaseClient {
-  MockClient(this._handler);
-
-  final Future<http.Response> Function(http.Request request) _handler;
-
-  @override
-  Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    final response = await _handler(http.Request(request.method, request.url));
-    return http.StreamedResponse(
-      Stream.value(response.bodyBytes),
-      response.statusCode,
-      headers: response.headers,
-      request: request,
-    );
-  }
 }

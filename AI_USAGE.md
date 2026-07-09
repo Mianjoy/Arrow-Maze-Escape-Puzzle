@@ -525,6 +525,53 @@ cd BackEnd-ArrowMaze && npm run dev
 
 - `FallbackLevelRepository` evita pantalla en blanco sin backend, pero puede ocultar fallos de integración si no se prueba explícitamente contra la API.
 - El mapper del frontend exige `optimalMoves <= maxMoves`; los niveles del seed deben usar `maxMoves` holgado (p. ej. `simple-1` con 20 en backend vs 5 en el JSON canónico de docs).
-- Siguiente paso del plan (Día 3): validar juego end-to-end con niveles remotos y ampliar catálogo seed a 10–15 niveles.
+- Siguiente paso del plan (Día 4): login/registro + `POST /progress/sync` al ganar.
+
+---
+
+## Consulta #10 — Prueba E2E jugable (Día 3 frontend)
+
+**Tarea o problema abordado.**
+
+Cerrar el entregable **“Prueba E2E jugable”** del Día 3: demostrar con tests automatizados y guía manual que el flujo **backend seed (15 niveles) → `GET /levels` → `RemoteLevelRepository` → selección → partida → victoria/derrota** funciona sin depender de assets legacy.
+
+**Herramienta de IA utilizada.**
+
+- Cursor AI (asistente integrado en el IDE).
+
+**Prompt o instrucción proporcionada.**
+
+> Implementar la validación E2E del plan crítico (Día 3): suite de tests que simule el catálogo remoto de 15 niveles, verifique mapeo wire-format y jugabilidad (victoria en `level-02`, derrota por `parMoves`, flujo UI lista→juego), flag `ASSET_FALLBACK` para pruebas manuales, documentación en `docs/e2e/README.md`, comentarios dartdoc en español y registro técnico en `AI_USAGE.md`.
+
+**Resultado obtenido.**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Fixture seed | `test/e2e/support/seed_catalog_fixture.dart` | Espejo de 15 niveles del backend |
+| Fábrica E2E | `test/e2e/support/e2e_app_factory.dart` | `AppContainer` + `MockHttpClient`, `fallbackToAssets: false` |
+| Helper jugabilidad | `test/e2e/support/playable_level_helper.dart` | Mapeo, inicio de partida, solver greedy, conteo de muros |
+| Mock HTTP compartido | `test/support/mock_http_client.dart` | Reutilizado por tests de infra y E2E |
+| Tests catálogo | `test/e2e/remote_catalog_e2e_test.dart` | 15 niveles, orden, mapper |
+| Tests dominio | `test/e2e/wire_format_playability_e2e_test.dart` | Inicio de partida, win/lose wire-format |
+| Tests UI | `test/e2e/playable_flow_e2e_test.dart` | Lista remota → victoria `level-02`, derrota `level-09` |
+| Flag manual | `lib/main.dart` | `--dart-define=ASSET_FALLBACK=false` |
+| Guía | `docs/e2e/README.md` | Procedimiento CI + manual con backend real |
+
+**Ejecución.**
+
+```bash
+flutter test test/e2e
+flutter run --dart-define=ASSET_FALLBACK=false   # manual contra npm run dev
+```
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- (Pendiente de revisión tras merge.)
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Los tests E2E de UI usan HTTP simulado (no requieren backend en CI); la prueba manual con backend real sigue siendo necesaria para CORS/red en dispositivos físicos.
+- El solver greedy no demuestra solvabilidad óptima de todos los niveles; solo verifica un subconjunto (`level-08`, `level-15`) además del tutorial `level-02`.
+- Siguiente paso del plan (Día 4): login/registro + `POST /progress/sync` al ganar.
 
 ---

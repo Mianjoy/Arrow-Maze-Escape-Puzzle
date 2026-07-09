@@ -17,8 +17,12 @@ import 'presentation/level_select/level_select_controller.dart';
 import 'presentation/level_select/level_select_screen.dart';
 
 /// Punto de entrada de la aplicación móvil Arrow-Maze.
+///
+/// Para pruebas E2E contra solo la API (sin fallback a assets):
+/// `flutter run --dart-define=ASSET_FALLBACK=false`
 void main() {
-  runApp(ArrowMazeApp(container: AppContainer()));
+  const fallbackToAssets = bool.fromEnvironment('ASSET_FALLBACK', defaultValue: true);
+  runApp(ArrowMazeApp(container: AppContainer(fallbackToAssets: fallbackToAssets)));
 }
 
 /// Composition root de la app: el único lugar que sabe qué implementación
