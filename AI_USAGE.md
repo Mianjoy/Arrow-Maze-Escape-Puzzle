@@ -377,3 +377,95 @@ Tres bugs del dominio, misma raíz (`blocked` = "fuera del tablero"), corregidos
 - Sigue pendiente la expansión del dominio al formato completo del backend (muros, salida, flechas multi-celda), acordada con el equipo como el siguiente trabajo mayor.
 
 ---
+
+## Consulta #7 — Fijar contrato de niveles compartido (Día 1 del plan de integración)
+
+**Tarea o problema abordado.**
+
+Cerrar la **parte 1** del plan de 5 días: acordar y fijar el contrato de niveles entre frontend y backend. Los dos repos usaban JSON incompatibles (frontend: `board.cells` / `parMoves`; backend: `StructuredLevelJsonDto` con `arrows[].head/body`, `exit`, `walls`, `maxMoves`). Sin un contrato único y un adaptador, la integración API (Día 2) quedaba bloqueada.
+
+**Herramienta de IA utilizada.**
+
+- Cursor AI (asistente integrado en el IDE).
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> comienza con la parte 1 del plan "Acordar y fijar el contrato de niveles"
+>
+> (posteriormente) necesito que comentes todo el codigo para saber que hace cada funcion y actualiza el IA_USAGE.md con los parametros y normas establecidas
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+### Normas establecidas del contrato (obligatorias para el equipo)
+
+| Norma | Detalle |
+|-------|---------|
+| **Fuente de verdad** | `BackEnd-ArrowMaze/docs/contract/level.contract.ts` — cualquier cambio empieza ahí y se replica en Dart. |
+| **Espejo Dart** | `lib/contract/level_contract.dart` — importable; documentación humana en `docs/contract/README.md`. |
+| **Adaptador único** | Solo `lib/interface_adapters/level_dto_mapper.dart` traduce wire → dominio. `lib/domain/` **no** importa el contrato. |
+| **JSON legacy** | `assets/levels/level_0X.json` (`board.cells`, `playerStart`, `parMoves`) sigue válido vía `LevelFactory` hasta migrar; niveles nuevos y API usan wire format. |
+| **Comentarios** | Español en cada función/método público (dartdoc `///`), como el resto del proyecto. |
+| **Commits** | Conventional Commits; actualizar `AI_USAGE.md` en el mismo momento de cada consulta con IA. |
+| **Dominio en inglés** | Nombres de clases/campos en inglés; comentarios en español. |
+
+### Mapeo de parámetros wire format → dominio Flutter
+
+| Campo `StructuredLevelJsonDto` | Tipo / valores | Campo dominio | Notas |
+|-------------------------------|----------------|---------------|-------|
+| `id` | `string` | `Level.id` | Identificador único |
+| `levelNumber` | `int` ≥ 1 | `Level.levelNumber` | Orden en progresión |
+| `difficulty` | `EASY` \| `MEDIUM` \| `HARD` \| `EXPERT` | `LevelDifficulty` (`easy`…) | Mayúsculas solo en JSON |
+| `maxMoves` | `int` > 0 | `Level.parMoves` | Techo antes de perder |
+| `maxTimeInSeconds` | `int` | `Level.timeLimit` | Segundos |
+| `width` | `int` | `boardDefinition.dimension.columns` | Columnas |
+| `height` | `int` | `boardDefinition.dimension.rows` | Filas |
+| `exit` | `{ row, col }` | `boardDefinition.exit` + `playerStart` | No hay avatar; `exit` como ancla |
+| `walls` | `{ row, col }[]` opcional | `boardDefinition.walls` | `CellState.wall` |
+| `arrows` | ver abajo | `boardDefinition.arrowPlacements` | Multi-celda |
+
+**Objeto `arrows[]`:**
+
+| Campo | Tipo | Dominio |
+|-------|------|---------|
+| `id` | `string` | `LevelArrowPlacement.id` |
+| `direction` | `UP` \| `DOWN` \| `LEFT` \| `RIGHT` | `Direction` |
+| `head` | `{ row, col }` | `LevelArrowPlacement.head` |
+| `body` | `{ row, col }[]` | `LevelArrowPlacement.body` |
+
+### Archivos creados o modificados
+
+| Archivo | Rol |
+|---------|-----|
+| `lib/contract/level_contract.dart` | DTOs espejo del TypeScript |
+| `lib/interface_adapters/level_dto_mapper.dart` | Adaptador wire → `Level` |
+| `docs/contract/README.md` | Decisión y tabla de mapeo |
+| `docs/levels/simple-1.json` | Nivel canónico (mismo que backend) |
+| `lib/domain/level/value_objects/level_arrow_placement.dart` | VO de flecha multi-celda |
+| `test/interface_adapters/level_dto_mapper_test.dart` | Tests de parseo y mapeo |
+| Dominio extendido | `Arrow.body`, `CellState.wall`, `Board.placeArrowSegments`, etc. |
+
+**Fragmento del adaptador:**
+
+```dart
+class LevelDtoMapper {
+  Level fromDto(StructuredLevelJsonDto dto) {
+    final provisional = _toProvisionalLevel(dto);
+    final board = provisional.buildInitialBoard(boardFactory: _boardFactory);
+    final optimalMoves = _shortestPathCalculator.calculateMinimumMoves(board);
+    // valida solvabilidad y optimalMoves <= dto.maxMoves
+    return Level(/* ... */);
+  }
+}
+```
+
+**Modificaciones realizadas por el equipo al resultado de la IA:**
+
+- (Pendiente de revisión del equipo tras merge.)
+
+**Lecciones aprendidas o limitaciones identificadas:**
+
+- El backend valida *jugabilidad* (`LevelSolvabilityValidator`); el frontend además exige `optimalMoves <= maxMoves` para que el par sea alcanzable con las reglas de estrellas — un `maxMoves` bajo puede hacer fallar `fromDto` aunque el nivel sea “jugable” en más movimientos.
+- Los 3 assets legacy no se migraron aún; `JsonAssetLevelRepository` sigue usando `LevelFactory` hasta el Día 2 (`RemoteLevelRepository`).
+- Siguiente paso del plan: seed de niveles en backend + `RemoteLevelRepository` en Flutter.
+
+---

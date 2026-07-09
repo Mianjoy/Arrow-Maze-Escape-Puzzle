@@ -29,6 +29,9 @@ class Cell {
   /// Indica si la celda está disponible para colocar una flecha.
   bool get isEmpty => state == CellState.empty;
 
+  /// Indica si la celda es un muro estático.
+  bool get isWall => state == CellState.wall;
+
   /// Indica si la celda contiene una flecha activa.
   bool get isOccupied => state == CellState.occupied;
 
@@ -60,6 +63,13 @@ class Cell {
       state: CellState.cleared,
       clearArrowId: true,
     );
+  }
+
+  /// Marca la celda como muro estático (bloquea disparos, no es interactiva).
+  ///
+  /// Corresponde a una entrada del array `walls` del contrato wire.
+  Cell asWall() {
+    return copyWith(state: CellState.wall, clearArrowId: true);
   }
 
   @override

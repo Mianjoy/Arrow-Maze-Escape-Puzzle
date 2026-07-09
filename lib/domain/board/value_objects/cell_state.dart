@@ -8,4 +8,7 @@ enum CellState {
 
   /// Celda que alguna vez tuvo una flecha ya extraída (opcional para trazabilidad).
   cleared,
+
+  /// Muro estático que bloquea la trayectoria de las flechas.
+  wall,
 }

@@ -16,6 +16,7 @@ class Arrow {
     required this.id,
     required this.position,
     required this.direction,
+    this.body = const [],
     this.state = ArrowState.active,
   });
 
@@ -28,8 +29,22 @@ class Arrow {
   /// Dirección hacia la que apunta y se desplaza al ser activada.
   final Direction direction;
 
+  /// Segmentos de cuerpo adicionales (ocupan celdas pero no son la cabeza).
+  ///
+  /// Provienen del array `body` del contrato wire. Bloquean trayectorias
+  /// de otras flechas igual que la cabeza. Vacío en niveles legacy de una celda.
+  final List<Position> body;
+
   /// Estado operativo actual de la flecha.
   final ArrowState state;
+
+  /// Todas las posiciones que ocupa la flecha (cabeza + cada segmento de cuerpo).
+  List<Position> get allPositions => [position, ...body];
+
+  /// Indica si [pos] está ocupada por esta flecha (cabeza o cuerpo).
+  ///
+  /// Usado por [Board.arrowIdAt] y [CollisionValidator] para flechas multi-celda.
+  bool occupies(Position pos) => allPositions.any((p) => p == pos);
 
   /// Indica si la flecha puede ser seleccionada para un movimiento.
   ///
@@ -43,14 +58,13 @@ class Arrow {
   /// Indica si la flecha ya fue extraída del tablero.
   bool get isExtracted => state == ArrowState.extracted;
 
-  /// Reinicia la flecha a su [originalPosition], dejándola activa de nuevo.
+  /// Reinicia la flecha a su [originalPosition] y [body] iniciales, en estado activo.
   ///
   /// Portado desde el dominio en español (`Flecha.reiniciar()` en la rama
-  /// `Integracion`), usado al reiniciar un nivel. Como [Arrow] es inmutable
-  /// y no conserva su posición original, quien reinicia el nivel (la capa
-  /// que orquesta el reinicio) debe proveerla explícitamente.
-  Arrow reset({required Position originalPosition}) {
-    return copyWith(position: originalPosition, state: ArrowState.active);
+  /// `Integracion`). Quien reinicia el nivel debe proveer posición y cuerpo
+  /// originales porque [Arrow] es inmutable y no los conserva internamente.
+  Arrow reset({required Position originalPosition, List<Position> body = const []}) {
+    return copyWith(position: originalPosition, body: body, state: ArrowState.active);
   }
 
   /// Retorna una copia con los campos indicados reemplazados.
@@ -58,12 +72,14 @@ class Arrow {
     Identifier? id,
     Position? position,
     Direction? direction,
+    List<Position>? body,
     ArrowState? state,
   }) {
     return Arrow(
       id: id ?? this.id,
       position: position ?? this.position,
       direction: direction ?? this.direction,
+      body: body ?? this.body,
       state: state ?? this.state,
     );
   }

@@ -40,7 +40,7 @@ class BoardView extends StatelessWidget {
             child: Container(
               margin: const EdgeInsets.all(2),
               decoration: BoxDecoration(
-                color: _cellColor(context, arrow),
+                color: _cellColor(context, arrow, cell),
                 border: Border.all(color: Theme.of(context).dividerColor),
                 borderRadius: BorderRadius.circular(4),
               ),
@@ -57,7 +57,13 @@ class BoardView extends StatelessWidget {
     );
   }
 
-  Color? _cellColor(BuildContext context, Arrow? arrow) {
+  /// Asigna color de fondo según tipo de celda y estado de la flecha.
+  ///
+  /// Muros (wire format) usan un gris del tema; flechas bloqueadas, rojo suave.
+  Color? _cellColor(BuildContext context, Arrow? arrow, Cell cell) {
+    if (cell.isWall) {
+      return Theme.of(context).colorScheme.surfaceContainerHighest;
+    }
     if (arrow == null) return null;
     if (arrow.state == ArrowState.blocked) {
       return Theme.of(context).colorScheme.errorContainer;
@@ -65,6 +71,7 @@ class BoardView extends StatelessWidget {
     return Theme.of(context).colorScheme.primaryContainer;
   }
 
+  /// Convierte la dirección de dominio a radianes para [Transform.rotate].
   double _rotationFor(ArrowDirection direction) {
     return switch (direction) {
       ArrowDirection.right => 0,

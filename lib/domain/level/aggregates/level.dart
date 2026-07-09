@@ -24,6 +24,7 @@ class Level {
     required this.playerStart,
     required this.parMoves,
     required this.optimalMoves,
+    this.levelNumber,
     this.timeLimit,
   })  : assert(parMoves > 0, 'parMoves must be positive'),
         assert(optimalMoves > 0, 'optimalMoves must be positive'),
@@ -34,6 +35,9 @@ class Level {
 
   /// Identificador único del nivel (string del JSON).
   final Identifier id;
+
+  /// Número ordinal en la progresión (wire format `levelNumber`).
+  final int? levelNumber;
 
   /// Dificultad del nivel.
   final LevelDifficulty difficulty;
@@ -54,6 +58,10 @@ class Level {
   final int? timeLimit;
 
   /// Construye el [Board] inicial listo para iniciar una partida.
+  ///
+  /// Orden de aplicación (wire format):
+  /// 1. Tablero vacío → 2. muros → 3. flechas multi-celda.
+  /// Formato legacy: solo flechas de una celda vía [LevelBoardDefinition.cells].
   Board buildInitialBoard({BoardFactory? boardFactory}) {
     final factory = boardFactory ?? const BoardFactory();
     var board = factory.createEmpty(
@@ -61,15 +69,31 @@ class Level {
       dimension: boardDefinition.dimension,
     );
 
-    var arrowIndex = 0;
-    for (final cellData in boardDefinition.arrowCells) {
-      final arrow = Arrow(
-        id: Identifier('arrow-$arrowIndex-${id.value}'),
-        position: cellData.position,
-        direction: cellData.direction!,
-      );
-      board = board.placeArrow(arrow);
-      arrowIndex++;
+    for (final wall in boardDefinition.walls) {
+      board = board.markWall(wall);
+    }
+
+    if (boardDefinition.usesWireLayout) {
+      for (final placement in boardDefinition.arrowPlacements) {
+        final arrow = Arrow(
+          id: placement.id,
+          position: placement.head,
+          direction: placement.direction,
+          body: placement.body,
+        );
+        board = board.placeArrowSegments(arrow);
+      }
+    } else {
+      var arrowIndex = 0;
+      for (final cellData in boardDefinition.arrowCells) {
+        final arrow = Arrow(
+          id: Identifier('arrow-$arrowIndex-${id.value}'),
+          position: cellData.position,
+          direction: cellData.direction!,
+        );
+        board = board.placeArrow(arrow);
+        arrowIndex++;
+      }
     }
 
     playerStart.position.ensureWithinBounds(

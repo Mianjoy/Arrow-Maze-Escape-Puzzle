@@ -34,6 +34,7 @@ export 'board/events/arrow_blocked_event.dart';
 
 // Level
 export 'level/aggregates/level.dart';
+export 'level/value_objects/level_arrow_placement.dart';
 export 'level/value_objects/level_board_definition.dart';
 export 'level/value_objects/level_cell_data.dart';
 export 'level/value_objects/level_difficulty.dart';

@@ -108,14 +108,18 @@ class Board {
     );
   }
 
-  /// Devuelve el [Identifier] de la flecha en [position], o `null` si la
-  /// celda está vacía.
+  /// Devuelve el [Identifier] de la flecha en [position], o `null` si no hay ninguna.
   ///
-  /// Agregado durante la fusión de dominio de Sprint 1 para soportar el
-  /// caso "sin flecha" portado desde la rama `Integracion` (ver
-  /// [ArrowMovementEngine.attemptMoveAt]).
+  /// Busca primero en la celda (`arrowId`); si no hay, recorre flechas no
+  /// extraídas con [Arrow.occupies] para soportar toques en segmentos de cuerpo
+  /// (contrato wire `StructuredLevelJsonDto`).
   Identifier? arrowIdAt(Position position) {
-    return cellAt(position).arrowId;
+    final cell = cellAt(position);
+    if (cell.arrowId != null) return cell.arrowId;
+    for (final arrow in _arrows.where((a) => !a.isExtracted)) {
+      if (arrow.occupies(position)) return arrow.id;
+    }
+    return null;
   }
 
   /// Obtiene la flecha con [arrowId] o lanza [DomainException] si no existe.
@@ -157,13 +161,72 @@ class Board {
     );
   }
 
-  /// Actualiza el estado de una flecha y su celda asociada.
+  /// Marca [position] como muro estático en el tablero.
+  ///
+  /// Los muros provienen del array `walls` del contrato wire. No se pueden
+  /// colocar flechas encima; [CollisionValidator] los trata como bloqueo.
+  Board markWall(Position position) {
+    final updatedCells = _cells
+        .map((cell) => cell.position == position ? cell.asWall() : cell)
+        .toList();
+    return Board(
+      id: id,
+      dimension: dimension,
+      cells: updatedCells,
+      arrows: _arrows,
+      domainEvents: _domainEvents,
+    );
+  }
+
+  /// Coloca una flecha multi-celda (cabeza en [Arrow.position] + [Arrow.body]).
+  ///
+  /// Valida que todas las posiciones estén libres y dentro del tablero.
+  /// Usado al cargar niveles del contrato wire; el formato legacy usa [placeArrow].
+  Board placeArrowSegments(Arrow arrow) {
+    for (final pos in arrow.allPositions) {
+      pos.ensureWithinBounds(rows: dimension.rows, columns: dimension.columns);
+      final cell = cellAt(pos);
+      if (!cell.isEmpty) {
+        throw CellOccupiedException(row: pos.row, column: pos.column);
+      }
+    }
+
+    if (_arrows.any((a) => a.id == arrow.id)) {
+      throw DomainException('Arrow ${arrow.id} already exists on board.');
+    }
+
+    var updatedCells = _cells;
+    for (final pos in arrow.allPositions) {
+      updatedCells = updatedCells
+          .map(
+            (cell) => cell.position == pos ? cell.occupyWith(arrow) : cell,
+          )
+          .toList();
+    }
+
+    return Board(
+      id: id,
+      dimension: dimension,
+      cells: updatedCells,
+      arrows: [..._arrows, arrow],
+      domainEvents: _domainEvents,
+    );
+  }
+
+  /// Actualiza el estado de una flecha y libera sus celdas si corresponde.
+  ///
+  /// Si la flecha quedó [ArrowState.extracted], limpia **todas** las celdas
+  /// que ocupaba (cabeza y cuerpo). Si [clearCell] es true, limpia solo las
+  /// celdas cuyo `arrowId` coincide (comportamiento legacy de una celda).
   Board applyArrowUpdate(Arrow updatedArrow, {bool clearCell = false}) {
     final updatedArrows = _arrows
         .map((arrow) => arrow.id == updatedArrow.id ? updatedArrow : arrow)
         .toList();
 
     final updatedCells = _cells.map((cell) {
+      if (updatedArrow.isExtracted && updatedArrow.occupies(cell.position)) {
+        return cell.clear();
+      }
       if (cell.arrowId == updatedArrow.id && clearCell) {
         return cell.clear();
       }
@@ -182,10 +245,12 @@ class Board {
   void _validateInvariants() {
     final occupiedPositions = <Position>{};
     for (final arrow in _arrows.where((a) => !a.isExtracted)) {
-      if (!occupiedPositions.add(arrow.position)) {
-        throw DomainException(
-          'Invariant violation: multiple arrows at position ${arrow.position}.',
-        );
+      for (final pos in arrow.allPositions) {
+        if (!occupiedPositions.add(pos)) {
+          throw DomainException(
+            'Invariant violation: multiple arrows at position $pos.',
+          );
+        }
       }
     }
   }
