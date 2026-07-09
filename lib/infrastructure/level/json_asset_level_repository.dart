@@ -12,9 +12,9 @@ import '../../domain/domain.dart';
 /// mantiene una lista fija de rutas conocidas. Agregar un nivel nuevo
 /// requiere: (1) el archivo en `assets/levels/`, (2) declararlo en
 /// `pubspec.yaml` bajo `flutter: assets:`, y (3) agregar su ruta aquí.
-/// Una implementación futura basada en `AssetManifest.json` o en el
-/// backend remoto (`ILevelRepository` es el punto de extensión) podría
-/// descubrir niveles automáticamente sin tocar el código cliente.
+/// Una implementación basada en el backend remoto ([RemoteLevelRepository])
+/// descubre niveles automáticamente vía `GET /levels`. Esta clase queda como
+/// respaldo offline cuando el API no está disponible ([FallbackLevelRepository]).
 class JsonAssetLevelRepository implements ILevelRepository {
   /// Crea el repositorio con una [LevelFactory] inyectable (por defecto una
   /// con el calculador de ruta más corta estándar).

@@ -465,7 +465,66 @@ class LevelDtoMapper {
 **Lecciones aprendidas o limitaciones identificadas:**
 
 - El backend valida *jugabilidad* (`LevelSolvabilityValidator`); el frontend además exige `optimalMoves <= maxMoves` para que el par sea alcanzable con las reglas de estrellas — un `maxMoves` bajo puede hacer fallar `fromDto` aunque el nivel sea “jugable” en más movimientos.
-- Los 3 assets legacy no se migraron aún; `JsonAssetLevelRepository` sigue usando `LevelFactory` hasta el Día 2 (`RemoteLevelRepository`).
-- Siguiente paso del plan: seed de niveles en backend + `RemoteLevelRepository` en Flutter.
+- Los 3 assets legacy no se migraron aún; `JsonAssetLevelRepository` actúa como respaldo offline vía `FallbackLevelRepository`.
+- Integración remota completada en Consulta #8 (`RemoteLevelRepository` + `AppContainer`).
+
+---
+
+## Consulta #8 — Integración remota de catálogo de niveles (Día 2 frontend)
+
+**Tarea o problema abordado.**
+
+Cerrar la segunda mitad del **Día 2** del plan de integración (5 días): conectar la app Flutter al backend operativo (seed + JWT ya desplegado en `BackEnd-ArrowMaze`) mediante un repositorio HTTP que consuma `GET /levels` y `GET /levels/:id`, traduzca `StructuredLevelJsonDto` a dominio con `LevelDtoMapper` y sustituya `JsonAssetLevelRepository` como fuente principal en el composition root.
+
+**Herramienta de IA utilizada.**
+
+- Cursor AI (asistente integrado en el IDE).
+
+**Prompt o instrucción proporcionada.**
+
+> Implementar el bloque **RemoteLevelRepository + conectar app** del plan crítico: cliente HTTP contra los endpoints públicos de niveles, implementación de `ILevelRepository` remota con `LevelDtoMapper`, wiring en `AppContainer` (composition root), tests con `MockClient`, comentarios dartdoc en español por función, y registro en `AI_USAGE.md` con redacción técnica acorde al estándar del repositorio.
+
+**Resultado obtenido.**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Config API | `lib/infrastructure/http/api_config.dart` | URL base (`API_BASE_URL` vía `--dart-define`, default `localhost:3000`) |
+| Cliente HTTP | `lib/infrastructure/http/level_api_client.dart` | `GET /levels`, `GET /levels/:id`, parseo JSON y errores de red |
+| Repositorio remoto | `lib/infrastructure/level/remote_level_repository.dart` | `ILevelRepository` + caché en memoria + `LevelDtoMapper` |
+| Respaldo offline | `lib/infrastructure/level/fallback_level_repository.dart` | Decorador: remoto → assets si la API falla |
+| Excepción infra | `lib/infrastructure/level/level_repository_exception.dart` | Errores HTTP/red sin contaminar el dominio |
+| Composition root | `lib/main.dart` → `AppContainer` | Cadena remota + fallback por defecto |
+| Tests | `test/infrastructure/level/*` | Mock HTTP, orden por `levelNumber`, 404, fallback |
+
+**Flujo de datos.**
+
+```
+LevelSelectScreen → LoadLevelsUseCase → ILevelRepository
+  → RemoteLevelRepository → LevelApiClient (GET /levels)
+  → LevelDtoMapper.fromJson() → List<Level>
+```
+
+**Configuración de entorno.**
+
+```bash
+# Web / desktop (backend local)
+flutter run -d chrome
+
+# Emulador Android (host loopback)
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000
+
+# Backend debe estar en ejecución con seed
+cd BackEnd-ArrowMaze && npm run dev
+```
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- (Pendiente de revisión tras merge.)
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- `FallbackLevelRepository` evita pantalla en blanco sin backend, pero puede ocultar fallos de integración si no se prueba explícitamente contra la API.
+- El mapper del frontend exige `optimalMoves <= maxMoves`; los niveles del seed deben usar `maxMoves` holgado (p. ej. `simple-1` con 20 en backend vs 5 en el JSON canónico de docs).
+- Siguiente paso del plan (Día 3): validar juego end-to-end con niveles remotos y ampliar catálogo seed a 10–15 niveles.
 
 ---
