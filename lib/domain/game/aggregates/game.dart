@@ -89,6 +89,16 @@ class Game {
   /// Movimientos restantes antes de agotar el par del nivel.
   int get remainingMoves => (level.parMoves - moveCount).clamp(0, level.parMoves);
 
+  /// Segundos transcurridos desde [startedAt] hasta [finishedAt] (o ahora si sigue activa).
+  ///
+  /// Usado al sincronizar progreso con el backend (`timeInSeconds` en `/progress/sync`).
+  int get elapsedSeconds {
+    final start = startedAt;
+    if (start == null) return 0;
+    final end = finishedAt ?? DateTime.now().toUtc();
+    return end.difference(start).inSeconds;
+  }
+
   /// Porcentaje de flechas extraídas respecto al total del tablero (0–100).
   ///
   /// Portado desde el dominio en español (`EstadoPartida.porcentajeCompletado()`

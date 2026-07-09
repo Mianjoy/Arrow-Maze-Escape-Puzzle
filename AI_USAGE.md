@@ -649,6 +649,62 @@ final next = Position(row: nextRow, column: nextCol);
 - `Position` con asserts no negativos exige comprobar límites del tablero **antes** de construir coordenadas intermedias; `nextPositionFrom` fallaba en flechas que salen por el borde (p. ej. `simple-1`).
 - `ListView.builder` no renderiza todos los `ListTile` a la vez: contar widgets en pantalla ≠ cantidad de niveles cargados; usar scroll o asserts sobre el repositorio.
 - La suite E2E con HTTP mock valida la cadena completa sin backend en CI; la demo manual con `ASSET_FALLBACK=false` sigue siendo el criterio de integración real.
-- Siguiente paso del plan (Día 4): login/registro + `POST /progress/sync` al ganar.
+
+---
+
+## Consulta #12 — Autenticación, progreso y leaderboard (Día 4 frontend)
+
+**Tarea o problema abordado.**
+
+Implementar el **Día 4** del plan de integración en Flutter: flujo de **registro e inicio de sesión** contra el backend, **persistencia del JWT**, **sincronización de progreso** al completar un nivel (`POST /progress/sync`) y **consulta de ranking** por nivel (`GET /leaderboard/:levelId`), con comentarios explicativos en todo el código nuevo y registro en `AI_USAGE.md`.
+
+**Herramienta de IA utilizada.**
+
+- Cursor AI (asistente integrado en el IDE).
+
+**Prompt o instrucción proporcionada.**
+
+> Implementar el bloque Día 4 (autenticación, progreso y leaderboard) en `Arrow-Maze-Escape-Puzzle`: pantallas de login/registro, almacenamiento de JWT, sincronización automática al ganar un nivel, vista de leaderboard, integración en `AppContainer`, tests automatizados y documentación dartdoc en español; actualizar `AI_USAGE.md` con redacción técnica profesional.
+
+**Resultado obtenido.**
+
+| Capa | Archivos principales | Responsabilidad |
+|------|---------------------|-----------------|
+| Aplicación | `auth_session.dart`, `leaderboard_entry.dart`, `i_token_storage.dart` | Modelos y puerto de persistencia de sesión |
+| Casos de uso | `login_user_use_case.dart`, `register_user_use_case.dart`, `logout_user_use_case.dart`, `restore_auth_session_use_case.dart`, `record_victory_use_case.dart`, `get_leaderboard_use_case.dart` | Orquestación auth, sync y ranking |
+| Infraestructura HTTP | `auth_api_client.dart`, `progress_api_client.dart`, `leaderboard_api_client.dart`, `api_exception.dart` | Clientes REST alineados al contrato del backend |
+| Almacenamiento | `shared_preferences_token_storage.dart`, `in_memory_token_storage.dart` | JWT en dispositivo / memoria (tests) |
+| Presentación | `auth_session_controller.dart`, `login_screen.dart`, `register_screen.dart`, `leaderboard_screen.dart` | UI de auth y ranking |
+| Integración | `main.dart`, `game_controller.dart`, `game_screen.dart`, `level_select_screen.dart` | Rutas, sync al ganar, logout |
+| Dominio | `game.dart` (`elapsedSeconds`) | Métrica para `timeInSeconds` en sync |
+| Tests | `auth_api_client_test.dart`, `record_victory_use_case_test.dart`, `test_auth_session.dart` | Cobertura de clientes y victoria |
+| E2E | `e2e_app_factory.dart` | Mock de auth/progress/leaderboard + sesión precargada |
+
+**Flujo implementado.**
+
+```text
+/login o /register → JWT en SharedPreferences
+       ↓
+/ (LevelSelect) → /game → victoria → RecordVictoryUseCase
+       ↓                              ↓
+logout                         POST /progress/sync (Bearer)
+       ↓
+/leaderboard/:levelId ← GET /leaderboard/:levelId
+```
+
+**Dependencia añadida.**
+
+- `shared_preferences: ^2.3.3` — persistencia local del token JWT.
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- (Pendiente de revisión tras merge.)
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- El registro en el backend no devuelve JWT; el caso de uso encadena `register` + `login` automáticamente.
+- La sincronización de progreso ocurre antes de mostrar el diálogo de victoria para reflejar éxito/error de sync.
+- Los tests E2E precargan sesión (`E2eAppFactory.e2eSession`) para no romper la suite sin pantalla de login.
+- Siguiente paso del plan (Día 5 / cierre): pulir UX (sesión expirada, errores de red), prueba en emulador Android y preparación de entrega.
 
 ---

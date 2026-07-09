@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../application/support/fake_repositories.dart';
+import '../support/test_auth_session.dart';
 
 /// Nivel de 1x2 con una única flecha en (0,0) apuntando a la derecha,
 /// sin obstáculos: se extrae (y gana la partida) en un solo toque.
@@ -33,6 +34,7 @@ void main() {
     final controller = GameController(
       startGameUseCase: StartGameUseCase(gameRepository: gameRepository),
       fireArrowUseCase: FireArrowUseCase(gameRepository: gameRepository),
+      authSessionController: buildTestAuthSessionController(),
     );
     final level = buildSingleArrowLevel();
 

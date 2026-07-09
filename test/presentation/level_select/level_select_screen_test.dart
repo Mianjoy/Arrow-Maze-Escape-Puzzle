@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../application/support/fake_repositories.dart';
+import '../support/test_auth_session.dart';
 
 void main() {
   testWidgets('muestra los niveles cargados por el controlador', (tester) async {
@@ -17,7 +18,12 @@ void main() {
 
     // Act
     await tester.pumpWidget(
-      MaterialApp(home: LevelSelectScreen(controller: controller)),
+      MaterialApp(
+        home: LevelSelectScreen(
+          controller: controller,
+          authSessionController: buildTestAuthSessionController(),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -35,7 +41,10 @@ void main() {
     // Act
     await tester.pumpWidget(
       MaterialApp(
-        home: LevelSelectScreen(controller: controller),
+        home: LevelSelectScreen(
+          controller: controller,
+          authSessionController: buildTestAuthSessionController(),
+        ),
         onGenerateRoute: (settings) {
           if (settings.name == '/game') {
             final pushedLevel = settings.arguments as Level;

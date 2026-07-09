@@ -41,8 +41,11 @@ Opcional: `--dart-define=API_BASE_URL=http://10.0.2.2:3000` en emulador Android.
 
 ### 3. Checklist manual
 
-- [ ] Lista muestra 15 niveles (`simple-1` … `level-15`)
-- [ ] `level-02`: un toque → victoria
+- [ ] Pantalla de login/registro funciona contra `npm run dev`
+- [ ] Tras login, lista muestra 15 niveles (`simple-1` … `level-15`)
+- [ ] `level-02`: un toque → victoria → progreso sincronizado
+- [ ] Botón **Leaderboard** en diálogo de victoria muestra ranking del nivel
+- [ ] Logout redirige a `/login`
 - [ ] `level-04`: tablero con muro visible
 - [ ] `level-09`: se puede perder al agotar movimientos
 - [ ] `level-15`: completable con varios disparos

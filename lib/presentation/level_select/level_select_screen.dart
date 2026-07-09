@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/domain.dart';
+import '../auth/auth_session_controller.dart';
 import 'level_select_controller.dart';
 
-/// Pantalla de selección de nivel: lista los niveles disponibles y navega
-/// a `/game` con el [Level] elegido como argumento de ruta.
+/// Pantalla de selección de nivel: lista niveles y navega a `/game`.
+///
+/// Muestra el usuario autenticado y permite cerrar sesión desde la barra superior.
 class LevelSelectScreen extends StatefulWidget {
-  /// Crea la pantalla con su [controller].
-  const LevelSelectScreen({super.key, required this.controller});
+  /// Crea la pantalla con controladores de niveles y sesión.
+  const LevelSelectScreen({
+    super.key,
+    required this.controller,
+    required this.authSessionController,
+  });
 
   /// Controlador que carga y expone los niveles.
   final LevelSelectController controller;
+
+  /// Controlador de sesión para mostrar usuario y logout.
+  final AuthSessionController authSessionController;
 
   @override
   State<LevelSelectScreen> createState() => _LevelSelectScreenState();
@@ -23,10 +32,33 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
     widget.controller.loadLevels();
   }
 
+  /// Cierra sesión y redirige al login.
+  Future<void> _logout() async {
+    await widget.authSessionController.logout();
+    if (!mounted) return;
+    Navigator.of(context).pushReplacementNamed('/login');
+  }
+
   @override
   Widget build(BuildContext context) {
+    final username = widget.authSessionController.session?.username ?? 'Guest';
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Arrow Maze — Select Level')),
+      appBar: AppBar(
+        title: const Text('Arrow Maze — Select Level'),
+        actions: [
+          Center(child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(username, style: Theme.of(context).textTheme.bodyMedium),
+          )),
+          IconButton(
+            key: const ValueKey('logout-button'),
+            tooltip: 'Sign out',
+            onPressed: _logout,
+            icon: const Icon(Icons.logout),
+          ),
+        ],
+      ),
       body: ListenableBuilder(
         listenable: widget.controller,
         builder: (context, _) {
@@ -52,7 +84,9 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               return ListTile(
                 key: ValueKey(level.id.value),
                 title: Text(level.id.value),
-                subtitle: Text('Difficulty: ${level.difficulty.name} · Par: ${level.parMoves} moves'),
+                subtitle: Text(
+                  'Difficulty: ${level.difficulty.name} · Par: ${level.parMoves} moves',
+                ),
                 trailing: const Icon(Icons.play_arrow),
                 onTap: () => Navigator.of(context).pushNamed('/game', arguments: level),
               );

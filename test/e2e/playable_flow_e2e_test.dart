@@ -38,6 +38,7 @@ void main() {
             return MaterialPageRoute(
               builder: (_) => LevelSelectScreen(
                 controller: container.buildLevelSelectController(),
+                authSessionController: container.authSessionController,
               ),
             );
         }

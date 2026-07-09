@@ -4,9 +4,10 @@ import '../../domain/domain.dart';
 import 'game_controller.dart';
 import 'widgets/board_view.dart';
 
-/// Pantalla de juego: renderiza el tablero de la partida y reacciona a
-/// victoria/derrota con un diálogo simple (pantallas dedicadas de
-/// victoria/derrota quedan para un follow-up; este es el motor básico).
+/// Pantalla de juego: renderiza el tablero y reacciona a victoria/derrota.
+///
+/// Tras ganar, ofrece ver el leaderboard del nivel y muestra el estado de
+/// sincronización de progreso con el backend.
 class GameScreen extends StatefulWidget {
   /// Crea la pantalla con su [controller] y el [level] a jugar.
   const GameScreen({super.key, required this.controller, required this.level});
@@ -56,6 +57,8 @@ class _GameScreenState extends State<GameScreen> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
+              if (widget.controller.isSyncingProgress)
+                const LinearProgressIndicator(),
               Expanded(
                 child: BoardView(
                   board: game.board,
@@ -72,17 +75,25 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  /// Muestra el diálogo de resultado con opción de leaderboard si ganó.
   void _showResultDialog(BuildContext context, Game game) {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(game.isWon ? 'Level cleared!' : 'Level failed'),
-        content: Text(
-          game.isWon
-              ? 'Score: ${game.score} · Stars: ${game.starsEarned?.value ?? 0}'
-              : game.lossMessage?.text ?? 'You lost.',
-        ),
+        content: Text(_buildDialogMessage(game)),
         actions: [
+          if (game.isWon)
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                Navigator.of(context).pushNamed(
+                  '/leaderboard',
+                  arguments: game.level.id.value,
+                );
+              },
+              child: const Text('Leaderboard'),
+            ),
           TextButton(
             onPressed: () {
               Navigator.of(dialogContext).pop();
@@ -101,5 +112,22 @@ class _GameScreenState extends State<GameScreen> {
         ],
       ),
     );
+  }
+
+  /// Construye el mensaje del diálogo incluyendo estado de sync si aplica.
+  String _buildDialogMessage(Game game) {
+    if (!game.isWon) {
+      return game.lossMessage?.text ?? 'You lost.';
+    }
+
+    final base = 'Score: ${game.score} · Stars: ${game.starsEarned?.value ?? 0}';
+    final syncError = widget.controller.syncError;
+    if (syncError != null) {
+      return '$base\n\nProgress sync failed: $syncError';
+    }
+    if (widget.controller.isSyncingProgress) {
+      return '$base\n\nSyncing progress...';
+    }
+    return '$base\n\nProgress saved.';
   }
 }
