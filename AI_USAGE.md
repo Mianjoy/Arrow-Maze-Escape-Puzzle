@@ -529,11 +529,11 @@ cd BackEnd-ArrowMaze && npm run dev
 
 ---
 
-## Consulta #10 — Prueba E2E jugable (Día 3 frontend)
+## Consulta #10 — Suite E2E jugable del catálogo remoto (Día 3 frontend)
 
 **Tarea o problema abordado.**
 
-Cerrar el entregable **“Prueba E2E jugable”** del Día 3: demostrar con tests automatizados y guía manual que el flujo **backend seed (15 niveles) → `GET /levels` → `RemoteLevelRepository` → selección → partida → victoria/derrota** funciona sin depender de assets legacy.
+Cerrar el entregable **“Prueba E2E jugable”** del Día 3: demostrar con tests automatizados y guía operativa que el flujo **seed (15 niveles) → `GET /levels` → `RemoteLevelRepository` → selección → partida → victoria/derrota** funciona sin depender de assets legacy.
 
 **Herramienta de IA utilizada.**
 
@@ -541,7 +541,7 @@ Cerrar el entregable **“Prueba E2E jugable”** del Día 3: demostrar con test
 
 **Prompt o instrucción proporcionada.**
 
-> Implementar la validación E2E del plan crítico (Día 3): suite de tests que simule el catálogo remoto de 15 niveles, verifique mapeo wire-format y jugabilidad (victoria en `level-02`, derrota por `parMoves`, flujo UI lista→juego), flag `ASSET_FALLBACK` para pruebas manuales, documentación en `docs/e2e/README.md`, comentarios dartdoc en español y registro técnico en `AI_USAGE.md`.
+> Implementar la validación E2E del bloque Día 3 en `Arrow-Maze-Escape-Puzzle`: suite de tests con catálogo remoto simulado (15 niveles), verificación de mapeo wire-format y jugabilidad (victoria en `level-02`, derrota por `parMoves`, flujo UI lista→juego), flag `ASSET_FALLBACK` para pruebas manuales, documentación en `docs/e2e/README.md`, comentarios dartdoc en español y registro técnico en `AI_USAGE.md`.
 
 **Resultado obtenido.**
 
@@ -553,7 +553,7 @@ Cerrar el entregable **“Prueba E2E jugable”** del Día 3: demostrar con test
 | Mock HTTP compartido | `test/support/mock_http_client.dart` | Reutilizado por tests de infra y E2E |
 | Tests catálogo | `test/e2e/remote_catalog_e2e_test.dart` | 15 niveles, orden, mapper |
 | Tests dominio | `test/e2e/wire_format_playability_e2e_test.dart` | Inicio de partida, win/lose wire-format |
-| Tests UI | `test/e2e/playable_flow_e2e_test.dart` | Lista remota → victoria `level-02`, derrota `level-09` |
+| Tests UI | `test/e2e/playable_flow_e2e_test.dart` | Lista remota, victoria `level-02`, derrota `level-09` |
 | Flag manual | `lib/main.dart` | `--dart-define=ASSET_FALLBACK=false` |
 | Guía | `docs/e2e/README.md` | Procedimiento CI + manual con backend real |
 
@@ -572,6 +572,83 @@ flutter run --dart-define=ASSET_FALLBACK=false   # manual contra npm run dev
 
 - Los tests E2E de UI usan HTTP simulado (no requieren backend en CI); la prueba manual con backend real sigue siendo necesaria para CORS/red en dispositivos físicos.
 - El solver greedy no demuestra solvabilidad óptima de todos los niveles; solo verifica un subconjunto (`level-08`, `level-15`) además del tutorial `level-02`.
+
+---
+
+## Consulta #11 — Verificación integral del sistema (Día 3 — ejecución E2E)
+
+**Tarea o problema abordado.**
+
+Ejecutar la **prueba de sistema completa** del plan de integración: correr la suite automatizada de Flutter (incluido `test/e2e`), validar la integración con el catálogo remoto de 15 niveles y corregir los defectos que impedían el paso en verde de `flutter test`, en coordinación con la verificación del backend (`127/127` tests, API con 15 niveles).
+
+**Herramienta de IA utilizada.**
+
+- Cursor AI (asistente integrado en el IDE).
+
+**Prompt o instrucción proporcionada.**
+
+> Ejecutar la verificación integral del sistema Arrow Maze: validar backend (`npm test`, `GET /levels` con 15 entradas) y frontend (`flutter analyze`, `flutter test`, suite `test/e2e`); corregir los fallos detectados durante la ejecución; documentar parámetros, resultados y lecciones en `AI_USAGE.md` con redacción técnica profesional.
+
+**Parámetros y comandos de verificación.**
+
+| Capa | Comando | Criterio de éxito |
+|------|---------|-------------------|
+| Frontend — análisis | `flutter analyze` | Sin issues |
+| Frontend — tests completos | `flutter test` | 49/49 passed |
+| Frontend — E2E | `flutter test test/e2e` | 11/11 passed |
+| Integración manual | `flutter run --dart-define=ASSET_FALLBACK=false` + `npm run dev` | Lista de 15 niveles remotos |
+| Backend (referencia cruzada) | `npm test` + `curl /levels` | 127 tests, array length 15 |
+
+**Normas de verificación E2E (obligatorias).**
+
+| Norma | Detalle |
+|-------|---------|
+| **Sin fallback a assets** | Tests E2E usan `E2eAppFactory` con `fallbackToAssets: false` |
+| **Fixture alineado al backend** | `SeedCatalogFixture` espeja `LEVEL_SEED_CATALOG` (15 ids) |
+| **Victoria mínima** | `level-02`: un disparo → diálogo `Level cleared!` |
+| **Derrota por par** | `level-09`: agotar `parMoves` → diálogo `Level failed` |
+| **ListView virtualizado** | Scroll con `scrollUntilVisible` antes de assert/tap en niveles 9+ |
+
+**Resultado obtenido (ejecución real).**
+
+| Métrica | Valor final |
+|---------|-------------|
+| `flutter analyze` | **No issues found** |
+| Tests totales | **49 passed**, 0 failed |
+| Suite `test/e2e` | **11 passed** (catálogo, dominio, UI) |
+| Backend cruzado | `GET /levels` → **15** niveles |
+
+**Correcciones aplicadas durante la verificación.**
+
+| Defecto detectado | Archivo | Corrección |
+|-------------------|---------|------------|
+| `_requireInt` no visible en `CellPositionDto` | `level_contract.dart` | Función top-level `_requireInt` compartida |
+| Assert `column >= 0` al salir del tablero | `collision_validator.dart` | Validar límites **antes** de instanciar `Position` |
+| `levelNumber` nullable en ordenación | `remote_level_repository.dart` | `(a.levelNumber ?? 0).compareTo(...)` |
+| UI E2E: `level-15` / `level-09` no visibles | `playable_flow_e2e_test.dart` | `scrollUntilVisible` + tests separados lista / juego |
+
+**Fragmento de corrección (`CollisionValidator`):**
+
+```dart
+final nextRow = current.row + arrow.direction.deltaRow;
+final nextCol = current.column + arrow.direction.deltaColumn;
+if (nextRow < 0 || nextCol < 0 ||
+    nextRow >= board.dimension.rows ||
+    nextCol >= board.dimension.columns) {
+  return null; // trayectoria libre hacia el exterior
+}
+final next = Position(row: nextRow, column: nextCol);
+```
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- (Pendiente de revisión tras merge.)
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- `Position` con asserts no negativos exige comprobar límites del tablero **antes** de construir coordenadas intermedias; `nextPositionFrom` fallaba en flechas que salen por el borde (p. ej. `simple-1`).
+- `ListView.builder` no renderiza todos los `ListTile` a la vez: contar widgets en pantalla ≠ cantidad de niveles cargados; usar scroll o asserts sobre el repositorio.
+- La suite E2E con HTTP mock valida la cadena completa sin backend en CI; la demo manual con `ASSET_FALLBACK=false` sigue siendo el criterio de integración real.
 - Siguiente paso del plan (Día 4): login/registro + `POST /progress/sync` al ganar.
 
 ---
