@@ -1,0 +1,97 @@
+import 'dart:ui';
+
+import '../../../domain/domain.dart';
+import '../../../contract/level_contract.dart';
+
+/// Utilidades para convertir flechas multi-celda en polilíneas dibujables.
+///
+/// Ordena cabeza y segmentos de cuerpo de cola a punta para que el
+/// [ArrowBoardPainter] trace un único trazo continuo con punta en la cabeza.
+abstract final class ArrowPathGeometry {
+  /// Máximo de segmentos de cuerpo permitidos por flecha (cabeza + 2 = 3 celdas).
+  static const int maxBodySegments = kMaxArrowBodySegments;
+
+  /// Máximo total de celdas que puede ocupar una flecha (cabeza incluida).
+  static const int maxCellsPerArrow = kMaxArrowBodySegments + 1;
+
+  /// Valida que [bodyLength] no supere [maxBodySegments].
+  ///
+  /// Lanza [FormatException] si el nivel JSON excede el límite de diseño.
+  static void validateBodyLength(int bodyLength, {required String arrowId}) {
+    if (bodyLength > maxBodySegments) {
+      throw FormatException(
+        'Arrow "$arrowId" has $bodyLength body segments; '
+        'maximum allowed is $maxBodySegments (3 cells total including head).',
+      );
+    }
+  }
+
+  /// Devuelve las posiciones ordenadas de la cola a la cabeza para dibujar el trazo.
+  ///
+  /// Recorre desde [Arrow.position] hacia los segmentos de [Arrow.body]
+  /// siguiendo adyacencia en el grid (soporta líneas rectas y esquinas en L).
+  static List<Position> tailToHead(Arrow arrow) {
+    if (arrow.body.isEmpty) {
+      return [arrow.position];
+    }
+
+    final orderedHeadToTail = <Position>[arrow.position];
+    final remaining = {...arrow.body};
+
+    var current = arrow.position;
+    while (remaining.isNotEmpty) {
+      final next = _pickAdjacent(current, remaining, arrow.direction);
+      if (next == null) {
+        // Fallback: añade el resto en orden arbitrario si el JSON es degenerado.
+        orderedHeadToTail.addAll(remaining);
+        break;
+      }
+      orderedHeadToTail.add(next);
+      remaining.remove(next);
+      current = next;
+    }
+
+    return orderedHeadToTail.reversed.toList();
+  }
+
+  /// Convierte una [Position] de grid al centro de su celda en coordenadas de lienzo.
+  static Offset cellCenter(
+    Position position, {
+    required double cellWidth,
+    required double cellHeight,
+  }) {
+    return Offset(
+      (position.column + 0.5) * cellWidth,
+      (position.row + 0.5) * cellHeight,
+    );
+  }
+
+  /// Elige la celda adyacente siguiente al encadenar el cuerpo de la flecha.
+  ///
+  /// Prioriza la celda alineada con la dirección opuesta al disparo (cola recta).
+  static Position? _pickAdjacent(
+    Position current,
+    Set<Position> candidates,
+    Direction direction,
+  ) {
+    final opposite = direction.opposite;
+    final preferred = current.translate(dRow: opposite.deltaRow, dCol: opposite.deltaColumn);
+    if (candidates.contains(preferred)) {
+      return preferred;
+    }
+
+    for (final candidate in candidates) {
+      if (_isAdjacent(current, candidate)) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  /// Indica si dos posiciones comparten lado en el grid (distancia Manhattan 1).
+  static bool _isAdjacent(Position a, Position b) {
+    final dRow = (a.row - b.row).abs();
+    final dCol = (a.column - b.column).abs();
+    return dRow + dCol == 1;
+  }
+}

@@ -123,6 +123,9 @@ class CellPositionDto {
   int get hashCode => Object.hash(row, col);
 }
 
+/// Máximo de segmentos de cuerpo por flecha (cabeza + cuerpo ≤ 3 celdas).
+const int kMaxArrowBodySegments = 2;
+
 /// Definición wire de una flecha: cabeza interactiva + segmentos de cuerpo.
 ///
 /// Corresponde a cada elemento del array `arrows` en [StructuredLevelJsonDto].
@@ -158,8 +161,16 @@ class StructuredArrowJsonDto {
             .toList()
         : <CellPositionDto>[];
 
+    final id = json['id'] as String;
+    if (body.length > kMaxArrowBodySegments) {
+      throw FormatException(
+        'Arrow "$id" has ${body.length} body segments; '
+        'maximum allowed is $kMaxArrowBodySegments (3 cells total including head).',
+      );
+    }
+
     return StructuredArrowJsonDto(
-      id: json['id'] as String,
+      id: id,
       direction: ArrowDirectionDto.fromWire(json['direction'] as String),
       head: CellPositionDto.fromJson(Map<String, dynamic>.from(json['head'] as Map)),
       body: body,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
 import '../auth/auth_session_controller.dart';
+import '../theme/app_colors.dart';
 import 'level_select_controller.dart';
 
 /// Pantalla de selección de nivel con indicadores de bloqueo, estrellas y progreso.
@@ -128,7 +129,9 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                 key: ValueKey(level.id.value),
                 leading: Icon(
                   unlocked ? (completed ? Icons.check_circle : Icons.lock_open) : Icons.lock,
-                  color: unlocked ? Colors.green : Colors.grey,
+                  color: unlocked
+                      ? (completed ? AppColors.success : AppColors.arrow)
+                      : AppColors.gridLine,
                 ),
                 title: Text(level.id.value),
                 subtitle: Text(

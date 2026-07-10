@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
 import '../auth/auth_session_controller.dart';
+import '../theme/app_colors.dart';
 
 /// Pantalla de inicio: título del juego, botón Jugar y acceso a Ajustes.
 class HomeScreen extends StatelessWidget {
@@ -33,7 +34,7 @@ class HomeScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.arrow_forward, size: 72, color: theme.colorScheme.primary),
+                Icon(Icons.grid_on, size: 72, color: AppColors.arrow),
                 const SizedBox(height: 24),
                 Text(
                   strings.appTitle,

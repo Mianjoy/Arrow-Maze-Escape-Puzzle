@@ -1134,3 +1134,42 @@ El backend ya podía sembrar niveles desde `levels/*.json` y sincronizarlos en c
 
 - `RefreshLevelsUseCase` depende de que la segunda llamada a `findAll()` vea datos distintos; en producción eso ocurre cuando el backend ya upserteó el JSON nuevo (watcher) y la app invalida caché antes de `GET /levels`.
 - Los niveles nuevos aparecen bloqueados hasta completar el anterior: `EnsureInitialProgressUseCase` no se re-ejecuta en el refresh (comportamiento deseado para no resetear progreso).
+
+---
+
+## Consulta #24 — Diseño visual minimalista: paleta Tollens, flechas multi-celda y tablero
+
+**Tarea o problema abordado.**
+
+Alinear la interfaz del cliente con la identidad visual acordada por el equipo (paleta Tollens minimalista + logo del laberinto): flechas dibujadas como trazos continuos de hasta **3 celdas** (cabeza + 2 segmentos de cuerpo), tablero con bordes redondeados y rejilla suave, y tema global coherente en lugar del `deepPurple` genérico de Material.
+
+**Herramienta de IA utilizada.**
+
+- Cursor Agent (Composer), con acceso a lectura/escritura del repositorio y ejecución de tests.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Implementar el rediseño visual del cliente Flutter según la paleta Tollens y el logo del laberinto: flechas con trazo continuo que abarquen hasta tres celdas del tablero, tablero minimalista con esquinas redondeadas, tema global coherente, validación del límite de segmentos en el contrato compartido, documentación dartdoc en español en cada función nueva, y registro en `AI_USAGE.md` con redacción técnica profesional.
+
+**Resultado obtenido.**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Paleta | `lib/presentation/theme/app_colors.dart` | Colores Tollens + acentos del logo (slate, rosa bloqueo, azul activo, verde éxito) |
+| Tema | `lib/presentation/theme/app_theme.dart` | `ThemeData` Material 3; wiring en `main.dart` |
+| Geometría | `lib/presentation/game/widgets/arrow_path_geometry.dart` | Ordena cola→cabeza; valida `body.length ≤ 2` |
+| Pintor | `lib/presentation/game/widgets/arrow_board_painter.dart` | `CustomPainter`: rejilla, muros, trazos gruesos y punta triangular |
+| Tablero | `lib/presentation/game/widgets/board_view.dart` | `Stack`: pintor + capa de toques transparente |
+| Contrato | `lib/contract/level_contract.dart` | `kMaxArrowBodySegments = 2`; rechaza JSON inválido en `fromJson` |
+| UI | `home_screen.dart`, `level_select_screen.dart` | Iconos y estados con `AppColors` |
+| Tests | `test/presentation/game/arrow_path_geometry_test.dart` | Orden L-shaped, línea recta, validación de límite |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Pendiente de revisión del equipo tras merge.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Separar **capa visual** (`CustomPaint`) de **capa de toques** (`GestureDetector` por celda) permite flechas multi-celda sin perder las `ValueKey` que usan los widget tests existentes.
+- El límite de 3 celdas debe validarse en el contrato wire y en el backend para que el pintor nunca reciba geometrías inesperadas.
+- Flechas en forma de L requieren encadenar segmentos por adyacencia, no solo ordenar por fila/columna.
