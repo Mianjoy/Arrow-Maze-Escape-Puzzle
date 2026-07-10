@@ -13,6 +13,7 @@ class CollisionValidator implements ICollisionValidator {
   /// Crea una instancia del validador de colisiones.
   const CollisionValidator();
 
+  /// Busca la primera celda que bloquea la trayectoria de [arrow] en [board].
   @override
   Position? findBlockingPosition({
     required Board board,

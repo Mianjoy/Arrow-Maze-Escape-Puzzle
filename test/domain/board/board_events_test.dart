@@ -20,8 +20,8 @@ void main() {
     return board;
   }
 
-  group('ArrowMovementEngine.attemptMove — eventos de dominio', () {
-    test('al extraer una flecha, registra un ArrowExtractedEvent', () {
+  group('ArrowMovementEngine.attemptMove — domain events', () {
+    test('should_emit_ArrowExtractedEvent_when_arrow_is_extracted', () {
       // Arrange: una flecha que puede salir del tablero sin obstáculos.
       const arrow = Arrow(
         id: Identifier('arrow-1'),
@@ -39,7 +39,7 @@ void main() {
       expect(outcome.board.domainEvents.single, isA<ArrowExtractedEvent>());
     });
 
-    test('al bloquear una flecha, registra un ArrowBlockedEvent', () {
+    test('should_emit_ArrowBlockedEvent_when_arrow_is_blocked', () {
       // Arrange: una flecha bloqueadora fija y una flecha móvil hacia ella.
       const blocker = Arrow(
         id: Identifier('blocker'),
@@ -62,7 +62,7 @@ void main() {
       expect(outcome.board.domainEvents.single, isA<ArrowBlockedEvent>());
     });
 
-    test('pullDomainEvents drena los eventos y devuelve un tablero sin ellos', () {
+    test('should_drain_events_via_pullDomainEvents_and_return_clean_board', () {
       // Arrange
       const arrow = Arrow(
         id: Identifier('arrow-1'),
@@ -81,8 +81,8 @@ void main() {
     });
   });
 
-  group('ArrowMovementEngine.attemptMoveAt — caso sin flecha', () {
-    test('devuelve noArrowAtCell si la celda tocada está vacía', () {
+  group('ArrowMovementEngine.attemptMoveAt — no arrow at cell', () {
+    test('should_return_noArrowAtCell_when_tapped_cell_is_empty', () {
       // Arrange: tablero sin ninguna flecha.
       final board = buildBoard(const []);
 
@@ -97,7 +97,7 @@ void main() {
       expect(outcome.board, same(board));
     });
 
-    test('delega en attemptMove si la celda tocada tiene una flecha', () {
+    test('should_delegate_to_attemptMove_when_tapped_cell_has_arrow', () {
       // Arrange
       const arrow = Arrow(
         id: Identifier('arrow-1'),

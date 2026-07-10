@@ -5,7 +5,7 @@ import 'package:test/test.dart';
 /// `Arrow.reset()` (originalmente `Flecha.reiniciar()`).
 void main() {
   group('Arrow.reset', () {
-    test('restaura la posición original y deja la flecha activa', () {
+    test('should_restore_original_position_and_keep_arrow_active', () {
       // Arrange: una flecha bloqueada, lejos de su posición original.
       const originalPosition = Position(row: 0, column: 0);
       const arrow = Arrow(
@@ -24,7 +24,7 @@ void main() {
       expect(result.isMovable, isTrue);
     });
 
-    test('también reinicia una flecha ya extraída', () {
+    test('should_reset_an_already_extracted_arrow', () {
       // Arrange
       const originalPosition = Position(row: 1, column: 2);
       const arrow = Arrow(

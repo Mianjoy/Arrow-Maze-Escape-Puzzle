@@ -3,7 +3,7 @@ import 'package:arrow_maze_escape_puzzle/interface_adapters/player_progress_json
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('PlayerProgressJsonMapper round-trip conserva desbloqueos y estrellas', () {
+  test('should_round_trip_PlayerProgress_preserving_unlocks_and_stars', () {
     const mapper = PlayerProgressJsonMapper();
     const playerId = Identifier('player-1');
     const levelId = Identifier('level-01');

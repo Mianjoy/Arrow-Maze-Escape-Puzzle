@@ -36,6 +36,7 @@ class CachedLevelRepository implements ILevelRepository {
 
   List<Level>? _cache;
 
+  /// Lista todos los niveles (memoria, red o última copia en disco).
   @override
   Future<List<Level>> findAll() async {
     final cached = _cache;
@@ -58,6 +59,7 @@ class CachedLevelRepository implements ILevelRepository {
     return levels;
   }
 
+  /// Obtiene un nivel por [id] desde el catálogo ya cargado.
   @override
   Future<Level?> findById(Identifier id) async {
     final levels = await findAll();
@@ -65,6 +67,12 @@ class CachedLevelRepository implements ILevelRepository {
       if (level.id == id) return level;
     }
     return null;
+  }
+
+  /// Descarta la caché en memoria para forzar una nueva descarga.
+  @override
+  void invalidateCache() {
+    _cache = null;
   }
 
   /// Lee el catálogo cacheado en disco, o `null` si nunca se guardó ninguno.

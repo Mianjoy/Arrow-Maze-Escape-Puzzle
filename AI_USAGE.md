@@ -1096,3 +1096,41 @@ El único aspecto transversal documentado en el cliente eran los domain events; 
 
 - Extraer una interfaz de un caso de uso ya en uso (`FireArrowUseCase` → `IFireArrowUseCase`) fue un cambio de bajo riesgo porque `GameController` ya lo recibía por constructor (inyección de dependencias existente) — solo cambió el tipo del parámetro, cero cambios de lógica en `GameController` ni en las pantallas.
 - Reutilizar el patrón Decorator (ya usado en `CachedLevelRepository`) para el aspecto AOP, en vez de introducir un mecanismo distinto, mantiene la arquitectura consistente y es más fácil de defender en la sustentación: "usamos el mismo patrón para dos problemas distintos —caché e instrumentación— porque ambos son, estructuralmente, 'añadir comportamiento a una implementación existente sin modificarla'".
+
+---
+
+## Consulta #23 — Hot-reload del catálogo: botón de actualización y notificación en selección de niveles
+
+**Tarea o problema abordado.**
+
+El backend ya podía sembrar niveles desde `levels/*.json` y sincronizarlos en caliente (Observer en el repo `BackEnd-ArrowMaze`, Consulta #16), pero el cliente seguía mostrando el catálogo cacheado en memoria hasta reiniciar la app. Se solicitó un botón simple en la pantalla de niveles que fuerce `GET /levels`, actualice la lista y notifique al usuario si hubo niveles nuevos.
+
+**Herramienta de IA utilizada.**
+
+- Cursor Agent (Composer), con acceso a lectura/escritura del repositorio y ejecución de tests.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Complementar el cliente Flutter con un botón de actualización del catálogo en la pantalla de selección de niveles: invalidar la caché del repositorio, volver a descargar `GET /levels`, refrescar la UI y mostrar una notificación (SnackBar) con el resultado; añadir i18n, tests y documentación en `AI_USAGE.md` con redacción técnica profesional, alineado con el hot-reload del backend vía patrón Observer.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Puerto | `ILevelRepository.invalidateCache()` | Contrato para descartar caché en memoria |
+| Infra | `CachedLevelRepository`, `RemoteLevelRepository` | Implementación de invalidación |
+| Caso de uso | `RefreshLevelsUseCase` + `LevelCatalogRefreshResult` | Compara ids antes/después del refresh |
+| Controlador | `LevelSelectController.refreshCatalog()` | Orquesta refresh y reordena niveles |
+| UI | `level_select_screen.dart` | `IconButton(Icons.refresh)` + `SnackBar` |
+| i18n | `app_strings.dart` | `refreshLevelsTooltip`, `levelsCatalogUpdated`, etc. |
+| Wiring | `main.dart` | Inyecta `RefreshLevelsUseCase` en el controlador |
+| Tests | `refresh_levels_use_case_test.dart`, `cached_level_repository_test.dart`, `level_select_screen_test.dart` | Conteos, invalidación HTTP y notificación visible |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Pendiente de revisión del equipo tras merge.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- `RefreshLevelsUseCase` depende de que la segunda llamada a `findAll()` vea datos distintos; en producción eso ocurre cuando el backend ya upserteó el JSON nuevo (watcher) y la app invalida caché antes de `GET /levels`.
+- Los niveles nuevos aparecen bloqueados hasta completar el anterior: `EnsureInitialProgressUseCase` no se re-ejecuta en el refresh (comportamiento deseado para no resetear progreso).

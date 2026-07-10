@@ -17,6 +17,9 @@ class FakeLevelRepository implements ILevelRepository {
     }
     return null;
   }
+
+  @override
+  void invalidateCache() {}
 }
 
 /// Fake en memoria de [IGameRepository] para pruebas de casos de uso.

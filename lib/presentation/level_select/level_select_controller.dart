@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 
 import '../../application/models/auth_session.dart';
+import '../../application/models/level_catalog_refresh_result.dart';
 import '../../application/use_cases/ensure_initial_progress_use_case.dart';
 import '../../application/use_cases/get_player_progress_use_case.dart';
 import '../../application/use_cases/load_levels_use_case.dart';
 import '../../application/use_cases/pull_remote_progress_use_case.dart';
+import '../../application/use_cases/refresh_levels_use_case.dart';
 import '../../application/use_cases/sync_pending_progress_use_case.dart';
 import '../../domain/domain.dart';
 
@@ -13,6 +15,7 @@ class LevelSelectController extends ChangeNotifier {
   /// Crea el controlador con casos de uso y el [playerId] del jugador activo.
   LevelSelectController({
     required LoadLevelsUseCase loadLevelsUseCase,
+    required RefreshLevelsUseCase refreshLevelsUseCase,
     required EnsureInitialProgressUseCase ensureInitialProgressUseCase,
     required GetPlayerProgressUseCase getPlayerProgressUseCase,
     required Identifier playerId,
@@ -20,6 +23,7 @@ class LevelSelectController extends ChangeNotifier {
     PullRemoteProgressUseCase? pullRemoteProgressUseCase,
     AuthSession? session,
   })  : _loadLevelsUseCase = loadLevelsUseCase,
+        _refreshLevelsUseCase = refreshLevelsUseCase,
         _ensureInitialProgressUseCase = ensureInitialProgressUseCase,
         _getPlayerProgressUseCase = getPlayerProgressUseCase,
         _playerId = playerId,
@@ -28,6 +32,7 @@ class LevelSelectController extends ChangeNotifier {
         _session = session;
 
   final LoadLevelsUseCase _loadLevelsUseCase;
+  final RefreshLevelsUseCase _refreshLevelsUseCase;
   final EnsureInitialProgressUseCase _ensureInitialProgressUseCase;
   final GetPlayerProgressUseCase _getPlayerProgressUseCase;
   final Identifier _playerId;
@@ -38,6 +43,7 @@ class LevelSelectController extends ChangeNotifier {
   List<Level> _levels = const [];
   PlayerProgress? _progress;
   bool _isLoading = false;
+  bool _isRefreshing = false;
   bool _isOffline = false;
   Object? _error;
 
@@ -49,6 +55,9 @@ class LevelSelectController extends ChangeNotifier {
 
   /// Indica si la carga está en curso.
   bool get isLoading => _isLoading;
+
+  /// Indica si se está refrescando el catálogo desde el servidor.
+  bool get isRefreshing => _isRefreshing;
 
   /// Indica si la última carga no pudo contactar al servidor (modo offline).
   ///
@@ -67,13 +76,7 @@ class LevelSelectController extends ChangeNotifier {
 
     try {
       _levels = await _loadLevelsUseCase.execute();
-      _levels = List<Level>.from(_levels)
-        ..sort((a, b) {
-          final an = a.levelNumber ?? 0;
-          final bn = b.levelNumber ?? 0;
-          if (an != bn) return an.compareTo(bn);
-          return a.id.value.compareTo(b.id.value);
-        });
+      _levels = _sortLevels(_levels);
       _progress = await _ensureInitialProgressUseCase.execute(_playerId);
     } catch (error) {
       _error = error;
@@ -83,6 +86,40 @@ class LevelSelectController extends ChangeNotifier {
     }
 
     await _syncWithServer();
+  }
+
+  /// Fuerza `GET /levels` (invalida caché) y actualiza la lista mostrada.
+  ///
+  /// Devuelve conteos para que la UI muestre una notificación al usuario.
+  Future<LevelCatalogRefreshResult?> refreshCatalog() async {
+    if (_isRefreshing) return null;
+
+    _isRefreshing = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final result = await _refreshLevelsUseCase.execute();
+      _levels = await _loadLevelsUseCase.execute();
+      _levels = _sortLevels(_levels);
+      return result;
+    } catch (error) {
+      _error = error;
+      return null;
+    } finally {
+      _isRefreshing = false;
+      notifyListeners();
+    }
+  }
+
+  List<Level> _sortLevels(List<Level> levels) {
+    return List<Level>.from(levels)
+      ..sort((a, b) {
+        final an = a.levelNumber ?? 0;
+        final bn = b.levelNumber ?? 0;
+        if (an != bn) return an.compareTo(bn);
+        return a.id.value.compareTo(b.id.value);
+      });
   }
 
   /// Sincroniza con el servidor de forma best-effort: descarga y fusiona el

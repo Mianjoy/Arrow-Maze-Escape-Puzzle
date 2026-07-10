@@ -37,6 +37,27 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
     Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
   }
 
+  /// Pide al servidor el catálogo actualizado y muestra un SnackBar con el resultado.
+  Future<void> _refreshLevels(AppStrings strings) async {
+    final result = await widget.controller.refreshCatalog();
+    if (!mounted) return;
+
+    if (result == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.levelsRefreshFailed)),
+      );
+      return;
+    }
+
+    final message = result.hasNewLevels
+        ? strings.levelsCatalogUpdated(result.newCount, result.addedCount)
+        : strings.levelsRefreshedUpToDate(result.newCount);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = AppStringsScope.of(context);
@@ -50,6 +71,20 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
           onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false),
         ),
         actions: [
+          IconButton(
+            key: const ValueKey('refresh-levels-button'),
+            tooltip: strings.refreshLevelsTooltip,
+            onPressed: widget.controller.isRefreshing
+                ? null
+                : () => _refreshLevels(strings),
+            icon: widget.controller.isRefreshing
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh),
+          ),
           if (username.isNotEmpty)
             Center(
               child: Padding(

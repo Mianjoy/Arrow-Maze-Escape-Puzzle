@@ -109,6 +109,7 @@ void main() {
       );
 
       // Act
+      repository.invalidateCache();
       final levels = await repository.findAll();
 
       // Assert
@@ -118,7 +119,27 @@ void main() {
       expect((stored.first as Map)['id'], 'simple-1');
     });
 
-    test('findById busca en el catálogo ya resuelto por findAll', () async {
+    test('should_force_new_http_request_on_next_load_after_invalidateCache', () async {
+      final prefs = await SharedPreferences.getInstance();
+      var callCount = 0;
+      final repository = buildRepository(
+        (request) async {
+          callCount += 1;
+          return http.Response(jsonEncode([simple1Json]), 200);
+        },
+        prefs: prefs,
+      );
+
+      await repository.findAll();
+      await repository.findAll();
+      expect(callCount, 1);
+
+      repository.invalidateCache();
+      await repository.findAll();
+      expect(callCount, 2);
+    });
+
+    test('should_find_by_id_within_catalog_resolved_by_findAll', () async {
       // Arrange
       final prefs = await SharedPreferences.getInstance();
       final repository = buildRepository(

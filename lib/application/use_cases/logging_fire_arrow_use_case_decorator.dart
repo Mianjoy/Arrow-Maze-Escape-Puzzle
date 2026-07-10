@@ -21,6 +21,7 @@ class LoggingFireArrowUseCaseDecorator implements IFireArrowUseCase {
   final IFireArrowUseCase _inner;
   final IUseCaseLogger _logger;
 
+  /// Delega el disparo en [inner] registrando trazas de inicio, fin y error.
   @override
   Future<({Game game, MoveResult result})> execute({
     required Game game,

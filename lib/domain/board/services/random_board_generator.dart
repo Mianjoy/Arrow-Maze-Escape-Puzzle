@@ -21,6 +21,7 @@ class RandomBoardGenerator implements IRandomBoardGenerator {
 
   final BoardFactory _boardFactory;
 
+  /// Genera un tablero con flechas aleatorias según [config].
   @override
   Board generate(BoardGenerationConfig config) {
     final random = Random(config.seed);

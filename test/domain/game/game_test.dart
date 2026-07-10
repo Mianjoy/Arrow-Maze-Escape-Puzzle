@@ -45,7 +45,7 @@ void main() {
   }
 
   group('Game.pause / Game.resume', () {
-    test('pause() transiciona de inProgress a paused', () {
+    test('should_transition_pause_from_inProgress_to_paused', () {
       // Arrange
       final game = buildStartedGame();
 
@@ -57,7 +57,7 @@ void main() {
       expect(paused.isPlayable, isFalse);
     });
 
-    test('resume() vuelve de paused a inProgress', () {
+    test('should_transition_resume_from_paused_to_inProgress', () {
       // Arrange
       final paused = buildStartedGame().pause();
 
@@ -69,7 +69,7 @@ void main() {
       expect(resumed.isPlayable, isTrue);
     });
 
-    test('pause() lanza InvalidMoveException si la partida no está en progreso', () {
+    test('should_throw_InvalidMoveException_when_pause_called_outside_inProgress', () {
       // Arrange: una partida recién creada, aún no iniciada (status ready).
       final game = Game(
         id: const Identifier('game-test'),
@@ -82,7 +82,7 @@ void main() {
       expect(() => game.pause(), throwsA(isA<InvalidMoveException>()));
     });
 
-    test('resume() lanza InvalidMoveException si la partida no está pausada', () {
+    test('should_throw_InvalidMoveException_when_resume_called_outside_paused', () {
       // Arrange
       final game = buildStartedGame();
 
@@ -91,10 +91,10 @@ void main() {
     });
   });
 
-  group('Game.performMove — puntaje y porcentaje de progreso', () {
+  group('Game.performMove — score and progress percentage', () {
     const engine = ArrowMovementEngine(collisionValidator: CollisionValidator());
 
-    test('suma puntos al extraer una flecha y refleja el 100% de avance', () {
+    test('should_add_score_on_arrow_extract_and_reach_100_percent_progress', () {
       // Arrange
       final game = buildStartedGame();
 

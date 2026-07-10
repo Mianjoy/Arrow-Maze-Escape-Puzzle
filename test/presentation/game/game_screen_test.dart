@@ -30,7 +30,7 @@ Level buildSingleArrowLevel() {
 }
 
 void main() {
-  testWidgets('navega a pantalla de victoria al vaciar el tablero', (tester) async {
+  testWidgets('should_navigate_to_victory_screen_when_board_is_cleared', (tester) async {
     final gameRepository = FakeGameRepository();
     final controller = GameController(
       startGameUseCase: StartGameUseCase(gameRepository: gameRepository),

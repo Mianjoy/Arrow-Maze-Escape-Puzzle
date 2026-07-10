@@ -29,7 +29,7 @@ void main() {
   }
 
   group('FireArrowUseCase', () {
-    test('extrae la flecha y persiste la partida actualizada cuando la celda tiene una flecha con camino libre', () async {
+    test('should_extract_arrow_and_persist_game_when_cell_has_clear_path', () async {
       // Arrange
       final gameRepository = FakeGameRepository();
       final useCase = FireArrowUseCase(gameRepository: gameRepository);
@@ -47,7 +47,7 @@ void main() {
       expect(gameRepository.savedGames, hasLength(1));
     });
 
-    test('no muta el juego ni persiste nada cuando se toca una celda vacía', () async {
+    test('should_not_mutate_or_persist_game_when_empty_cell_is_tapped', () async {
       // Arrange
       final gameRepository = FakeGameRepository();
       final useCase = FireArrowUseCase(gameRepository: gameRepository);
@@ -65,7 +65,7 @@ void main() {
       expect(gameRepository.savedGames, isEmpty);
     });
 
-    test('una flecha bloqueada sigue siendo re-disparable y cada intento cuenta como movimiento', () async {
+    test('should_allow_retry_on_blocked_arrow_and_count_each_attempt_as_move', () async {
       // Arrange: dos flechas enfrentadas en fila 0 de un tablero 1x2 — se
       // bloquean mutuamente (ninguna puede salir jamás).
       var board = const BoardFactory().createEmpty(
@@ -107,7 +107,7 @@ void main() {
       expect(secondAttempt.game.moveCount, firstAttempt.game.moveCount + 1);
     });
 
-    test('una flecha bloqueada se puede extraer una vez que se despeja la flecha que la bloqueaba', () async {
+    test('should_extract_blocked_arrow_after_blocking_arrow_is_cleared', () async {
       // Arrange: tablero 1x3. arrow-b en (0,1) apunta a la derecha (sale
       // limpio); arrow-a en (0,0) apunta a la derecha pero la bloquea arrow-b.
       var board = const BoardFactory().createEmpty(

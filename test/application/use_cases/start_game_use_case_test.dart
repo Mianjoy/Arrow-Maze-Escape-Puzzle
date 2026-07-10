@@ -6,7 +6,7 @@ import '../support/fake_repositories.dart';
 
 void main() {
   group('StartGameUseCase', () {
-    test('crea la partida en estado inProgress y la persiste', () async {
+    test('should_create_game_in_inProgress_state_and_persist_it', () async {
       // Arrange
       final level = buildTestLevel();
       final gameRepository = FakeGameRepository();

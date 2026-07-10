@@ -24,9 +24,11 @@ class SharedPreferencesAppSettings implements IAppSettings {
     return settings;
   }
 
+  /// Indica si el audio está silenciado.
   @override
   bool get isMuted => _muted;
 
+  /// Idioma activo de la interfaz.
   @override
   Locale get locale => _locale;
 

@@ -32,7 +32,7 @@ void main() {
   const session = AuthSession(token: 'tok', userId: 'u1', username: 'p1');
   const config = ApiConfig(baseUrl: 'http://test');
 
-  test('RecordVictoryUseCase guarda progreso local y llama POST /progress/sync', () async {
+  test('should_save_local_progress_and_call_POST_progress_sync', () async {
     var syncCalled = false;
     final client = MockHttpClient((request) async {
       expect(request.method, 'POST');
