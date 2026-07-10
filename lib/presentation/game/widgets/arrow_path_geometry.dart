@@ -8,7 +8,7 @@ import '../../../contract/level_contract.dart';
 /// Ordena cabeza y segmentos de cuerpo de cola a punta para que el
 /// [ArrowBoardPainter] trace un único trazo continuo con punta en la cabeza.
 abstract final class ArrowPathGeometry {
-  /// Máximo de segmentos de cuerpo permitidos por flecha (cabeza + 2 = 3 celdas).
+  /// Máximo de segmentos de cuerpo permitidos por flecha (ver [kMaxArrowBodySegments]).
   static const int maxBodySegments = kMaxArrowBodySegments;
 
   /// Máximo total de celdas que puede ocupar una flecha (cabeza incluida).
@@ -21,7 +21,8 @@ abstract final class ArrowPathGeometry {
     if (bodyLength > maxBodySegments) {
       throw FormatException(
         'Arrow "$arrowId" has $bodyLength body segments; '
-        'maximum allowed is $maxBodySegments (3 cells total including head).',
+        'maximum allowed is $maxBodySegments '
+        '($maxCellsPerArrow cells total including head).',
       );
     }
   }
@@ -75,9 +76,17 @@ abstract final class ArrowPathGeometry {
     Direction direction,
   ) {
     final opposite = direction.opposite;
-    final preferred = current.translate(dRow: opposite.deltaRow, dCol: opposite.deltaColumn);
-    if (candidates.contains(preferred)) {
-      return preferred;
+    final preferredRow = current.row + opposite.deltaRow;
+    final preferredCol = current.column + opposite.deltaColumn;
+    // `Position` exige coordenadas no negativas; cerca del borde del tablero
+    // esta "adivinanza" de la celda en línea recta puede caer fuera de la
+    // rejilla (fila/columna negativa), así que se valida antes de construirla
+    // en vez de dejar que el assert del constructor aborte el pintado.
+    if (preferredRow >= 0 && preferredCol >= 0) {
+      final preferred = Position(row: preferredRow, column: preferredCol);
+      if (candidates.contains(preferred)) {
+        return preferred;
+      }
     }
 
     for (final candidate in candidates) {

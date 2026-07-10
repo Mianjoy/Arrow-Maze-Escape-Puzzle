@@ -123,8 +123,14 @@ class CellPositionDto {
   int get hashCode => Object.hash(row, col);
 }
 
-/// Máximo de segmentos de cuerpo por flecha (cabeza + cuerpo ≤ 3 celdas).
-const int kMaxArrowBodySegments = 2;
+/// Máximo de segmentos de cuerpo por flecha (cabeza + cuerpo ≤ 6 celdas).
+///
+/// El nivel canónico `simple-1` (compartido con el backend en
+/// `docs/levels/simple-1.json` / `BackEnd-ArrowMaze/levels/01-simple-1.json`)
+/// tiene flechas con 5 segmentos de cuerpo; el límite debe cubrirlas. El
+/// trazado (`ArrowPathGeometry.tailToHead`) sigue adyacencias celda a celda
+/// sin asumir una única curva, así que soporta trazos con varios giros.
+const int kMaxArrowBodySegments = 5;
 
 /// Definición wire de una flecha: cabeza interactiva + segmentos de cuerpo.
 ///
@@ -165,7 +171,8 @@ class StructuredArrowJsonDto {
     if (body.length > kMaxArrowBodySegments) {
       throw FormatException(
         'Arrow "$id" has ${body.length} body segments; '
-        'maximum allowed is $kMaxArrowBodySegments (3 cells total including head).',
+        'maximum allowed is $kMaxArrowBodySegments '
+        '(${kMaxArrowBodySegments + 1} cells total including head).',
       );
     }
 

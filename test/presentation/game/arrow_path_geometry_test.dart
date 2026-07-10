@@ -40,7 +40,10 @@ void main() {
 
     test('should_throw_when_body_exceeds_max_segments', () {
       expect(
-        () => ArrowPathGeometry.validateBodyLength(3, arrowId: 'x'),
+        () => ArrowPathGeometry.validateBodyLength(
+          ArrowPathGeometry.maxBodySegments + 1,
+          arrowId: 'x',
+        ),
         throwsFormatException,
       );
     });
