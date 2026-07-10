@@ -9,7 +9,8 @@ import 'arrow_path_geometry.dart';
 /// Pinta el tablero completo: rejilla, muros y flechas como trazos continuos.
 ///
 /// Inspirado en el logo del laberinto: líneas gruesas con extremos redondeados
-/// y punta triangular en la cabeza. Cada flecha puede abarcar hasta 3 celdas.
+/// y punta triangular en la cabeza. Cada flecha puede abarcar cualquier
+/// cantidad de celdas (cabeza + al menos 1 celda de cuerpo).
 class ArrowBoardPainter extends CustomPainter {
   /// Crea el painter para [board] con el tamaño de celda ya calculado.
   const ArrowBoardPainter({

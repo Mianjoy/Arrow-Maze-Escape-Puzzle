@@ -1173,3 +1173,39 @@ Alinear la interfaz del cliente con la identidad visual acordada por el equipo (
 - Separar **capa visual** (`CustomPaint`) de **capa de toques** (`GestureDetector` por celda) permite flechas multi-celda sin perder las `ValueKey` que usan los widget tests existentes.
 - El límite de 3 celdas debe validarse en el contrato wire y en el backend para que el pintor nunca reciba geometrías inesperadas.
 - Flechas en forma de L requieren encadenar segmentos por adyacencia, no solo ordenar por fila/columna.
+
+---
+
+## Consulta #25 — Flechas de longitud arbitraria, `optimalMoves` desde el backend y fix de navegación en Retry
+
+**Tarea o problema abordado.**
+
+Tres problemas encontrados al probar la app con niveles reales de mayor tamaño y variedad: (1) el límite de 3 celdas por flecha (Consulta #24) era una limitación visual mal convertida en regla de negocio — la regla real es "mínimo 1 celda de cuerpo, sin máximo"; (2) `LevelDtoMapper.fromDto` recalculaba la ruta óptima con un BFS exhaustivo sobre el espacio de estados al cargar cada nivel, lo que congelaba la pestaña completa con niveles de muchas flechas (48 en un caso real); (3) el botón "Reintentar" de la pantalla de derrota hacía `Navigator.pop()`, lo que revelaba la instancia original (y desactualizada) de `LevelSelectScreen` en vez de reabrir el nivel — causando que niveles ya superados aparecieran como no completados.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Claude Sonnet 5), sesión interactiva de terminal con acceso de lectura/escritura al repositorio, ejecución de `flutter test` y control de versiones.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Solucionar que las flechas tengan cualquier longitud (no solo 5); deben tener al menos una cabeza y una celda de cuerpo. El cliente se congela al cargar niveles grandes — mover el cálculo de la ruta óptima al backend. Si estoy jugando el nivel 19 y lo superó, juego el 20 y lo superó, pero pierdo en el 21 y le doy retry, no reabre el nivel 21 sino que sale a la pantalla de niveles y el 19/20 aparecen como no superados.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Contrato | `lib/contract/level_contract.dart` | `kMinArrowBodySegments = 1`; `optimalMoves` opcional, leído del servidor |
+| Mapper | `lib/interface_adapters/level_dto_mapper.dart` | Ya no ejecuta `ShortestPathCalculator`; usa `dto.optimalMoves ?? arrows.length` |
+| Navegación | `lib/presentation/result/defeat_screen.dart` | El botón Retry ahora hace `pushReplacementNamed('/game', arguments: level)` en vez de `pop()` |
+| Tests | `level_dto_mapper_test.dart`, `defeat_screen_test.dart` | Cobertura del respaldo `arrows.length`, del valor del servidor, y de la navegación de Retry |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- El equipo decidió explícitamente no mantener una verificación de solvabilidad redundante en el cliente tras mover `optimalMoves` al backend, confiando en que el backend ya valida cada nivel antes de aceptarlo (single source of truth).
+- Se identificó que `ShortestPathCalculator` sigue siendo necesario para `LevelFactory` (generación procedural de niveles, camino distinto al de carga desde el backend) y se dejó sin tocar.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Un límite de validación "copiado" de una limitación visual en lugar de derivado de la regla de negocio real (cada disparo retira exactamente una flecha, así que el óptimo siempre es `arrows.length`) es fácil de introducir sin darse cuenta, y solo se detectó al medir con datos reales.
+- Todo el flujo Game→Victory→Game→…→Defeat usa `pushReplacementNamed`, así que cualquier pantalla que necesite "volver" debe forzar una ruta nueva en vez de `pop()`, o revelará una instancia congelada de la pantalla anterior — el equipo ya había resuelto esto para los botones "volver a niveles", pero se pasó por alto en "Retry".
+- Medir antes de optimizar: se verificó con un script aislado que la validación de solubilidad del backend tarda milisegundos incluso con 48 flechas, evitando construir una optimización (caché por hash de contenido) que no hacía falta todavía.

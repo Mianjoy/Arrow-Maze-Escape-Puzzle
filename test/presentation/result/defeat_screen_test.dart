@@ -78,31 +78,45 @@ void main() {
     expect(find.textContaining('perdido'), findsOneWidget);
   });
 
-  testWidgets('should_restart_the_same_level_and_pop_when_retry_is_tapped', (tester) async {
+  testWidgets('should_push_a_fresh_game_route_for_the_same_level_when_retry_is_tapped', (tester) async {
     // Arrange
     final gameRepository = FakeGameRepository();
-    final level = _buildLosableLevel();
     final controller = GameController(
       startGameUseCase: StartGameUseCase(gameRepository: gameRepository),
       fireArrowUseCase: FireArrowUseCase(gameRepository: gameRepository),
       authSessionController: buildTestAuthSessionController(),
       audioService: NoOpAudioService(),
     );
-    await controller.startGame(level);
     final lostGame = _buildLostGame();
+
+    // No usamos `pop()` a propósito: en la app real, todo el flujo
+    // Game→Victory→Game→...→Defeat usa `pushReplacementNamed`, así que
+    // debajo de DefeatScreen sigue la instancia original de
+    // LevelSelectScreen (con progreso desactualizado), no la partida. Este
+    // fake router registra `/game` para capturar la intención de
+    // navegación sin depender del wiring real de GameScreen.
+    String? pushedRouteName;
+    Object? pushedArguments;
 
     await tester.pumpWidget(
       AppStringsScope(
         strings: const AppStringsEs(),
         child: MaterialApp(
-          home: Navigator(
-            onGenerateRoute: (settings) => MaterialPageRoute(
-              builder: (_) => DefeatScreen(
-                args: DefeatScreenArgs(game: lostGame),
-                gameController: controller,
-              ),
-            ),
-          ),
+          initialRoute: '/defeat',
+          onGenerateRoute: (settings) {
+            if (settings.name == '/defeat') {
+              return MaterialPageRoute(
+                settings: settings,
+                builder: (_) => DefeatScreen(
+                  args: DefeatScreenArgs(game: lostGame),
+                  gameController: controller,
+                ),
+              );
+            }
+            pushedRouteName = settings.name;
+            pushedArguments = settings.arguments;
+            return MaterialPageRoute(settings: settings, builder: (_) => const SizedBox());
+          },
         ),
       ),
     );
@@ -111,9 +125,10 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('defeat-retry')));
     await tester.pumpAndSettle();
 
-    // Assert: a fresh (non-lost) game was started on the same level.
-    expect(controller.game, isNotNull);
-    expect(controller.game!.isLost, isFalse);
-    expect(controller.game!.level.id, level.id);
+    // Assert: navigated to a fresh `/game` route for the same level, not
+    // popped back to whatever sits below in the stack.
+    expect(pushedRouteName, '/game');
+    expect(pushedArguments, isA<Level>());
+    expect((pushedArguments! as Level).id, lostGame.level.id);
   });
 }

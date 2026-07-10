@@ -123,14 +123,14 @@ class CellPositionDto {
   int get hashCode => Object.hash(row, col);
 }
 
-/// Máximo de segmentos de cuerpo por flecha (cabeza + cuerpo ≤ 6 celdas).
+/// Mínimo de segmentos de cuerpo por flecha: una celda suelta sin cuerpo no
+/// es una flecha jugable (cabeza + al menos 1 celda de cuerpo).
 ///
-/// El nivel canónico `simple-1` (compartido con el backend en
-/// `docs/levels/simple-1.json` / `BackEnd-ArrowMaze/levels/01-simple-1.json`)
-/// tiene flechas con 5 segmentos de cuerpo; el límite debe cubrirlas. El
-/// trazado (`ArrowPathGeometry.tailToHead`) sigue adyacencias celda a celda
-/// sin asumir una única curva, así que soporta trazos con varios giros.
-const int kMaxArrowBodySegments = 5;
+/// No hay máximo: el trazado (`ArrowPathGeometry.tailToHead`) sigue
+/// adyacencias celda a celda sin asumir una única curva, así que soporta
+/// trazos de longitud arbitraria con varios giros. El backend
+/// (`arrowPlacementValidator`) aplica la misma regla del lado del servidor.
+const int kMinArrowBodySegments = 1;
 
 /// Definición wire de una flecha: cabeza interactiva + segmentos de cuerpo.
 ///
@@ -168,11 +168,10 @@ class StructuredArrowJsonDto {
         : <CellPositionDto>[];
 
     final id = json['id'] as String;
-    if (body.length > kMaxArrowBodySegments) {
+    if (body.length < kMinArrowBodySegments) {
       throw FormatException(
         'Arrow "$id" has ${body.length} body segments; '
-        'maximum allowed is $kMaxArrowBodySegments '
-        '(${kMaxArrowBodySegments + 1} cells total including head).',
+        'every arrow needs at least $kMinArrowBodySegments body cell in addition to its head.',
       );
     }
 
@@ -210,6 +209,7 @@ class StructuredLevelJsonDto {
     required this.exit,
     required this.arrows,
     this.walls,
+    this.optimalMoves,
   });
 
   /// Identificador único del nivel (p. ej. `"simple-1"`, `"level-01"`).
@@ -242,6 +242,15 @@ class StructuredLevelJsonDto {
   /// Lista de flechas del nivel (al menos una en niveles jugables).
   final List<StructuredArrowJsonDto> arrows;
 
+  /// Movimientos mínimos jugando perfecto, calculados por el servidor.
+  ///
+  /// Siempre igual a `arrows.length` (cada disparo exitoso retira una
+  /// flecha; ganar exige retirarlas todas). `null` si el DTO viene de un
+  /// archivo autor-escrito que no lo incluye (p. ej. niveles sembrados sin
+  /// pasar por `LevelJsonMapper.toDto`); en ese caso [LevelDtoMapper] usa
+  /// `arrows.length` como respaldo.
+  final int? optimalMoves;
+
   /// Parsea el JSON raíz devuelto por la API o leído de un archivo `.json`.
   ///
   /// Valida tipos y presencia de campos obligatorios; `walls` es opcional.
@@ -271,6 +280,7 @@ class StructuredLevelJsonDto {
       arrows: arrowsJson
           .map((e) => StructuredArrowJsonDto.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList(),
+      optimalMoves: json['optimalMoves'] is num ? (json['optimalMoves'] as num).toInt() : null,
     );
   }
 
@@ -286,5 +296,6 @@ class StructuredLevelJsonDto {
         'exit': exit.toJson(),
         if (walls != null && walls!.isNotEmpty) 'walls': walls!.map((w) => w.toJson()).toList(),
         'arrows': arrows.map((a) => a.toJson()).toList(),
+        if (optimalMoves != null) 'optimalMoves': optimalMoves,
       };
 }

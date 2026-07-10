@@ -5,13 +5,13 @@
   "maxMoves": 5,
   "maxTimeInSeconds": 60,
   "width": 5,
-  "height": 5,
+  "height": 6,
   "exit": { "row": 0, "col": 4 },
   "arrows": [
     { "id": "f1", "direction": "LEFT", "head": { "row": 0, "col": 0 }, "body": [{ "row": 0, "col": 1 }] },
     { "id": "f2", "direction": "RIGHT", "head": { "row": 1, "col": 1 }, "body": [{ "row": 1, "col": 0 }] },
     { "id": "f3", "direction": "DOWN", "head": { "row": 1, "col": 2 }, "body": [{ "row": 0, "col": 2 }] },
-    { "id": "f4", "direction": "RIGHT", "head": { "row": 0, "col": 3 }, "body": [] },
+    { "id": "f4", "direction": "RIGHT", "head": { "row": 5, "col": 1 }, "body": [{ "row": 5, "col": 0 }] },
     {
       "id": "f5",
       "direction": "UP",

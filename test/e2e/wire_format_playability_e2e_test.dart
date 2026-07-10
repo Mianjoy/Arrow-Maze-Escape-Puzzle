@@ -7,7 +7,7 @@ import 'support/seed_catalog_fixture.dart';
 /// Valida jugabilidad de dominio para cada nivel del seed (wire → partida).
 void main() {
   group('E2E — wire-format playability (domain)', () {
-    test('should_start_all_15_seed_levels_with_arrows_on_board', () async {
+    test('should_start_all_seed_levels_with_arrows_on_board', () async {
       for (final json in SeedCatalogFixture.load()) {
         final level = PlayableLevelHelper.mapWireLevel(json);
         final game = await PlayableLevelHelper.startGame(level);
@@ -17,29 +17,21 @@ void main() {
       }
     });
 
-    test('should_materialize_walls_from_wire_format_for_level_04', () {
-      final json = SeedCatalogFixture.levelById('level-04');
-      final level = PlayableLevelHelper.mapWireLevel(json);
-      expect(PlayableLevelHelper.countWalls(level), 1);
-    });
+    // should_materialize_walls_from_wire_format_for_level_04 se retiró junto
+    // con level-04 (violaba la regla de mínimo 1 celda de cuerpo por
+    // flecha). Ningún nivel semilla actual (01/09/12/15) tiene `walls`; la
+    // cobertura de materialización de muros vuelve cuando el equipo diseñe
+    // manualmente un nivel de reemplazo con `walls`.
 
-    test('should_win_level_02_with_single_shot_tutorial', () async {
-      final level = PlayableLevelHelper.mapWireLevel(SeedCatalogFixture.levelById('level-02'));
+    test('should_win_level_12_with_single_shot_tutorial', () async {
+      final level = PlayableLevelHelper.mapWireLevel(SeedCatalogFixture.levelById('level-12'));
       final game = await PlayableLevelHelper.startGame(level);
       final after = await PlayableLevelHelper.tapCell(
         game,
-        const Position(row: 0, column: 0),
+        const Position(row: 0, column: 3),
       );
 
       expect(after.isWon, isTrue);
-    });
-
-    test('should_win_level_08_with_greedy_shots', () async {
-      final level = PlayableLevelHelper.mapWireLevel(SeedCatalogFixture.levelById('level-08'));
-      final game = await PlayableLevelHelper.startGame(level);
-      final solved = await PlayableLevelHelper.solveGreedy(game);
-
-      expect(solved.isWon, isTrue);
     });
 
     test('should_win_level_15_with_greedy_shots_expert', () async {

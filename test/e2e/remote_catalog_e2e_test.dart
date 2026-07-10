@@ -5,7 +5,7 @@ import 'support/e2e_app_factory.dart';
 import 'support/playable_level_helper.dart';
 import 'support/seed_catalog_fixture.dart';
 
-/// Pruebas E2E del catálogo remoto simulado (15 niveles, sin fallback a assets).
+/// Pruebas E2E del catálogo remoto simulado (ver [kSeedCatalogExpectedCount], sin fallback a assets).
 void main() {
   group('E2E — remote catalog (simulated GET /levels)', () {
     late AppContainer container;
@@ -14,15 +14,19 @@ void main() {
       container = E2eAppFactory.createWithFullSeedCatalog();
     });
 
-    test('should_load_exactly_15_seed_levels', () async {
+    test('should_load_exactly_the_curated_seed_levels', () async {
       final levels = await container.levelRepository.findAll();
       expect(levels.length, kSeedCatalogExpectedCount);
     });
 
-    test('should_order_levels_by_levelNumber', () async {
+    test('should_order_levels_ascending_by_levelNumber', () async {
+      // No asumimos numeración consecutiva: el progreso se calcula por orden
+      // relativo (ver RecordVictoryUseCase._findNextLevel), no por +1, así
+      // que huecos en levelNumber tras retirar niveles no conformes son
+      // válidos.
       final levels = await container.levelRepository.findAll();
-      for (var i = 0; i < levels.length; i++) {
-        expect(levels[i].levelNumber, i + 1);
+      for (var i = 1; i < levels.length; i++) {
+        expect(levels[i].levelNumber! > levels[i - 1].levelNumber!, isTrue);
       }
     });
 

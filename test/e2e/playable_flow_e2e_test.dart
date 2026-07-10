@@ -73,25 +73,26 @@ void main() {
     );
   }
 
-  testWidgets('E2E UI: should_list_level_02_and_level_15_after_loading_api', (tester) async {
+  testWidgets('E2E UI: should_list_level_09_and_level_15_after_loading_api', (tester) async {
     await tester.pumpWidget(buildE2eApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('level-02'), findsOneWidget);
+    expect(find.text('level-09'), findsOneWidget);
     await scrollToLevel(tester, 'level-15');
     expect(find.text('level-15'), findsOneWidget);
   });
 
-  testWidgets('E2E UI: should_win_level_02_with_single_shot', (tester) async {
+  testWidgets('E2E UI: should_win_level_12_with_single_shot', (tester) async {
     await tester.pumpWidget(buildE2eApp());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('level-02'));
+    await scrollToLevel(tester, 'level-12');
+    await tester.tap(find.text('level-12'));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('cell-0-0')), findsOneWidget);
+    expect(find.byKey(const ValueKey('cell-0-3')), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('cell-0-0')));
+    await tester.tap(find.byKey(const ValueKey('cell-0-3')));
     await tester.pumpAndSettle();
 
     expect(find.byType(VictoryScreen), findsOneWidget);

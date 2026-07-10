@@ -1,32 +1,12 @@
 import 'dart:ui';
 
 import '../../../domain/domain.dart';
-import '../../../contract/level_contract.dart';
 
 /// Utilidades para convertir flechas multi-celda en polilíneas dibujables.
 ///
 /// Ordena cabeza y segmentos de cuerpo de cola a punta para que el
 /// [ArrowBoardPainter] trace un único trazo continuo con punta en la cabeza.
 abstract final class ArrowPathGeometry {
-  /// Máximo de segmentos de cuerpo permitidos por flecha (ver [kMaxArrowBodySegments]).
-  static const int maxBodySegments = kMaxArrowBodySegments;
-
-  /// Máximo total de celdas que puede ocupar una flecha (cabeza incluida).
-  static const int maxCellsPerArrow = kMaxArrowBodySegments + 1;
-
-  /// Valida que [bodyLength] no supere [maxBodySegments].
-  ///
-  /// Lanza [FormatException] si el nivel JSON excede el límite de diseño.
-  static void validateBodyLength(int bodyLength, {required String arrowId}) {
-    if (bodyLength > maxBodySegments) {
-      throw FormatException(
-        'Arrow "$arrowId" has $bodyLength body segments; '
-        'maximum allowed is $maxBodySegments '
-        '($maxCellsPerArrow cells total including head).',
-      );
-    }
-  }
-
   /// Devuelve las posiciones ordenadas de la cola a la cabeza para dibujar el trazo.
   ///
   /// Recorre desde [Arrow.position] hacia los segmentos de [Arrow.body]

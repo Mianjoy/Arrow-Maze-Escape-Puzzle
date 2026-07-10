@@ -37,15 +37,5 @@ void main() {
       expect(ordered.last, const Position(row: 1, column: 3));
       expect(ordered.length, 3);
     });
-
-    test('should_throw_when_body_exceeds_max_segments', () {
-      expect(
-        () => ArrowPathGeometry.validateBodyLength(
-          ArrowPathGeometry.maxBodySegments + 1,
-          arrowId: 'x',
-        ),
-        throwsFormatException,
-      );
-    });
   });
 }

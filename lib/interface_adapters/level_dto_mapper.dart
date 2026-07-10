@@ -6,49 +6,35 @@ import '../domain/domain.dart';
 ///
 /// Responsabilidades:
 /// - Mapear campos del JSON de transporte a value objects de dominio.
-/// - Construir un tablero provisional y calcular la ruta óptima con
-///   [ShortestPathCalculator].
-/// - Rechazar niveles irresolubles o cuya ruta óptima supere `maxMoves`.
+/// - Tomar `optimalMoves` del DTO (calculado por el servidor) en vez de
+///   recalcularlo — ver nota en [fromDto].
+/// - Rechazar niveles cuya ruta óptima supere `maxMoves`.
 ///
 /// Ubicación en Clean Architecture: capa **Interface Adapters**
 /// (`lib/interface_adapters/`). El dominio no conoce este formato.
 class LevelDtoMapper {
-  /// Crea el mapper con dependencias inyectables (útil en tests).
-  ///
-  /// Si no se pasan, usa [ShortestPathCalculator] y [BoardFactory] por defecto
-  /// con la misma configuración que el juego en producción.
-  const LevelDtoMapper({
-    ShortestPathCalculator? shortestPathCalculator,
-    BoardFactory? boardFactory,
-  })  : _shortestPathCalculator = shortestPathCalculator ??
-            const ShortestPathCalculator(
-              movementEngine: ArrowMovementEngine(
-                collisionValidator: CollisionValidator(),
-              ),
-            ),
-        _boardFactory = boardFactory ?? const BoardFactory();
-
-  final ShortestPathCalculator _shortestPathCalculator;
-  final BoardFactory _boardFactory;
+  /// Crea el mapper (sin estado ni dependencias inyectables).
+  const LevelDtoMapper();
 
   /// Construye un [Level] jugable a partir del DTO ya parseado.
   ///
-  /// Pasos:
-  /// 1. Traduce el DTO a un [Level] provisional (sin `optimalMoves` real).
-  /// 2. Materializa el tablero inicial con [Level.buildInitialBoard].
-  /// 3. Calcula movimientos mínimos con BFS ([ShortestPathCalculator]).
-  /// 4. Valida solvabilidad y que `optimalMoves <= dto.maxMoves`.
+  /// `optimalMoves` se toma de `dto.optimalMoves` (calculado por el backend
+  /// en `LevelJsonMapper.toDto`, ver `docs/contract/level.contract.ts`) en
+  /// vez de recalcularse con búsqueda local: cada disparo exitoso retira
+  /// exactamente una flecha y ganar exige retirarlas todas, así que el
+  /// óptimo es siempre `arrows.length` — no hace falta ninguna búsqueda para
+  /// derivarlo, y antes de este cambio se recalculaba con un BFS sobre el
+  /// espacio de estados que, para niveles con muchas flechas (ej. 48),
+  /// podía congelar la pestaña completa al cargar el catálogo (ver
+  /// AI_USAGE.md). Si el DTO no trae `optimalMoves` (archivo autor-escrito
+  /// sin pasar por el backend), se usa `arrows.length` como respaldo, que es
+  /// matemáticamente el mismo valor.
   ///
-  /// Lanza [DomainException] si el nivel no tiene solución o el par es
-  /// demasiado bajo para la ruta óptima.
+  /// Lanza [DomainException] si el par (`maxMoves`) es demasiado bajo para
+  /// la ruta óptima.
   Level fromDto(StructuredLevelJsonDto dto) {
     final provisional = _toProvisionalLevel(dto);
-    final board = provisional.buildInitialBoard(boardFactory: _boardFactory);
-
-    final optimalMoves = _shortestPathCalculator.calculateMinimumMoves(board);
-    if (optimalMoves == null) {
-      throw DomainException('Level ${dto.id} has no solvable path.');
-    }
+    final optimalMoves = dto.optimalMoves ?? dto.arrows.length;
 
     if (optimalMoves > dto.maxMoves) {
       throw DomainException(
@@ -75,10 +61,8 @@ class LevelDtoMapper {
     return fromDto(StructuredLevelJsonDto.fromJson(json));
   }
 
-  /// Traduce el DTO a un [Level] sin calcular aún la ruta óptima.
-  ///
-  /// Usa `optimalMoves: 1` como placeholder hasta que [fromDto] complete
-  /// el agregado tras el BFS.
+  /// Traduce el DTO a un [Level] con `optimalMoves: 1` como placeholder;
+  /// [fromDto] lo reemplaza por el valor real antes de devolverlo.
   Level _toProvisionalLevel(StructuredLevelJsonDto dto) {
     final exit = Position(row: dto.exit.row, column: dto.exit.col);
     final walls = (dto.walls ?? [])
