@@ -13,7 +13,7 @@ class GameController extends ChangeNotifier {
   /// Crea el controlador con casos de uso, sesión, audio y sync de victoria.
   GameController({
     required StartGameUseCase startGameUseCase,
-    required FireArrowUseCase fireArrowUseCase,
+    required IFireArrowUseCase fireArrowUseCase,
     required AuthSessionController authSessionController,
     required IAudioService audioService,
     RecordVictoryUseCase? recordVictoryUseCase,
@@ -24,7 +24,7 @@ class GameController extends ChangeNotifier {
         _recordVictoryUseCase = recordVictoryUseCase;
 
   final StartGameUseCase _startGameUseCase;
-  final FireArrowUseCase _fireArrowUseCase;
+  final IFireArrowUseCase _fireArrowUseCase;
   final AuthSessionController _authSessionController;
   final IAudioService _audioService;
   final RecordVictoryUseCase? _recordVictoryUseCase;
@@ -106,7 +106,11 @@ class GameController extends ChangeNotifier {
 
     try {
       _lastVictoryResult = await recordVictory.execute(game: wonGame, session: session);
+      _syncError = _lastVictoryResult?.syncError;
     } catch (error) {
+      // Solo alcanza este catch si falló algo local (repositorio de progreso,
+      // cálculo del siguiente nivel) — la sincronización remota ya se maneja
+      // dentro de `execute` y nunca llega a lanzar por sí sola.
       _syncError = error;
     } finally {
       _isSyncingProgress = false;

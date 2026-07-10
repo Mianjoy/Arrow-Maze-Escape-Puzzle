@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_strings.dart';
+import 'auth_error_message.dart';
 import 'login_controller.dart';
 
 /// Pantalla de inicio de sesión: formulario username/password contra el backend.
@@ -74,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (widget.controller.error != null) ...[
                     const SizedBox(height: 16),
                     Text(
-                      widget.controller.error.toString(),
+                      authErrorMessage(AppStringsScope.of(context), widget.controller.error),
                       style: TextStyle(color: Theme.of(context).colorScheme.error),
                     ),
                   ],

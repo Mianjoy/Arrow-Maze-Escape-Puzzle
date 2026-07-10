@@ -3,6 +3,7 @@ import 'package:arrow_maze_escape_puzzle/application/use_cases/record_victory_us
 import 'package:arrow_maze_escape_puzzle/domain/domain.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/http/api_config.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/http/progress_api_client.dart';
+import 'package:arrow_maze_escape_puzzle/infrastructure/progress/in_memory_pending_sync_repository.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/progress/in_memory_player_progress_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -49,6 +50,7 @@ void main() {
       progressRepository: InMemoryPlayerProgressRepository(),
       levelRepository: levelRepo,
       progressApiClient: ProgressApiClient(config: config, httpClient: client),
+      pendingSyncRepository: InMemoryPendingSyncRepository(),
     );
 
     final level = buildWinnableLevel();
@@ -69,5 +71,53 @@ void main() {
 
     expect(syncCalled, isTrue);
     expect(result.nextLevel?.id.value, 'level-02');
+  });
+
+  test(
+      'should_unlock_next_level_locally_when_progress_sync_fails',
+      () async {
+    // Arrange: backend inalcanzable — cada intento de red falla.
+    final client = MockHttpClient((request) async {
+      return http.Response('backend down', 500);
+    });
+
+    final levelRepo = FakeLevelRepository([
+      buildWinnableLevel(id: 'level-01', levelNumber: 1),
+      buildWinnableLevel(id: 'level-02', levelNumber: 2),
+    ]);
+
+    final pendingSyncRepository = InMemoryPendingSyncRepository();
+    final useCase = RecordVictoryUseCase(
+      progressRepository: InMemoryPlayerProgressRepository(),
+      levelRepository: levelRepo,
+      progressApiClient: ProgressApiClient(config: config, httpClient: client),
+      pendingSyncRepository: pendingSyncRepository,
+    );
+
+    final level = buildWinnableLevel();
+    final started = Game.fromLevel(
+      gameId: const Identifier('g1'),
+      playerId: session.playerId,
+      level: level,
+    ).start();
+
+    final won = started.performMove(
+      arrowId: started.board.arrows.first.id,
+      movementEngine: const ArrowMovementEngine(collisionValidator: CollisionValidator()),
+    ).game;
+
+    // Act
+    final result = await useCase.execute(game: won, session: session);
+
+    // Assert: progreso y desbloqueo locales no dependen de que el sync tenga éxito.
+    expect(result.syncError, isNotNull);
+    expect(result.nextLevel?.id.value, 'level-02');
+    expect(result.progress.progressFor(level.id)?.status, LevelProgressStatus.completed);
+
+    // Assert: la sincronización fallida quedó encolada para reintentar después.
+    final pending = await pendingSyncRepository.loadAll();
+    expect(pending, hasLength(1));
+    expect(pending.single.levelId, level.id);
+    expect(pending.single.playerId, session.playerId);
   });
 }

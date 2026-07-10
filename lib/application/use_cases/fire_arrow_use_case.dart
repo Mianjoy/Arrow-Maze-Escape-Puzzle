@@ -1,5 +1,17 @@
 import '../../domain/domain.dart';
 
+/// Contrato del caso de uso de disparo, extraído para permitir decorarlo
+/// (p. ej. [LoggingFireArrowUseCaseDecorator]) sin que [GameController]
+/// dependa de la implementación concreta.
+abstract interface class IFireArrowUseCase {
+  /// Intenta disparar la flecha en [position] sobre [game]; retorna el
+  /// [Game] resultante y el [MoveResult] del intento.
+  Future<({Game game, MoveResult result})> execute({
+    required Game game,
+    required Position position,
+  });
+}
+
 /// Caso de uso: intentar disparar la flecha (si existe) en la celda tocada.
 ///
 /// Si la celda está vacía, no muta el dominio (retorna el mismo [Game] con
@@ -11,7 +23,7 @@ import '../../domain/domain.dart';
 /// colisión de nuevo: la flecha se extrae si su trayectoria ya está libre, o
 /// vuelve a quedar bloqueada si no. En ambos casos cuenta como un
 /// movimiento (regla de juego del equipo).
-class FireArrowUseCase {
+class FireArrowUseCase implements IFireArrowUseCase {
   /// Crea el caso de uso con el [gameRepository] donde persistir la partida
   /// y, opcionalmente, un [movementEngine] (por defecto uno con validación
   /// de colisiones estándar).
@@ -25,8 +37,7 @@ class FireArrowUseCase {
   final IGameRepository _gameRepository;
   final ArrowMovementEngine _movementEngine;
 
-  /// Intenta disparar la flecha en [position] sobre [game]; retorna el
-  /// [Game] resultante y el [MoveResult] del intento.
+  @override
   Future<({Game game, MoveResult result})> execute({
     required Game game,
     required Position position,

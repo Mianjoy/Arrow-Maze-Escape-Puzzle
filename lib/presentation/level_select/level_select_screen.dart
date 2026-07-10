@@ -81,7 +81,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
             return const Center(child: Text('No levels available.'));
           }
 
-          return ListView.builder(
+          final levelList = ListView.builder(
             itemCount: levels.length,
             itemBuilder: (context, index) {
               final level = levels[index];
@@ -109,6 +109,36 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                     : null,
               );
             },
+          );
+
+          if (!widget.controller.isOffline) {
+            return levelList;
+          }
+
+          // Banner de "modo sin conexión": el juego sigue jugable con el
+          // progreso local; se sincronizará cuando vuelva la conexión.
+          return Column(
+            children: [
+              Material(
+                color: Theme.of(context).colorScheme.secondaryContainer,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.cloud_off, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          strings.offlinePlayNotice,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(child: levelList),
+            ],
           );
         },
       ),

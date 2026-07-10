@@ -37,6 +37,56 @@ class PlayerProgress {
     );
   }
 
+  /// Fusiona el progreso remoto de un nivel (descargado del servidor) con el
+  /// local, conservando lo mejor de cada uno.
+  ///
+  /// Reglas: el estado nunca retrocede (si local ya está `completed`, sigue
+  /// `completed`; si el remoto dice completado, se marca `completed`); se toma
+  /// el mínimo de movimientos y tiempo. El servidor no persiste estrellas, así
+  /// que si el remoto marca completado y localmente no había estrellas, se usa
+  /// [StarRating.one] como mínimo; si local ya tenía mejores, se conservan.
+  PlayerProgress mergeRemoteLevel({
+    required Identifier levelId,
+    int? remoteBestMoveCount,
+    int? remoteBestTimeSeconds,
+    required bool remoteCompleted,
+  }) {
+    final current = _levels[levelId];
+
+    final mergedStatus = current?.status == LevelProgressStatus.completed || remoteCompleted
+        ? LevelProgressStatus.completed
+        : (current?.status ?? LevelProgressStatus.unlocked);
+
+    final mergedMoves = _minNullable(current?.bestMoveCount, remoteBestMoveCount);
+    final mergedTime = _minNullable(current?.bestTimeSeconds, remoteBestTimeSeconds);
+
+    final mergedStars = mergedStatus == LevelProgressStatus.completed
+        ? StarRating.bestOf(current?.bestStars, StarRating.one)
+        : current?.bestStars;
+
+    return PlayerProgress(
+      playerId: playerId,
+      levels: {
+        ..._levels,
+        levelId: LevelProgress(
+          levelId: levelId,
+          status: mergedStatus,
+          bestMoveCount: mergedMoves,
+          bestTimeSeconds: mergedTime,
+          bestStars: mergedStars,
+          completionCount: current?.completionCount ?? 0,
+        ),
+      },
+    );
+  }
+
+  /// Devuelve el menor de dos valores que pueden ser nulos (nulo = sin dato).
+  static int? _minNullable(int? a, int? b) {
+    if (a == null) return b;
+    if (b == null) return a;
+    return a < b ? a : b;
+  }
+
   /// Registra la completitud de un nivel con métricas de desempeño y estrellas.
   PlayerProgress completeLevel({
     required Identifier levelId,

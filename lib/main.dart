@@ -2,22 +2,28 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'application/models/auth_session.dart';
 import 'application/ports/i_app_settings.dart';
 import 'application/ports/i_audio_service.dart';
+import 'application/ports/i_pending_sync_repository.dart';
 import 'application/ports/i_token_storage.dart';
+import 'application/ports/i_use_case_logger.dart';
 import 'application/use_cases/ensure_initial_progress_use_case.dart';
 import 'application/use_cases/fire_arrow_use_case.dart';
 import 'application/use_cases/get_leaderboard_use_case.dart';
 import 'application/use_cases/get_player_progress_use_case.dart';
 import 'application/use_cases/load_levels_use_case.dart';
+import 'application/use_cases/logging_fire_arrow_use_case_decorator.dart';
 import 'application/use_cases/login_user_use_case.dart';
 import 'application/use_cases/logout_user_use_case.dart';
+import 'application/use_cases/pull_remote_progress_use_case.dart';
 import 'application/use_cases/record_victory_use_case.dart';
 import 'application/use_cases/register_user_use_case.dart';
 import 'application/use_cases/restore_auth_session_use_case.dart';
 import 'application/use_cases/start_game_use_case.dart';
+import 'application/use_cases/sync_pending_progress_use_case.dart';
 import 'domain/domain.dart';
 import 'infrastructure/audio/app_audio_service.dart';
 import 'infrastructure/auth/in_memory_token_storage.dart';
@@ -28,10 +34,11 @@ import 'infrastructure/http/auth_api_client.dart';
 import 'infrastructure/http/leaderboard_api_client.dart';
 import 'infrastructure/http/level_api_client.dart';
 import 'infrastructure/http/progress_api_client.dart';
-import 'infrastructure/level/fallback_level_repository.dart';
-import 'infrastructure/level/json_asset_level_repository.dart';
-import 'infrastructure/level/remote_level_repository.dart';
+import 'infrastructure/level/cached_level_repository.dart';
+import 'infrastructure/logging/console_use_case_logger.dart';
+import 'infrastructure/progress/in_memory_pending_sync_repository.dart';
 import 'infrastructure/progress/in_memory_player_progress_repository.dart';
+import 'infrastructure/progress/shared_preferences_pending_sync_repository.dart';
 import 'infrastructure/progress/shared_preferences_player_progress_repository.dart';
 import 'infrastructure/settings/in_memory_app_settings.dart';
 import 'infrastructure/settings/shared_preferences_app_settings.dart';
@@ -58,16 +65,16 @@ import 'presentation/settings/settings_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  const fallbackToAssets = bool.fromEnvironment('ASSET_FALLBACK', defaultValue: true);
+  final prefs = await SharedPreferences.getInstance();
   final tokenStorage = await SharedPreferencesTokenStorage.create();
   final appSettings = await SharedPreferencesAppSettings.create();
   final progressRepository = await SharedPreferencesPlayerProgressRepository.create();
 
   final container = AppContainer(
+    prefs: prefs,
     tokenStorage: tokenStorage,
     appSettings: appSettings,
     progressRepository: progressRepository,
-    fallbackToAssets: fallbackToAssets,
   );
   await container.initialize();
 
@@ -78,29 +85,36 @@ Future<void> main() async {
 class AppContainer {
   /// Construye el contenedor; parámetros opcionales para tests.
   AppContainer({
+    SharedPreferences? prefs,
     ILevelRepository? levelRepository,
     IGameRepository? gameRepository,
     IPlayerProgressRepository? progressRepository,
+    IPendingSyncRepository? pendingSyncRepository,
     ITokenStorage? tokenStorage,
     IAppSettings? appSettings,
     IAudioService? audioService,
     ApiConfig? apiConfig,
     http.Client? httpClient,
-    bool fallbackToAssets = true,
+    IUseCaseLogger? useCaseLogger,
     AuthSession? initialAuthSession,
     bool enableProgressSync = true,
   })  : apiConfig = apiConfig ?? ApiConfig.fromEnvironment,
         _httpClient = httpClient ?? http.Client(),
+        useCaseLogger = useCaseLogger ?? ConsoleUseCaseLogger(),
         tokenStorage = tokenStorage ?? InMemoryTokenStorage(),
         appSettings = appSettings ?? InMemoryAppSettings(),
         levelRepository = levelRepository ??
             _buildLevelRepository(
               apiConfig: apiConfig ?? ApiConfig.fromEnvironment,
-              fallbackToAssets: fallbackToAssets,
+              prefs: _requirePrefs(prefs),
               httpClient: httpClient,
             ),
         gameRepository = gameRepository ?? InMemoryGameRepository(),
         progressRepository = progressRepository ?? InMemoryPlayerProgressRepository(),
+        pendingSyncRepository = pendingSyncRepository ??
+            (prefs != null
+                ? SharedPreferencesPendingSyncRepository(prefs: prefs)
+                : InMemoryPendingSyncRepository()),
         _enableProgressSync = enableProgressSync {
     authApiClient = AuthApiClient(config: this.apiConfig, httpClient: _httpClient);
     progressApiClient = ProgressApiClient(config: this.apiConfig, httpClient: _httpClient);
@@ -134,6 +148,22 @@ class AppContainer {
             progressRepository: this.progressRepository,
             levelRepository: this.levelRepository,
             progressApiClient: progressApiClient,
+            pendingSyncRepository: this.pendingSyncRepository,
+          )
+        : null;
+
+    syncPendingProgressUseCase = _enableProgressSync
+        ? SyncPendingProgressUseCase(
+            pendingSyncRepository: this.pendingSyncRepository,
+            progressApiClient: progressApiClient,
+          )
+        : null;
+
+    pullRemoteProgressUseCase = _enableProgressSync
+        ? PullRemoteProgressUseCase(
+            progressApiClient: progressApiClient,
+            progressRepository: this.progressRepository,
+            levelRepository: this.levelRepository,
           )
         : null;
   }
@@ -142,6 +172,10 @@ class AppContainer {
   final ApiConfig apiConfig;
   final http.Client _httpClient;
   final bool _enableProgressSync;
+
+  /// Aspecto AOP de logging/trazabilidad para casos de uso (ver
+  /// [LoggingFireArrowUseCaseDecorator]).
+  final IUseCaseLogger useCaseLogger;
 
   /// Almacenamiento del token de sesión.
   final ITokenStorage tokenStorage;
@@ -180,6 +214,14 @@ class AppContainer {
   /// inicialización.
   late final RecordVictoryUseCase? recordVictoryUseCase;
 
+  /// Caso de uso que reintenta sincronizaciones pendientes; `null` si
+  /// [enableProgressSync] es false. Mismo motivo `late` que arriba.
+  late final SyncPendingProgressUseCase? syncPendingProgressUseCase;
+
+  /// Caso de uso que descarga y fusiona el progreso remoto; `null` si
+  /// [enableProgressSync] es false. Mismo motivo `late` que arriba.
+  late final PullRemoteProgressUseCase? pullRemoteProgressUseCase;
+
   /// Puerto de carga de niveles.
   final ILevelRepository levelRepository;
 
@@ -188,6 +230,9 @@ class AppContainer {
 
   /// Puerto de persistencia del progreso del jugador.
   final IPlayerProgressRepository progressRepository;
+
+  /// Puerto de la cola de sincronizaciones de progreso pendientes.
+  final IPendingSyncRepository pendingSyncRepository;
 
   /// Restaura sesión y preferencias; inicia música si no está silenciada.
   ///
@@ -206,14 +251,26 @@ class AppContainer {
 
   static ILevelRepository _buildLevelRepository({
     required ApiConfig apiConfig,
-    required bool fallbackToAssets,
+    required SharedPreferences prefs,
     http.Client? httpClient,
   }) {
-    final remote = RemoteLevelRepository(
+    return CachedLevelRepository(
       apiClient: LevelApiClient(config: apiConfig, httpClient: httpClient),
+      prefs: prefs,
     );
-    if (!fallbackToAssets) return remote;
-    return FallbackLevelRepository(primary: remote, fallback: JsonAssetLevelRepository());
+  }
+
+  /// Exige [prefs] cuando no se inyecta un [ILevelRepository] ya construido:
+  /// [CachedLevelRepository] necesita `SharedPreferences` para su caché
+  /// offline, y no se puede resolver `SharedPreferences.getInstance()` de
+  /// forma síncrona dentro de una lista de inicialización.
+  static SharedPreferences _requirePrefs(SharedPreferences? prefs) {
+    if (prefs == null) {
+      throw ArgumentError(
+        'AppContainer requires `prefs` when `levelRepository` is not provided.',
+      );
+    }
+    return prefs;
   }
 
   /// Controlador de selección de nivel para el jugador autenticado.
@@ -224,6 +281,9 @@ class AppContainer {
       ensureInitialProgressUseCase: ensureInitialProgressUseCase,
       getPlayerProgressUseCase: getPlayerProgressUseCase,
       playerId: playerId,
+      syncPendingProgressUseCase: syncPendingProgressUseCase,
+      pullRemoteProgressUseCase: pullRemoteProgressUseCase,
+      session: authSessionController.session,
     );
   }
 
@@ -241,9 +301,17 @@ class AppContainer {
       );
 
   /// Crea el controlador de la pantalla de juego.
+  ///
+  /// `fireArrowUseCase` se envuelve con [LoggingFireArrowUseCaseDecorator]
+  /// (aspecto AOP de logging/trazabilidad): registra el estado del tablero
+  /// antes/después de cada disparo sin que `FireArrowUseCase` ni
+  /// `GameController` conozcan el logger.
   GameController buildGameController() => GameController(
         startGameUseCase: StartGameUseCase(gameRepository: gameRepository),
-        fireArrowUseCase: FireArrowUseCase(gameRepository: gameRepository),
+        fireArrowUseCase: LoggingFireArrowUseCaseDecorator(
+          inner: FireArrowUseCase(gameRepository: gameRepository),
+          logger: useCaseLogger,
+        ),
         authSessionController: authSessionController,
         audioService: audioService,
         recordVictoryUseCase: recordVictoryUseCase,

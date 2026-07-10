@@ -52,7 +52,13 @@ class DefeatScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: () => Navigator.of(context).popUntil((route) => route.settings.name == '/levels'),
+              // Ver comentario equivalente en VictoryScreen: fuerza una ruta
+              // `/levels` nueva para no reusar un `LevelSelectController` con
+              // progreso desactualizado.
+              onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil(
+                '/levels',
+                (route) => route.settings.name == '/home',
+              ),
               child: Text(strings.backToLevels),
             ),
           ],

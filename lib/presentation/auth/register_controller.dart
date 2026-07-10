@@ -7,10 +7,23 @@ import 'auth_session_controller.dart';
 /// Reutiliza [AuthSessionController] para registrar y dejar sesión activa.
 class RegisterController extends ChangeNotifier {
   /// Crea el controlador con el [authSessionController] compartido de la app.
+  ///
+  /// Se suscribe a sus cambios y los reenvía como propios: [isLoading] y
+  /// [error] leen del controlador compartido, así que sin este reenvío la UI
+  /// (que escucha `this`, no `authSessionController`) nunca se reconstruiría
+  /// tras un registro fallido — el error quedaría calculado pero invisible.
   RegisterController({required AuthSessionController authSessionController})
-      : _authSessionController = authSessionController;
+      : _authSessionController = authSessionController {
+    _authSessionController.addListener(notifyListeners);
+  }
 
   final AuthSessionController _authSessionController;
+
+  @override
+  void dispose() {
+    _authSessionController.removeListener(notifyListeners);
+    super.dispose();
+  }
 
   /// Indica si el formulario está enviándose.
   bool get isLoading => _authSessionController.isLoading;

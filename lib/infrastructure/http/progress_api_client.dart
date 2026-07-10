@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../application/models/auth_session.dart';
+import '../../application/models/remote_level_progress.dart';
 import 'api_config.dart';
 import 'api_exception.dart';
 
@@ -53,6 +54,36 @@ class ProgressApiClient {
     }
 
     throw _mapError(response, fallback: 'Progress sync failed');
+  }
+
+  /// Descarga todo el progreso del jugador autenticado (`GET /progress`).
+  ///
+  /// El backend identifica al usuario por el JWT; devuelve la lista de niveles
+  /// con registro para que el cliente la fusione con su progreso local.
+  Future<List<RemoteLevelProgress>> fetchProgress(AuthSession session) async {
+    final uri = _config.resolve('/progress');
+    final http.Response response;
+    try {
+      response = await _httpClient
+          .get(uri, headers: session.authorizationHeader)
+          .timeout(const Duration(seconds: 15));
+    } catch (error) {
+      throw ApiException('Network error calling $uri: $error');
+    }
+
+    if (response.statusCode != 200) {
+      throw _mapError(response, fallback: 'Fetch progress failed');
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map || decoded['levels'] is! List) {
+      throw const ApiException('GET /progress: expected { levels: [...] }');
+    }
+
+    return (decoded['levels'] as List)
+        .cast<Map<String, dynamic>>()
+        .map(RemoteLevelProgress.fromJson)
+        .toList();
   }
 
   /// Ejecuta POST con cuerpo JSON y cabeceras personalizadas.

@@ -841,3 +841,258 @@ Continuación de: "Ok, fusionemos las ramas [...] te voy a dejar en modo automá
 - Antes de "adivinar" cómo migrar una API deprecada (el mensaje de `flutter analyze` sugiere la alternativa pero no siempre la firma exacta), leer el código fuente del SDK instalado localmente evita una migración plausible-pero-incorrecta.
 
 ---
+
+## Consulta #16 — Caché local del catálogo de niveles para juego offline
+
+**Tarea o problema abordado.**
+
+El enunciado académico exige persistencia local del progreso del jugador, pero el equipo decidió ir más allá del mínimo: el catálogo de niveles debe descargarse del backend en cada inicio (`GET /levels`, ver Consulta #8) y quedar disponible localmente si el dispositivo pierde la red, en vez de depender de los 3 niveles estáticos empaquetados como assets (`JsonAssetLevelRepository` + `FallbackLevelRepository`, ver Consultas #7–#10). El diseño previsto: los 15 niveles viven exclusivamente en el backend (que ya valida su jugabilidad antes de persistirlos, `UpsertLevelUseCase` + `LevelSolvabilityValidator`); el cliente solo cachea localmente lo que ya descargó.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Claude Sonnet 5, agente con acceso a terminal.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+El equipo planteó primero la pregunta de si convenía implementar persistencia offline del catálogo de niveles para acercarse más a la rúbrica del enunciado (revisada explícitamente citando la Sección 5.1 ítem 8 y la Sección 3.3 Capa 4). Tras acordar el diseño (un decorador `CachedLevelRepository` sustituyendo a `RemoteLevelRepository` + `FallbackLevelRepository` + `JsonAssetLevelRepository`), se pidió: "Sí, dale, empieza con la implementación".
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Repositorio con caché | `lib/infrastructure/level/cached_level_repository.dart` | `ILevelRepository`: intenta `GET /levels`, escribe write-through en `SharedPreferences` (JSON crudo, clave `cached_levels_json`); si la red falla, lee la última copia guardada; si no hay copia, relanza el error original |
+| Wiring | `lib/main.dart` (`AppContainer._buildLevelRepository`) | Reemplaza la cadena `RemoteLevelRepository` → `FallbackLevelRepository` → `JsonAssetLevelRepository` por una sola instancia de `CachedLevelRepository`; se elimina el flag `ASSET_FALLBACK` |
+| Tests | `test/infrastructure/level/cached_level_repository_test.dart` | 5 casos (`should_cache_levels_when_network_succeeds`, `should_return_cached_levels_when_network_fails_and_cache_exists`, `should_rethrow_when_network_fails_and_no_cache_exists`, `should_refresh_cache_when_network_recovers`, `findById`) con `MockHttpClient` y `SharedPreferences.setMockInitialValues` |
+| Limpieza | — | Se eliminaron `json_asset_level_repository.dart`, `fallback_level_repository.dart`, sus tests, los 3 assets `assets/levels/level_0{1,2,3}.json` y su declaración en `pubspec.yaml` — ya no cumplían ningún rol una vez que existe caché real |
+
+Diseño elegido: cachear el **JSON crudo** devuelto por `LevelApiClient.fetchAllLevels()` (antes de mapear a dominio), no el agregado `Level` — evita necesitar un serializador `Level → JSON` que no existía (`LevelDtoMapper` solo tenía `fromDto`/`fromJson`, nunca `toJson`).
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna corrección posterior; se verificó `flutter analyze` ("No issues found!") y la suite completa (`flutter test`, 52/52 en verde, incluyendo los 5 tests nuevos) antes de dar la tarea por terminada.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- El enunciado académico (Sección 5.1 ítem 8) solo exige explícitamente persistir *progreso y puntuaciones*, no el catálogo de niveles — cachear niveles es una decisión de arquitectura del equipo que excede el mínimo, no un requisito literal; se documenta aquí para que quede claro en la defensa por qué se hizo de todas formas (juego jugable offline, mejor uso del patrón Decorator ya existente).
+- Quedó pendiente (fuera del alcance de esta consulta): el README todavía describe el catálogo de niveles y el estado de las capas con lenguaje de "Sprint 1/2" desactualizado respecto al código real — se decidió corregirlo en una pasada de documentación separada, no en cada commit individual.
+
+---
+
+## Consulta #17 — Bugs de refresco de progreso y avance offline tras probar la caché (Consulta #16 en vivo)
+
+**Tarea o problema abordado.**
+
+Al probar en vivo la caché de niveles de la Consulta #16 (backend y frontend corriendo de verdad, no solo tests), el equipo reportó dos comportamientos incorrectos: (1) tras ganar un nivel y volver a la lista con "Volver a niveles", el nivel recién completado no aparecía marcado hasta salir al home y reentrar; (2) con el backend apagado, ganar un nivel no mostraba el botón "Siguiente nivel" — el flujo de victoria se rompía sin red, contradiciendo el propósito mismo de la caché offline.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Claude Sonnet 5, agente con acceso a terminal.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+"Ok, funciona pero hay un detalle, si logré superar 5 niveles por ejemplo, y decido volver a los niveles (presionando back to levels), esos 5 niveles no se muestran como superados hasta que salgo al home y vuelvo a entrar, y otra cosa, en teoria si apagas el back, yo deberia poder seguir jugando en el front no?"
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+- **Causa raíz #1**: `VictoryScreen`/`DefeatScreen` usaban `Navigator.popUntil((route) => route.settings.name == '/levels')`, que reutiliza la instancia *ya existente* de `LevelSelectScreen` en el stack — su `LevelSelectController` había cargado el progreso una sola vez en `initState` y nunca se refrescaba al reaparecer. Corregido reemplazando por `pushNamedAndRemoveUntil('/levels', (route) => route.settings.name == '/home')`, que fuerza una ruta `/levels` nueva con un controlador recién creado (mismo patrón que ya usaba el logout).
+- **Causa raíz #2**: `RecordVictoryUseCase.execute()` llamaba `await _progressApiClient.syncProgress(...)` **sin try/catch** después de guardar el progreso local y calcular el siguiente nivel — si esa llamada lanzaba (backend caído), la excepción abortaba el método completo *antes* del `return`, así que `RecordVictoryResult` (con el `nextLevel` ya calculado) nunca llegaba a la UI aunque el progreso ya estuviera guardado en disco. Corregido aislando solo la llamada de red en su propio try/catch interno; el resultado ahora siempre se devuelve con progreso + siguiente nivel, exponiendo el fallo de sync en un nuevo campo `RecordVictoryResult.syncError` en vez de propagar la excepción.
+- Tests nuevos: `should_unlock_next_level_locally_when_progress_sync_fails` en `record_victory_use_case_test.dart`.
+- Verificación en vivo repetida tras el fix: backend apagado, ganar nivel → aparece "Siguiente nivel" con mensaje de error de sync; "Volver a niveles" → progreso actualizado sin pasar por home.
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna corrección adicional; verificado con `flutter analyze` limpio y suite completa en verde antes y después del fix.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Un bug de este tipo (excepción de red abortando un método con trabajo local ya completado) es casi invisible en tests unitarios que mockean el HTTP client con éxito por defecto — solo se detectó al **probar la app corriendo de verdad** con el backend apagado, reforzando que la sección "Running the app locally" del README y la prueba manual con `--dart-define` siguen siendo necesarias más allá de la suite automatizada.
+- `popUntil` vs. `pushNamedAndRemoveUntil` es una distinción sutil de Flutter con consecuencias reales en apps con controladores con estado cacheado en memoria (`ChangeNotifier` con `load()` en `initState`): reutilizar una ruta no reconstruye su widget ni vuelve a llamar `initState`.
+
+---
+
+## Consulta #18 — Cola de sincronización pendiente para progreso offline
+
+**Tarea o problema abordado.**
+
+Tras corregir los bugs de la Consulta #17, el equipo notó que `RecordVictoryUseCase` capturaba el error de `POST /progress/sync` pero **nunca reintentaba el envío** — si el jugador ganaba varios niveles sin red, esas victorias quedaban guardadas localmente para siempre pero nunca llegaban al backend, incumpliendo el espíritu del ítem 2 de la Sección 5.2 del enunciado ("sincronizar el progreso del jugador con el servidor"), que implica una sincronización eventual, no solo un intento único que se pierde si falla.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Claude Sonnet 5, agente con acceso a terminal.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+"Ok, entonces ahora con el backend apagado, al encenderlo debería sincronizarse con el backend y enviar el progreso? [...] Sí, implementa la cola de sincronización pendiente."
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Modelo | `lib/application/models/pending_sync_entry.dart` | `PendingSyncEntry`: datos de una victoria no sincronizada (jugador, nivel, score, movimientos, tiempo), con `toJson`/`fromJson` |
+| Puerto | `lib/application/ports/i_pending_sync_repository.dart` | `IPendingSyncRepository`: `add`/`loadAll`/`saveAll` |
+| Infraestructura | `lib/infrastructure/progress/shared_preferences_pending_sync_repository.dart`, `.../in_memory_pending_sync_repository.dart` | Persistencia real (`SharedPreferences`, clave `pending_sync_queue`) y valor por defecto para tests/entornos sin `prefs` |
+| Caso de uso | `lib/application/use_cases/sync_pending_progress_use_case.dart` | Reenvía las entradas pendientes del jugador de la sesión activa; deja intactas las de otros jugadores en el mismo dispositivo; las que sigan fallando quedan en la cola |
+| Wiring | `RecordVictoryUseCase` ahora encola en `IPendingSyncRepository` cuando el sync falla; `LevelSelectController.load()` llama `SyncPendingProgressUseCase` como intento best-effort silencioso cada vez que se entra a la pantalla de niveles | — |
+| Tests | `sync_pending_progress_use_case_test.dart` (3 casos), ampliación de `record_victory_use_case_test.dart` (verifica que la entrada quede encolada) | — |
+
+Diseño: el disparo de reintento se ancla a `LevelSelectController.load()` (ya se ejecuta cada vez que se entra a esa pantalla) en vez de detectar conectividad explícitamente — simplemente se reintenta siempre y se descarta el resultado si vuelve a fallar; evita añadir un mecanismo de detección de red separado.
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna corrección posterior; `flutter analyze` limpio y suite completa en verde (56/56) tras el cambio.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- La pregunta del equipo ("¿al encender el backend debería sincronizarse solo?") identificó correctamente una laguna real de arquitectura que ningún test unitario previo había cubierto, porque todos mockeaban el sync como exitoso o fallido una sola vez — ninguno probaba la secuencia "falla offline → vuelve la red → se reintenta".
+- Quedó pendiente (fuera de esta consulta): la cola es best-effort y silenciosa; no hay UI que muestre "tienes N sincronizaciones pendientes", lo cual sería una mejora de transparencia pero no es requisito del enunciado.
+
+---
+
+## Consulta #19 — Sincronización bidireccional (pull+merge al login) y mensaje de modo sin conexión
+
+**Tarea o problema abordado.**
+
+Tras la Consulta #18 (cola de push), el equipo identificó que la sincronización seguía siendo unidireccional: el cliente **subía** progreso pero nunca lo **descargaba**. Consecuencia: entrar desde otro dispositivo o una ventana de incógnito con el mismo usuario mostraba el juego desde cero, porque el progreso vivía en el servidor pero nunca se traía de vuelta. Además, el error crudo de red (`ApiException(null): Network error calling ...`) se mostraba tal cual en pantalla, poco amigable. Este es el punto de fondo del ítem 5.2.2 del enunciado ("sincronizar el progreso del jugador con el servidor"): que el progreso sea del jugador (servidor), no del dispositivo.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Claude Sonnet 5 (backend + parte del frontend) y Claude Opus 4.8 (continuación frontend), agente con acceso a terminal.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+"Sí, impleméntalo, endpoint GET y pull+merge al login, y también que en pantalla no se muestre el error de conexión, si no un mensaje de 'actualmente te encuentras jugando sin conexión, tu progreso se sincronizará con el servidor cuando tengas conexión o el servidor esté disponible' o algo así."
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+Backend (repo `BackEnd-ArrowMaze`, documentado también en su propio `AI_USAGE.md`):
+- Nuevo endpoint `GET /progress` (protegido por JWT) que devuelve todo el progreso del usuario autenticado; `userId` se toma del token, nunca del cliente.
+- `IProgressRepository.findAllByUser`, `GetPlayerProgressUseCase`, wiring en el container, doc OpenAPI/Swagger, tests unitarios y de integración (401 sin JWT, devuelve lo sincronizado, vacío para usuario nuevo).
+
+Frontend (este repo):
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Modelo | `lib/application/models/remote_level_progress.dart` | Espejo del DTO de `GET /progress` |
+| Cliente HTTP | `ProgressApiClient.fetchProgress` | Descarga el progreso remoto |
+| Merge de dominio | `PlayerProgress.mergeRemoteLevel` | Fusión best-of por nivel: el estado nunca retrocede, se toma el mínimo de movimientos/tiempo; como el servidor no persiste estrellas, usa `StarRating.one` de fallback al marcar completado y conserva las locales si eran mejores |
+| Caso de uso | `lib/application/use_cases/pull_remote_progress_use_case.dart` | Descarga, fusiona nivel por nivel, y mantiene la cadena de progresión desbloqueando el sucesor de cada nivel completado |
+| Wiring | `LevelSelectController.load()` → `_syncWithServer()` | Al entrar a niveles (primer paso tras login): pull+merge, luego push de pendientes; si algo falla marca `isOffline` sin romper el juego |
+| Mensaje offline | `AppStrings.offlinePlayNotice` (ES/EN), banner en `LevelSelectScreen` y mensaje en `VictoryScreen` | Reemplaza el error técnico de red por el aviso amable pedido |
+| Tests | `player_progress_merge_test.dart` (3), `pull_remote_progress_use_case_test.dart` (2), mock de `GET /progress` en el E2E factory | — |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna corrección posterior; `flutter analyze` limpio y suite completa en verde (61/61 frontend; backend 22 unitarios + integración) tras el cambio.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- **Limitación conocida**: el esquema de progreso del backend (`highScore/minMoves/minTimeInSeconds/isCompleted`) no persiste estrellas, así que las estrellas no sobreviven un viaje de ida y vuelta por el servidor — al descargar un nivel completado desde otro dispositivo se muestra con 1 estrella de fallback aunque en el dispositivo original tuviera 3. Se documenta como decisión consciente (no bloquea el progreso ni el desbloqueo, que es lo esencial del enunciado); ampliar el esquema del backend con `stars` sería la mejora natural.
+- La sincronización quedó verdaderamente bidireccional: `POST` sube, `GET` baja, y `PlayerProgress.mergeRemoteLevel` (dominio) decide qué conservar — la regla "mejor de ambos" vive en la entidad, no en el caso de uso, consistente con cómo el backend ya lo hacía en `PlayerProgress.updateScore`.
+
+---
+
+## Consulta #20 — Mensajes de error amigables en login/registro
+
+**Tarea o problema abordado.**
+
+Al probar el registro/login con el mismo usuario desde otra sesión, el equipo notó que las pantallas de login y registro mostraban el `toString()` crudo de `ApiException` (p. ej. `ApiException(401): Invalid username or password`) en vez de un mensaje localizado y comprensible cuando la contraseña es incorrecta o el usuario ya existe.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Claude Sonnet 5, agente con acceso a terminal.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+"[...] por cierto, se deben agregar notificaciones de error al momento de iniciar sesión de si la contraseña es incorrecta, de si el usuario ya existe y cosas por el estilo."
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Strings | `AppStrings.invalidCredentialsError`, `.usernameAlreadyExistsError`, `.authConnectionError` (ES/EN) | Mensajes localizados para 401, 409 y fallo de red |
+| Helper | `lib/presentation/auth/auth_error_message.dart` (`authErrorMessage`) | Mapea `ApiException` por `statusCode` (401→credenciales inválidas, 409→usuario ya existe, `null`→error de conexión); cualquier otro código cae al mensaje crudo como fallback |
+| Wiring | `login_screen.dart`, `register_screen.dart` | Reemplazan `widget.controller.error.toString()` por `authErrorMessage(AppStringsScope.of(context), widget.controller.error)` |
+| Tests | `test/presentation/auth/auth_error_message_test.dart` (5 casos) | — |
+
+El backend ya distinguía estos casos correctamente (`InvalidCredentialsError` 401, `UserAlreadyExistsError` 409, ver `AI_USAGE.md` del repo `BackEnd-ArrowMaze`); el gap estaba solo en cómo el cliente presentaba ese error, no en la lógica de negocio.
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna corrección posterior; `flutter analyze` limpio y suite completa en verde (66/66) tras el cambio.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- El resto de las pantallas de auth (labels, validaciones de formulario) todavía usan texto en inglés embebido en vez de `AppStrings` — quedó fuera del alcance de esta consulta (se pidió específicamente sobre errores), pero es una inconsistencia de i18n a corregir en una pasada posterior.
+
+---
+
+## Consulta #21 — Bug real: los mensajes de error de auth nunca se mostraban (no era caché del navegador)
+
+**Tarea o problema abordado.**
+
+Tras la Consulta #20, el equipo probó con contraseña incorrecta y usuario repetido en una build nueva servida en un puerto distinto, con refresco duro del navegador — y el mensaje seguía sin aparecer. La primera hipótesis (mía) fue caché del service worker de Flutter Web; el equipo insistió en que probaba la URL y el puerto correctos. Verificar el log de compilación del proceso confirmó que la build sí era la nueva (sin errores, servida después de los cambios), lo que descartó la hipótesis de caché y obligó a revisar la lógica real.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Claude Sonnet 5, agente con acceso a terminal.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+"Nada, estoy en la dirección correcta, hice refresco y no cambió nada, los mensajes no se muestran, enciende el servidor para ver si persiste el usuario con su progreso."
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+Causa raíz encontrada en `LoginController` y `RegisterController` (`lib/presentation/auth/`): ambos `extends ChangeNotifier` pero **nunca llamaban a `notifyListeners()` ni se suscribían a los cambios de `AuthSessionController`** — el controlador que realmente muta `error`/`isLoading` tras un login/registro fallido. Las pantallas (`LoginScreen`, `RegisterScreen`) usan `ListenableBuilder(listenable: widget.controller, ...)`, escuchando al controlador de pantalla, no al `AuthSessionController` compartido. Resultado: el error quedaba correctamente calculado en memoria, pero la UI nunca se reconstruía para mostrarlo — un bug de wiring **preexistente**, no introducido por el mapeo de mensajes de la Consulta #20 (que en sí mismo era correcto, solo invisible).
+
+Corrección: ambos controladores ahora se suscriben en el constructor (`_authSessionController.addListener(notifyListeners)`) y se desuscriben en `dispose()`.
+
+| Componente | Ubicación | Cambio |
+|------------|-----------|--------|
+| `LoginController` | `lib/presentation/auth/login_controller.dart` | Reenvía notificaciones de `AuthSessionController` |
+| `RegisterController` | `lib/presentation/auth/register_controller.dart` | Ídem |
+| Tests de regresión | `test/presentation/auth/login_screen_test.dart`, `register_screen_test.dart` | Widget tests que simulan 401/409 vía `MockHttpClient` y verifican que el mensaje aparece **sin ninguna interacción adicional** tras el submit fallido — el escenario exacto que expuso el bug |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna corrección posterior; `flutter analyze` limpio y suite completa en verde (68/68, incluidos los 2 tests nuevos) tras el fix.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- **Caso de la IA equivocándose primero, documentado con honestidad**: mi primer diagnóstico (caché del service worker) era plausible pero incorrecto — Flutter Web en modo `debug` (`flutter run`, no `flutter build web`) no registra un service worker agresivo como en release, así que esa hipótesis nunca debió tener tanto peso. El equipo insistiendo en que probaba la instancia correcta, en vez de aceptar mi explicación, fue lo que forzó revisar el log de compilación y luego el código real — una lección de que "refresca el caché" es una respuesta cómoda que puede enmascarar un bug de wiring real si se acepta sin verificar.
+- Patrón a vigilar en el resto del código: cualquier `ChangeNotifier` que envuelve a otro `ChangeNotifier` (como `LoginController`/`RegisterController` envolviendo `AuthSessionController`) debe reenviar explícitamente las notificaciones o la UI que escucha al envoltorio nunca se entera de cambios en el envuelto. Vale la pena auditar si existe el mismo patrón en otros controladores de pantalla que compongan sobre `AuthSessionController` u otros controladores compartidos.
+
+---
+
+## Consulta #22 — Aspecto AOP de logging/trazabilidad sobre `FireArrowUseCase`
+
+**Tarea o problema abordado.**
+
+El único aspecto transversal documentado en el cliente eran los domain events; faltaba algo más cercano al ejemplo literal del enunciado ("interceptar `MovePlayerUseCase.execute()` para registrar el estado del tablero antes y después del movimiento"). Se pidió agregar un aspecto de logging real, sin usar una librería de AOP.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Claude Sonnet 5, agente con acceso a terminal.
+
+**Prompt o instrucción proporcionada.**
+
+"Sí, dale con el aspecto AOP."
+
+**Resultado obtenido.**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Puerto extraído | `IFireArrowUseCase` en `lib/application/use_cases/fire_arrow_use_case.dart` | Permite decorar el caso de uso sin que `GameController` dependa de la clase concreta |
+| Puerto de logging | `lib/application/ports/i_use_case_logger.dart` (`IUseCaseLogger`) | Abstrae el mecanismo de logging (AOP: el caso de uso no lo conoce) |
+| Decorador | `lib/application/use_cases/logging_fire_arrow_use_case_decorator.dart` | Registra estado del tablero (flechas restantes, movimientos, estado) antes/después de cada disparo, duración, y errores (relanzados, nunca silenciados) |
+| Implementación | `lib/infrastructure/logging/console_use_case_logger.dart` | Logging real vía `dart:developer` |
+| Wiring | `AppContainer.buildGameController()` en `lib/main.dart` | Envuelve `FireArrowUseCase` con el decorador; `FireArrowUseCase` sigue sin ninguna línea de logging |
+| Tests | `test/application/use_cases/logging_fire_arrow_use_case_decorator_test.dart` (3 casos) | Transparencia del resultado, mensajes antes/después, relanzamiento de errores |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna corrección posterior; `flutter analyze` limpio y suite completa en verde (82/82) tras el cambio.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Extraer una interfaz de un caso de uso ya en uso (`FireArrowUseCase` → `IFireArrowUseCase`) fue un cambio de bajo riesgo porque `GameController` ya lo recibía por constructor (inyección de dependencias existente) — solo cambió el tipo del parámetro, cero cambios de lógica en `GameController` ni en las pantallas.
+- Reutilizar el patrón Decorator (ya usado en `CachedLevelRepository`) para el aspecto AOP, en vez de introducir un mecanismo distinto, mantiene la arquitectura consistente y es más fácil de defender en la sustentación: "usamos el mismo patrón para dos problemas distintos —caché e instrumentación— porque ambos son, estructuralmente, 'añadir comportamiento a una implementación existente sin modificarla'".
