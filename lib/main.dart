@@ -19,7 +19,7 @@ import 'application/use_cases/logging_fire_arrow_use_case_decorator.dart';
 import 'application/use_cases/login_user_use_case.dart';
 import 'application/use_cases/logout_user_use_case.dart';
 import 'application/use_cases/pull_remote_progress_use_case.dart';
-import 'application/use_cases/record_victory_use_case.dart';
+import 'application/use_cases/refresh_levels_use_case.dart';
 import 'application/use_cases/register_user_use_case.dart';
 import 'application/use_cases/restore_auth_session_use_case.dart';
 import 'application/use_cases/start_game_use_case.dart';
@@ -278,6 +278,7 @@ class AppContainer {
     final playerId = authSessionController.session?.playerId ?? const Identifier('local-player');
     return LevelSelectController(
       loadLevelsUseCase: LoadLevelsUseCase(levelRepository: levelRepository),
+      refreshLevelsUseCase: RefreshLevelsUseCase(levelRepository: levelRepository),
       ensureInitialProgressUseCase: ensureInitialProgressUseCase,
       getPlayerProgressUseCase: getPlayerProgressUseCase,
       playerId: playerId,

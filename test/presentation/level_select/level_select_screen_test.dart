@@ -1,6 +1,7 @@
 import 'package:arrow_maze_escape_puzzle/application/use_cases/ensure_initial_progress_use_case.dart';
 import 'package:arrow_maze_escape_puzzle/application/use_cases/get_player_progress_use_case.dart';
 import 'package:arrow_maze_escape_puzzle/application/use_cases/load_levels_use_case.dart';
+import 'package:arrow_maze_escape_puzzle/application/use_cases/refresh_levels_use_case.dart';
 import 'package:arrow_maze_escape_puzzle/domain/domain.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/progress/in_memory_player_progress_repository.dart';
 import 'package:arrow_maze_escape_puzzle/l10n/app_strings.dart';
@@ -22,6 +23,7 @@ void main() {
     final levelRepo = FakeLevelRepository(levels);
     return LevelSelectController(
       loadLevelsUseCase: LoadLevelsUseCase(levelRepository: levelRepo),
+      refreshLevelsUseCase: RefreshLevelsUseCase(levelRepository: levelRepo),
       ensureInitialProgressUseCase: EnsureInitialProgressUseCase(
         levelRepository: levelRepo,
         progressRepository: repo,
@@ -106,5 +108,41 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Game Screen for level-01'), findsOneWidget);
+  });
+
+  testWidgets('muestra notificación tras pulsar actualizar niveles', (tester) async {
+    final level = buildTestLevel(id: 'level-01');
+    final playerId = const Identifier('test-user');
+    final progressRepo = InMemoryPlayerProgressRepository();
+    await progressRepo.save(PlayerProgress(
+      playerId: playerId,
+      levels: {
+        level.id: LevelProgress(levelId: level.id, status: LevelProgressStatus.unlocked),
+      },
+    ));
+
+    final controller = buildController(
+      levels: [level],
+      playerId: playerId,
+      progressRepo: progressRepo,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AppStringsScope(
+          strings: const AppStringsEn(),
+          child: LevelSelectScreen(
+            controller: controller,
+            authSessionController: buildTestAuthSessionController(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('refresh-levels-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Catalog is up to date (1 levels).'), findsOneWidget);
   });
 }

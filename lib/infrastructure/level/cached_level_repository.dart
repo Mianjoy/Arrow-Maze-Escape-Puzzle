@@ -67,6 +67,11 @@ class CachedLevelRepository implements ILevelRepository {
     return null;
   }
 
+  @override
+  void invalidateCache() {
+    _cache = null;
+  }
+
   /// Lee el catálogo cacheado en disco, o `null` si nunca se guardó ninguno.
   List<Map<String, dynamic>>? _readStoredPayloads() {
     final raw = _prefs.getString(_cacheKey);

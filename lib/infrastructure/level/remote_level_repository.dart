@@ -82,4 +82,9 @@ class RemoteLevelRepository implements ILevelRepository {
     }
     return null;
   }
+
+  @override
+  void invalidateCache() {
+    _cache = null;
+  }
 }

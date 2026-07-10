@@ -108,6 +108,18 @@ abstract class AppStrings {
 
   /// Etiqueta de estrellas obtenidas, con [stars] interpolado.
   String starsLabel(int stars);
+
+  /// Tooltip del botón para refrescar el catálogo de niveles.
+  String get refreshLevelsTooltip;
+
+  /// Notificación cuando el catálogo se actualizó con niveles nuevos.
+  String levelsCatalogUpdated(int totalCount, int addedCount);
+
+  /// Notificación cuando el catálogo ya estaba al día.
+  String levelsRefreshedUpToDate(int totalCount);
+
+  /// Notificación cuando falla la actualización del catálogo.
+  String get levelsRefreshFailed;
 }
 
 /// Cadenas en inglés (idioma por defecto).
@@ -212,6 +224,20 @@ class AppStringsEn extends AppStrings {
 
   @override
   String starsLabel(int stars) => 'Stars: $stars';
+
+  @override
+  String get refreshLevelsTooltip => 'Refresh levels';
+
+  @override
+  String levelsCatalogUpdated(int totalCount, int addedCount) =>
+      'Catalog updated: $totalCount levels ($addedCount new).';
+
+  @override
+  String levelsRefreshedUpToDate(int totalCount) =>
+      'Catalog is up to date ($totalCount levels).';
+
+  @override
+  String get levelsRefreshFailed => 'Could not refresh the level catalog.';
 }
 
 /// Cadenas en español.
@@ -317,6 +343,20 @@ class AppStringsEs extends AppStrings {
 
   @override
   String starsLabel(int stars) => 'Estrellas: $stars';
+
+  @override
+  String get refreshLevelsTooltip => 'Actualizar niveles';
+
+  @override
+  String levelsCatalogUpdated(int totalCount, int addedCount) =>
+      'Catálogo actualizado: $totalCount niveles ($addedCount nuevo${addedCount == 1 ? '' : 's'}).';
+
+  @override
+  String levelsRefreshedUpToDate(int totalCount) =>
+      'El catálogo ya está al día ($totalCount niveles).';
+
+  @override
+  String get levelsRefreshFailed => 'No se pudo actualizar el catálogo de niveles.';
 }
 
 /// Provee [AppStrings] a descendientes del árbol de widgets vía `of(context)`.
