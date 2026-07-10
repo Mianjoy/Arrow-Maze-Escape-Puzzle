@@ -20,6 +20,7 @@ class LoginController extends ChangeNotifier {
 
   final AuthSessionController _authSessionController;
 
+  /// Deja de escuchar cambios de [AuthSessionController] al destruir el controlador.
   @override
   void dispose() {
     _authSessionController.removeListener(notifyListeners);

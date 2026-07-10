@@ -7,26 +7,26 @@ import 'support/seed_catalog_fixture.dart';
 
 /// Pruebas E2E del catálogo remoto simulado (15 niveles, sin fallback a assets).
 void main() {
-  group('E2E — catálogo remoto (GET /levels simulado)', () {
+  group('E2E — remote catalog (simulated GET /levels)', () {
     late AppContainer container;
 
     setUp(() {
       container = E2eAppFactory.createWithFullSeedCatalog();
     });
 
-    test('carga exactamente 15 niveles del seed', () async {
+    test('should_load_exactly_15_seed_levels', () async {
       final levels = await container.levelRepository.findAll();
       expect(levels.length, kSeedCatalogExpectedCount);
     });
 
-    test('los niveles están ordenados por levelNumber', () async {
+    test('should_order_levels_by_levelNumber', () async {
       final levels = await container.levelRepository.findAll();
       for (var i = 0; i < levels.length; i++) {
         expect(levels[i].levelNumber, i + 1);
       }
     });
 
-    test('cada entrada del fixture mapea a dominio sin error', () {
+    test('should_map_each_fixture_entry_to_domain_without_error', () {
       for (final json in SeedCatalogFixture.load()) {
         expect(
           () => PlayableLevelHelper.mapWireLevel(json),

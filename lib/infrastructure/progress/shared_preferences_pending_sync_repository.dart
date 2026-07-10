@@ -16,12 +16,14 @@ class SharedPreferencesPendingSyncRepository implements IPendingSyncRepository {
 
   static const _key = 'pending_sync_queue';
 
+  /// Añade [entry] al final de la cola persistida.
   @override
   Future<void> add(PendingSyncEntry entry) async {
     final current = await loadAll();
     await saveAll([...current, entry]);
   }
 
+  /// Lee la cola de sincronizaciones pendientes desde disco.
   @override
   Future<List<PendingSyncEntry>> loadAll() async {
     final raw = _prefs.getString(_key);
@@ -33,6 +35,7 @@ class SharedPreferencesPendingSyncRepository implements IPendingSyncRepository {
         .toList();
   }
 
+  /// Persiste [entries] como lista JSON (o borra la clave si está vacía).
   @override
   Future<void> saveAll(List<PendingSyncEntry> entries) async {
     if (entries.isEmpty) {

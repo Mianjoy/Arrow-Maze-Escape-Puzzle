@@ -25,6 +25,7 @@ class RemoteLevelRepository implements ILevelRepository {
 
   List<Level>? _cache;
 
+  /// Descarga y cachea el catálogo completo (`GET /levels`).
   @override
   Future<List<Level>> findAll() async {
     final cached = _cache;
@@ -52,6 +53,7 @@ class RemoteLevelRepository implements ILevelRepository {
     return _cache!;
   }
 
+  /// Obtiene un nivel por [id] (caché o `GET /levels/:id`).
   @override
   Future<Level?> findById(Identifier id) async {
     final cached = _cache;
@@ -83,6 +85,7 @@ class RemoteLevelRepository implements ILevelRepository {
     return null;
   }
 
+  /// Descarta la caché en memoria para forzar una nueva descarga.
   @override
   void invalidateCache() {
     _cache = null;

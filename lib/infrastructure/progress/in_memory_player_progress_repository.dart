@@ -7,11 +7,13 @@ import '../../domain/domain.dart';
 class InMemoryPlayerProgressRepository implements IPlayerProgressRepository {
   final Map<String, PlayerProgress> _progressByPlayerId = {};
 
+  /// Guarda o actualiza el progreso en el mapa interno.
   @override
   Future<void> save(PlayerProgress progress) async {
     _progressByPlayerId[progress.playerId.value] = progress;
   }
 
+  /// Recupera el progreso de [playerId] o `null` si no existe.
   @override
   Future<PlayerProgress?> findByPlayerId(Identifier playerId) async {
     return _progressByPlayerId[playerId.value];

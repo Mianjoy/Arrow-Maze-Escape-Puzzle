@@ -23,7 +23,7 @@ void main() {
   });
 
   group('LevelApiClient', () {
-    test('fetchAllLevels lanza si el cuerpo no es un array', () async {
+    test('should_throw_when_fetchAllLevels_body_is_not_an_array', () async {
       final mockClient = MockHttpClient((request) async {
         return http.Response('{"id":"x"}', 200);
       });
@@ -40,8 +40,8 @@ void main() {
     });
   });
 
-  group('RemoteLevelRepository — con MockClient', () {
-    test('findAll mapea niveles del GET /levels y ordena por levelNumber', () async {
+  group('RemoteLevelRepository — with MockClient', () {
+    test('should_map_and_sort_levels_from_GET_levels', () async {
       final mockClient = MockHttpClient((request) async {
         expect(request.url.path, '/levels');
         return http.Response(
@@ -69,7 +69,7 @@ void main() {
       expect(levels.last.id.value, 'level-b');
     });
 
-    test('findById devuelve null ante 404', () async {
+    test('should_return_null_from_findById_on_404', () async {
       final mockClient = MockHttpClient((request) async {
         return http.Response('{"error":"not found"}', 404);
       });
@@ -85,7 +85,7 @@ void main() {
       expect(level, isNull);
     });
 
-    test('findById mapea el cuerpo de GET /levels/:id', () async {
+    test('should_map_findById_from_GET_levels_by_id_body', () async {
       final mockClient = MockHttpClient((request) async {
         expect(request.url.path, '/levels/simple-1');
         return http.Response(jsonEncode(simple1Json), 200);
@@ -103,7 +103,7 @@ void main() {
       expect(level!.parMoves, 20);
     });
 
-    test('propaga LevelRepositoryException si GET /levels no es 200', () async {
+    test('should_throw_LevelRepositoryException_when_GET_levels_is_not_200', () async {
       final mockClient = MockHttpClient((request) async {
         return http.Response('error', 500);
       });

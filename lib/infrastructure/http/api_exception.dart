@@ -12,6 +12,7 @@ class ApiException implements Exception {
   /// Código HTTP cuando la respuesta llegó al servidor.
   final int? statusCode;
 
+  /// Representación legible con código HTTP y [message].
   @override
   String toString() => 'ApiException($statusCode): $message';
 }

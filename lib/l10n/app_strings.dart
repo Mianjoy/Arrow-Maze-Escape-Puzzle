@@ -378,6 +378,7 @@ class AppStringsScope extends InheritedWidget {
     return scope!.strings;
   }
 
+  /// Indica si las cadenas cambiaron y los descendientes deben reconstruirse.
   @override
   bool updateShouldNotify(AppStringsScope oldWidget) => strings != oldWidget.strings;
 }

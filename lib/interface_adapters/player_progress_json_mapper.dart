@@ -2,10 +2,14 @@ import 'dart:convert';
 
 import '../../domain/domain.dart';
 
-/// Traduce [PlayerProgress] a JSON persistible y viceversa.
+/// Adaptador que serializa y deserializa [PlayerProgress] a JSON persistible.
+///
+/// Usado por repositorios locales (`SharedPreferences`) para guardar el progreso
+/// offline del jugador. Capa **Interface Adapters** (`lib/interface_adapters/`).
 class PlayerProgressJsonMapper {
   /// Crea el mapper sin estado interno.
   const PlayerProgressJsonMapper();
+
   /// Serializa el agregado [progress] a un mapa JSON.
   Map<String, dynamic> toJson(PlayerProgress progress) {
     return {

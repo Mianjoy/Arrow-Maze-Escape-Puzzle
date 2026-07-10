@@ -73,7 +73,7 @@ void main() {
     );
   }
 
-  testWidgets('E2E UI: lista incluye level-02 y level-15 tras cargar API', (tester) async {
+  testWidgets('E2E UI: should_list_level_02_and_level_15_after_loading_api', (tester) async {
     await tester.pumpWidget(buildE2eApp());
     await tester.pumpAndSettle();
 
@@ -82,7 +82,7 @@ void main() {
     expect(find.text('level-15'), findsOneWidget);
   });
 
-  testWidgets('E2E UI: gana level-02 con un disparo', (tester) async {
+  testWidgets('E2E UI: should_win_level_02_with_single_shot', (tester) async {
     await tester.pumpWidget(buildE2eApp());
     await tester.pumpAndSettle();
 
@@ -97,7 +97,7 @@ void main() {
     expect(find.byType(VictoryScreen), findsOneWidget);
   });
 
-  testWidgets('E2E UI: derrota en level-09 al agotar parMoves', (tester) async {
+  testWidgets('E2E UI: should_lose_level_09_when_par_moves_exhausted', (tester) async {
     await tester.pumpWidget(buildE2eApp());
     await tester.pumpAndSettle();
 

@@ -13,8 +13,8 @@ import 'package:test/test.dart';
 void main() {
   const mapper = LevelDtoMapper();
 
-  group('StructuredLevelJsonDto — parseo del wire format', () {
-    test('parsea metadatos y flechas del nivel canónico simple-1', () {
+  group('StructuredLevelJsonDto — wire format parsing', () {
+    test('should_parse_metadata_and_arrows_from_canonical_simple_1', () {
       final raw = File('docs/levels/simple-1.json').readAsStringSync();
       final dto = StructuredLevelJsonDto.fromJson(jsonDecode(raw) as Map<String, dynamic>);
 
@@ -29,8 +29,8 @@ void main() {
     });
   });
 
-  group('LevelDtoMapper — wire format → dominio', () {
-    test('mapea simple-1 a Level resoluble (layout multi-celda)', () {
+  group('LevelDtoMapper — wire format to domain', () {
+    test('should_map_simple_1_to_solvable_multi_cell_level', () {
       final raw = File('docs/levels/simple-1.json').readAsStringSync();
       final base = StructuredLevelJsonDto.fromJson(jsonDecode(raw) as Map<String, dynamic>);
       // El JSON canónico usa maxMoves: 5; elevamos el techo para validar
@@ -59,7 +59,7 @@ void main() {
       expect(level.optimalMoves, lessThanOrEqualTo(level.parMoves));
     });
 
-    test('mapea el nivel mínimo del backend (2×1, una flecha)', () {
+    test('should_map_minimal_backend_level_2x1_single_arrow', () {
       const dto = StructuredLevelJsonDto(
         id: 'level-1',
         levelNumber: 1,
@@ -86,7 +86,7 @@ void main() {
       expect(level.optimalMoves, 1);
     });
 
-    test('rechaza un nivel sin solución (flechas enfrentadas)', () {
+    test('should_reject_unsolvable_level_with_facing_arrows', () {
       const dto = StructuredLevelJsonDto(
         id: 'blocked',
         levelNumber: 99,

@@ -37,6 +37,7 @@ class FireArrowUseCase implements IFireArrowUseCase {
   final IGameRepository _gameRepository;
   final ArrowMovementEngine _movementEngine;
 
+  /// Intenta disparar la flecha en [position]; persiste el [Game] resultante.
   @override
   Future<({Game game, MoveResult result})> execute({
     required Game game,

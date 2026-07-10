@@ -33,7 +33,7 @@ void main() {
     );
   }
 
-  testWidgets('muestra los niveles cargados por el controlador', (tester) async {
+  testWidgets('should_display_levels_loaded_by_controller', (tester) async {
     final level = buildTestLevel(id: 'level-01');
     final playerId = const Identifier('test-user');
     final progressRepo = InMemoryPlayerProgressRepository();
@@ -66,7 +66,7 @@ void main() {
     expect(find.text('level-01'), findsOneWidget);
   });
 
-  testWidgets('navega a /game con el nivel elegido al tocar un item', (tester) async {
+  testWidgets('should_navigate_to_game_with_selected_level_on_tap', (tester) async {
     final level = buildTestLevel(id: 'level-01');
     final playerId = const Identifier('test-user');
     final progressRepo = InMemoryPlayerProgressRepository();
@@ -110,7 +110,7 @@ void main() {
     expect(find.text('Game Screen for level-01'), findsOneWidget);
   });
 
-  testWidgets('muestra notificación tras pulsar actualizar niveles', (tester) async {
+  testWidgets('should_show_snackbar_after_tapping_refresh_levels', (tester) async {
     final level = buildTestLevel(id: 'level-01');
     final playerId = const Identifier('test-user');
     final progressRepo = InMemoryPlayerProgressRepository();

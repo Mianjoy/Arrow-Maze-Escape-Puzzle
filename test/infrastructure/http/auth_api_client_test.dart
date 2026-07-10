@@ -10,7 +10,7 @@ import '../../support/mock_http_client.dart';
 void main() {
   const config = ApiConfig(baseUrl: 'http://test');
 
-  test('login devuelve AuthSession cuando el backend responde 200', () async {
+  test('should_return_AuthSession_when_login_responds_200', () async {
     final client = MockHttpClient((request) async {
       expect(request.method, 'POST');
       expect(request.url.path, '/auth/login');
@@ -33,7 +33,7 @@ void main() {
     expect(session.isAuthenticated, isTrue);
   });
 
-  test('register devuelve userId y username en 201', () async {
+  test('should_return_userId_and_username_when_register_responds_201', () async {
     final client = MockHttpClient((request) async {
       expect(request.url.path, '/auth/register');
       return http.Response(
