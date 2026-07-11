@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
@@ -8,6 +9,10 @@ import '../../application/ports/i_app_settings.dart';
 import '../../application/ports/i_audio_service.dart';
 
 /// Reproduce efectos desde assets MP3 y música de fondo con [AudioPlayer].
+///
+/// En Web se cargan bytes vía [rootBundle] (clave del manifest: `assets/audio/...`)
+/// y se reproducen con [BytesSource], evitando HTTP 404 por doble prefijo
+/// `assets/assets/` de [AssetSource].
 ///
 /// [IAppSettings.isMuted] silencia solo la música de fondo (`background.mp3`);
 /// los efectos de juego se reproducen siempre.
@@ -20,31 +25,34 @@ class AppAudioService implements IAudioService {
   }
 
   static const _sfxPoolSize = 3;
+  static const _mp3Mime = 'audio/mpeg';
 
   final IAppSettings _settings;
   final AudioPlayer _musicPlayer = AudioPlayer();
   final List<AudioPlayer> _sfxPool =
       List.generate(_sfxPoolSize, (_) => AudioPlayer());
   final Random _random = Random();
+  final Map<String, Future<Uint8List>> _byteCache = {};
 
   bool _musicStarted = false;
   int _sfxPoolIndex = 0;
 
-  /// Rutas relativas al directorio `assets/` declarado en [pubspec.yaml]
-  /// (sin prefijo `assets/` — [AssetSource] lo añade internamente en Web).
-  static const _generalTap = 'audio/General_Tap/general_click_sound.mp3';
-  static const _blockedMove = 'audio/Movement_Not_Allowe/not_allowed_movement.mp3';
-  static const _levelCleared = 'audio/Level_Cleared/level_cleared.mp3';
-  static const _timeUp = 'audio/times_up.mp3';
-  static const _noMovementsLeft = 'audio/no_movements_left.mp3';
-  static const _backgroundMusic = 'audio/background.mp3';
+  /// Claves exactas del [AssetManifest] (incluyen prefijo `assets/`).
+  static const _generalTap =
+      'assets/audio/General_Tap/general_click_sound.mp3';
+  static const _blockedMove =
+      'assets/audio/Movement_Not_Allowe/not_allowed_movement.mp3';
+  static const _levelCleared = 'assets/audio/Level_Cleared/level_cleared.mp3';
+  static const _timeUp = 'assets/audio/times_up.mp3';
+  static const _noMovementsLeft = 'assets/audio/no_movements_left.mp3';
+  static const _backgroundMusic = 'assets/audio/background.mp3';
 
   static const _arrowExtractedSounds = [
-    'audio/Tap_sound/tap_sound_1.mp3',
-    'audio/Tap_sound/tap_sound_2.mp3',
-    'audio/Tap_sound/tap_sound_3.mp3',
-    'audio/Tap_sound/tap_sound_4.mp3',
-    'audio/Tap_sound/tap_sound_5.mp3',
+    'assets/audio/Tap_sound/tap_sound_1.mp3',
+    'assets/audio/Tap_sound/tap_sound_2.mp3',
+    'assets/audio/Tap_sound/tap_sound_3.mp3',
+    'assets/audio/Tap_sound/tap_sound_4.mp3',
+    'assets/audio/Tap_sound/tap_sound_5.mp3',
   ];
 
   @override
@@ -96,9 +104,10 @@ class AppAudioService implements IAudioService {
   Future<void> startBackgroundMusic() async {
     if (_settings.isMuted || _musicStarted) return;
     try {
+      final bytes = await _loadAssetBytes(_backgroundMusic);
       await _musicPlayer.setReleaseMode(ReleaseMode.loop);
       await _musicPlayer.setVolume(0.35);
-      await _musicPlayer.play(AssetSource(_backgroundMusic));
+      await _musicPlayer.play(BytesSource(bytes, mimeType: _mp3Mime));
       _musicStarted = true;
     } catch (_) {
       // En Web el autoplay puede fallar hasta el primer gesto; _musicStarted
@@ -113,13 +122,22 @@ class AppAudioService implements IAudioService {
     _musicStarted = false;
   }
 
+  /// Carga bytes del asset con caché (clave = ruta del manifest, p. ej. `assets/audio/...`).
+  Future<Uint8List> _loadAssetBytes(String bundleKey) {
+    return _byteCache.putIfAbsent(bundleKey, () async {
+      final data = await rootBundle.load(bundleKey);
+      return data.buffer.asUint8List();
+    });
+  }
+
   /// Reproduce un efecto corto con pool rotativo (independiente del mute).
-  Future<void> _playSfx(String assetPath, {SystemSoundType? fallback}) async {
+  Future<void> _playSfx(String bundleKey, {SystemSoundType? fallback}) async {
     try {
+      final bytes = await _loadAssetBytes(bundleKey);
       final player = _sfxPool[_sfxPoolIndex];
       _sfxPoolIndex = (_sfxPoolIndex + 1) % _sfxPool.length;
       await player.stop();
-      await player.play(AssetSource(assetPath));
+      await player.play(BytesSource(bytes, mimeType: _mp3Mime));
     } catch (_) {
       if (fallback != null && !kIsWeb) {
         await SystemSound.play(fallback);

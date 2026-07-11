@@ -1,8 +1,8 @@
 # Audio assets
 
-All sound files use **MP3** format, consumed via `audioplayers` and `AssetSource`.
-
-Paths passed to `AssetSource` are **relative to this folder** (e.g. `audio/background.mp3`), without a leading `assets/` prefix — adding `assets/` twice causes 404 on Flutter Web.
+All sound files use **MP3** format. `AppAudioService` loads them via `rootBundle`
+(manifest key: `assets/audio/...`) and plays with `BytesSource` — this avoids
+HTTP 404 from duplicated `assets/` prefixes when using `AssetSource` on Web.
 
 | Carpeta / archivo | Uso |
 |-------------------|-----|
@@ -14,4 +14,5 @@ Paths passed to `AssetSource` are **relative to this folder** (e.g. `audio/backg
 | `times_up.mp3` | Tiempo del nivel agotado |
 | `no_movements_left.mp3` | Movimientos del nivel agotados |
 
-Tras añadir, convertir o renombrar archivos, reinicia la app por completo (no basta hot reload).
+Each file is listed explicitly in `pubspec.yaml`. Tras añadir o renombrar
+archivos, ejecuta `flutter clean`, `flutter pub get` y reinicia la app por completo.

@@ -1573,12 +1573,12 @@ Tras la migración a WAV (Consulta #31), la reproducción de audio falló en **B
 | `times_up.mp3` | `playTimeUp()` | **No** |
 | `no_movements_left.mp3` | `playNoMovementsLeft()` | **No** |
 
-**Cambios técnicos en `AppAudioService`:**
+**Cambios técnicos en `AppAudioService` (iteración inicial):**
 
 | Aspecto | Implementación |
 |---------|----------------|
 | Formato | Rutas `.mp3` restauradas en constantes |
-| Carga Web | `AssetSource('audio/...')` **sin** prefijo `assets/` (evita URL `assets/assets/audio/...` → 404) |
+| Carga Web | Primera iteración: `AssetSource('audio/...')` sin prefijo `assets/` — insuficiente en Brave; ver Consulta #33 |
 | Efectos solapados | Pool rotativo de 3 `AudioPlayer` para SFX |
 | Música de fondo | Reproductor dedicado; `startBackgroundMusic()` y `ensureAudioUnlocked()` respetan `isMuted` |
 | Fallback nativo | `SystemSound` solo cuando `!kIsWeb` (no disponible en Web) |
@@ -1592,29 +1592,27 @@ Tras la migración a WAV (Consulta #31), la reproducción de audio falló en **B
 | Etiqueta i18n | `app_strings.dart` | “Silenciar música de fondo” / “Mute background music” |
 | Puertos | `i_app_settings.dart`, `i_audio_service.dart` | Documentación: `isMuted` aplica solo a BGM |
 
-**Diagnóstico del error 404 en Web:**
+**Diagnóstico del error 404 en Web (iteración inicial):**
 
-- Un intento intermedio con `rootBundle.load('assets/$path')` + `BytesSource` provocaba peticiones a **`assets/assets/audio/...`** (doble prefijo).
-- **Solución definitiva:** pasar a `AssetSource` rutas relativas al directorio declarado en `pubspec.yaml` (`audio/Tap_sound/tap_sound_1.mp3`), dejando que `audioplayers` resuelva la URL correcta (`assets/audio/...`).
+- Se probó `AssetSource('audio/...')` sin prefijo `assets/`, según documentación de `audioplayers`.
+- En **Brave/macOS** persistieron HTTP **404** en `assets/assets/audio/...` y `MediaError: Format error (Code: 4)` (el navegador recibía HTML de error, no MP3).
+- La **solución definitiva** se documenta en la Consulta #33 (`BytesSource` + claves del manifest + assets explícitos en `pubspec.yaml`).
 
 **Archivos modificados:**
 
 | Archivo | Cambio |
 |---------|--------|
-| `lib/infrastructure/audio/app_audio_service.dart` | MP3, `AssetSource`, pool SFX, mute solo en BGM |
+| `lib/infrastructure/audio/app_audio_service.dart` | MP3, `AssetSource` (iteración inicial), pool SFX, mute solo en BGM |
 | `lib/application/ports/i_audio_service.dart` | Documentación de mute vs. efectos |
 | `lib/application/ports/i_app_settings.dart` | `isMuted` = silencio de música de fondo |
 | `lib/main.dart` | Stop/start de BGM al togglear mute |
 | `lib/l10n/app_strings.dart` | Etiqueta “Silenciar música de fondo” |
 | `lib/presentation/settings/settings_screen.dart` | Comentario de pantalla actualizado |
-| `assets/audio/README.md` | Tabla MP3; nota sobre rutas sin prefijo `assets/` |
+| `assets/audio/README.md` | Tabla MP3; nota sobre rutas relativas a `AssetSource` |
 
-**Fragmento representativo:**
+**Fragmento representativo (iteración inicial — sustituido en #33):**
 
 ```dart
-/// [IAppSettings.isMuted] silencia solo la música de fondo (`background.mp3`);
-/// los efectos de juego se reproducen siempre.
-
 Future<void> startBackgroundMusic() async {
   if (_settings.isMuted || _musicStarted) return;
   await _musicPlayer.play(AssetSource(_backgroundMusic)); // audio/background.mp3
@@ -1628,13 +1626,105 @@ Future<void> _playSfx(String assetPath, {SystemSoundType? fallback}) async {
 
 **Modificaciones realizadas por el equipo al resultado de la IA.**
 
-- El equipo revirtió manualmente los archivos de `assets/audio/` de WAV a MP3 y validó la reproducción en Brave/macOS tras `flutter clean` y restart completo.
+- El equipo revirtió manualmente los archivos de `assets/audio/` de WAV a MP3.
+- Tras pruebas en Brave/macOS, se detectó que `AssetSource` seguía fallando; se abrió la Consulta #33.
 
 **Lecciones aprendidas o limitaciones identificadas.**
 
 - **MP3** sigue siendo el formato más compatible en navegadores para Flutter Web frente a WAV no estándar o de gran tamaño.
-- **No anteponer `assets/`** a rutas de `AssetSource`; en Web la URL resultante sería `assets/assets/...` → HTTP 404.
+- `AssetSource` con rutas `audio/...` **no garantiza** reproducción en Flutter Web; puede seguir generando 404 con doble prefijo `assets/` (ver Consulta #33).
 - Acotar el mute a la **música de fondo** permite al jugador silenciar el ambiente sin perder feedback sonoro del tablero (taps, victoria, derrota).
 - Un pool de reproductores SFX evita condiciones de carrera al solapar sonidos consecutivos (`stop()` + `play()` en el mismo `AudioPlayer`).
 - Tras cambiar assets o rutas: **`flutter clean`** + restart completo; hot reload no recarga el bundle.
 - En Web, la política de **autoplay** sigue exigiendo un gesto del usuario antes de iniciar `background.mp3`; `ensureAudioUnlocked()` se invoca desde `withButtonClick` y `onCellTapped` (Consulta #30).
+
+---
+
+## Consulta #33 — Corrección definitiva de carga de audio en Flutter Web (BytesSource + manifest)
+
+**Tarea o problema abordado.**
+
+Tras la Consulta #32, la reproducción seguía fallando en **Brave/macOS (Flutter Web)**. La consola del navegador mostraba:
+
+- Peticiones `GET` con HTTP **404** a rutas como `assets/assets/audio/General_Tap/general_click_sound.mp3`.
+- Excepciones de `audioplayers`: `AudioPlayerException`, `WebAudioError`, `MediaError: MEDIA_ELEMENT_ERROR: Format error (Code: 4)` (efecto secundario del 404: el elemento `<audio>` recibe HTML de error, no un MP3).
+
+Se requería una corrección definitiva que evite la resolución de URLs duplicadas de `AssetSource` en Web y garantice que todos los MP3 del juego estén empaquetados en el bundle.
+
+**Herramienta de IA utilizada.**
+
+- Cursor Agent (Composer), con acceso a lectura/escritura del repositorio, exploración de assets y consola del navegador.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Tras revertir los audios a MP3, en Flutter Web (Brave/macOS) los sonidos no se reproducen. La consola muestra errores HTTP 404 en rutas con doble prefijo `assets/assets/audio/...` y excepciones de `audioplayers` (`WebAudioError`, `Format error Code: 4`) al cargar archivos como `audio/General_Tap/general_click_sound.mp3`.
+>
+> Aplicar las correcciones recomendadas:
+>
+> - **Carga de assets:** usar `rootBundle.load()` con la clave exacta del manifest (`assets/audio/...`) y reproducir con `BytesSource` + `mimeType: audio/mpeg`, evitando peticiones HTTP fallidas de `AssetSource` en Web.
+> - **Caché y pool:** mantener caché en memoria de bytes y pool rotativo de reproductores SFX para solapamiento de efectos.
+> - **pubspec.yaml:** listar explícitamente los 11 archivos MP3 usados por el juego (más fiable en Web que solo declarar el directorio).
+> - **Comportamiento del mute:** sin cambios respecto a #32 — el toggle silencia solo `background.mp3`; los efectos de juego siguen activos.
+> - **Documentación:** actualizar `assets/audio/README.md` y registrar la consulta en `AI_USAGE.md` con redacción técnica profesional.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+**Estrategia de carga (Web y nativo):**
+
+| Paso | Implementación |
+|------|----------------|
+| Clave del asset | Constantes con ruta completa del manifest: `assets/audio/General_Tap/general_click_sound.mp3` |
+| Lectura | `rootBundle.load(bundleKey)` → `Uint8List` |
+| Reproducción | `BytesSource(bytes, mimeType: 'audio/mpeg')` |
+| Rendimiento | `Map<String, Future<Uint8List>>` como caché; pool de 3 `AudioPlayer` para SFX |
+
+**Assets declarados explícitamente en `pubspec.yaml`:**
+
+- `background.mp3`, `times_up.mp3`, `no_movements_left.mp3`
+- `General_Tap/general_click_sound.mp3`
+- `Level_Cleared/level_cleared.mp3`
+- `Movement_Not_Allowe/not_allowed_movement.mp3`
+- `Tap_sound/tap_sound_1.mp3` … `tap_sound_5.mp3`
+
+**Semántica del mute (sin cambios respecto a #32):**
+
+| Asset MP3 | ¿Afectado por mute? |
+|-----------|---------------------|
+| `background.mp3` | **Sí** |
+| Resto de efectos de juego | **No** |
+
+**Archivos modificados:**
+
+| Archivo | Cambio |
+|---------|--------|
+| `lib/infrastructure/audio/app_audio_service.dart` | `BytesSource` + `rootBundle` + caché; claves `assets/audio/...` |
+| `pubspec.yaml` | Listado explícito de 11 MP3 |
+| `assets/audio/README.md` | Nota sobre carga vía manifest y `BytesSource` |
+
+**Fragmento representativo:**
+
+```dart
+static const _generalTap =
+    'assets/audio/General_Tap/general_click_sound.mp3';
+
+Future<Uint8List> _loadAssetBytes(String bundleKey) {
+  return _byteCache.putIfAbsent(bundleKey, () async {
+    final data = await rootBundle.load(bundleKey);
+    return data.buffer.asUint8List();
+  });
+}
+
+await player.play(BytesSource(bytes, mimeType: 'audio/mpeg'));
+```
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Validación en Brave/macOS tras `flutter clean`, `flutter pub get` y restart completo de la app (no hot reload).
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- En Flutter Web, `AssetSource` puede generar URLs con doble prefijo `assets/`; el **404** es la causa raíz y el `Format error (Code: 4)` es un síntoma, no un códec corrupto.
+- `rootBundle.load('assets/audio/...')` usa la clave correcta del manifest (un solo prefijo `assets/`).
+- `BytesSource` reproduce desde memoria y evita la capa HTTP de `AudioCache` en Web.
+- Listar assets **explícitamente** en `pubspec.yaml` reduce el riesgo de que archivos no entren al bundle Web tras cambios de formato o renombrado.
+- Tras modificar assets o `pubspec`: **`flutter clean`** + restart completo obligatorio.
