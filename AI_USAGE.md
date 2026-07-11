@@ -1209,3 +1209,50 @@ Tres problemas encontrados al probar la app con niveles reales de mayor tamaño 
 - Un límite de validación "copiado" de una limitación visual en lugar de derivado de la regla de negocio real (cada disparo retira exactamente una flecha, así que el óptimo siempre es `arrows.length`) es fácil de introducir sin darse cuenta, y solo se detectó al medir con datos reales.
 - Todo el flujo Game→Victory→Game→…→Defeat usa `pushReplacementNamed`, así que cualquier pantalla que necesite "volver" debe forzar una ruta nueva en vez de `pop()`, o revelará una instancia congelada de la pantalla anterior — el equipo ya había resuelto esto para los botones "volver a niveles", pero se pasó por alto en "Retry".
 - Medir antes de optimizar: se verificó con un script aislado que la validación de solubilidad del backend tarda milisegundos incluso con 48 flechas, evitando construir una optimización (caché por hash de contenido) que no hacía falta todavía.
+
+---
+
+## Consulta #26 — Refinamiento del tablero: trazo fino, cabeza al borde y fondo sin rejilla
+
+**Tarea o problema abordado.**
+
+Tras el rediseño visual (Consulta #24), al probar niveles con flechas verticales largas (p. ej. espiral con cabeza apuntando hacia arriba en el borde del tablero) se observaron tres problemas de legibilidad: (1) la punta triangular se dibujaba centrada en la celda de la cabeza y el trazo del cuerpo llegaba hasta el mismo centro, generando solapamiento en la unión; (2) el grosor del trazo (18 % del tamaño de celda) ocultaba demasiado los cruces entre flechas; (3) la rejilla de fondo competía visualmente con el estilo minimalista acordado — se pidió dejar solo muros y fondo liso.
+
+**Herramienta de IA utilizada.**
+
+- Cursor Agent (Composer), con acceso a lectura/escritura del repositorio.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Refinar el renderizado del tablero en `ArrowBoardPainter` para mejorar la legibilidad de flechas largas con cabeza orientada hacia arriba: corregir la posición de la punta triangular (evitar solapamiento con el trazo del cuerpo), reducir el grosor del trazo para que los cruces entre flechas se distingan con claridad, y eliminar la cuadrícula de fondo dejando únicamente los muros y el fondo liso del tablero.
+>
+> Implementar las mejoras propuestas en el código, añadir tests unitarios de la geometría de cabeza cuando aplique, registrar la consulta en `AI_USAGE.md` conforme a las normas del proyecto (Consulta #7), y proponer un mensaje de commit en Conventional Commits.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Geometría de cabeza | `lib/presentation/game/widgets/arrow_path_geometry.dart` | `headTip()` ancla la punta al borde de la celda según `Direction`; `headBase()` calcula dónde debe terminar el trazo del cuerpo |
+| Pintor | `lib/presentation/game/widgets/arrow_board_painter.dart` | Elimina `_paintGrid()`; grosor `0.12×` celda; cuerpo termina en `headBase`, no en el centro; punta más estrecha (`headLength × 1.8`, `headWidth × 1.2`) |
+| Contenedor | `lib/presentation/game/widgets/board_view.dart` | Borde del tablero suavizado (`AppColors.sand`) sin líneas de rejilla |
+| Tests | `test/presentation/game/arrow_path_geometry_test.dart` | Casos para `headTip` (flecha `UP` en fila 0) y `headBase` |
+
+**Constantes de renderizado aplicadas:**
+
+```dart
+static const _strokeFactor = 0.12;      // antes 0.18
+static const _headLengthFactor = 1.8;     // antes 2.2
+static const _headWidthFactor = 1.2;      // antes 1.6
+static const _headMarginFactor = 0.5;     // inset desde el borde de celda
+```
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Pendiente de revisión del equipo tras merge.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Separar **geometría** (`headTip` / `headBase`) del **pintado** facilita probar posicionamiento sin widget tests de `CustomPainter`.
+- Acortar el trazo antes de la cabeza evita el efecto “doble grosor” más que agrandar la punta.
+- Quitar la rejilla no afecta la capa de toques (`_BoardTouchGrid`): la detección por celda sigue intacta.
+- En niveles muy densos, un grosor menor puede reducir el área táctil visual; si hiciera falta, el ajuste fino sería subir `_strokeFactor` a `0.13` sin reintroducir la rejilla.

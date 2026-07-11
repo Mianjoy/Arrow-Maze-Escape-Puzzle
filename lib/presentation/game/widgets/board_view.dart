@@ -4,11 +4,10 @@ import '../../../domain/domain.dart';
 import '../../theme/app_colors.dart';
 import 'arrow_board_painter.dart';
 
-/// Renderiza el [Board] como cuadrícula minimalista con flechas de trazo continuo.
+/// Renderiza el [Board] con fondo liso, muros y flechas de trazo continuo.
 ///
-/// Separa la capa visual ([ArrowBoardPainter]) de la capa de toques (rejilla
-/// transparente) para que flechas de hasta 3 celdas se dibujen como un solo
-/// camino, al estilo del logo del laberinto.
+/// Separa la capa visual ([ArrowBoardPainter]) de la capa de toques invisible
+/// para que flechas multi-celda se dibujen como un solo camino.
 class BoardView extends StatelessWidget {
   /// Crea la vista para [board] y notificar toques con [onCellTapped].
   const BoardView({super.key, required this.board, required this.onCellTapped});
@@ -29,7 +28,7 @@ class BoardView extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.boardSurface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.gridLine.withOpacity(0.4)),
+            border: Border.all(color: AppColors.sand.withOpacity(0.6)),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),

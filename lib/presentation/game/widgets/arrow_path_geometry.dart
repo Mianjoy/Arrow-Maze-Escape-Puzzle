@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import '../../../domain/domain.dart';
@@ -45,6 +46,46 @@ abstract final class ArrowPathGeometry {
       (position.column + 0.5) * cellWidth,
       (position.row + 0.5) * cellHeight,
     );
+  }
+
+  /// Punta de la flecha en el borde de la celda de cabeza, con [margin] de inset.
+  static Offset headTip({
+    required Position head,
+    required Direction direction,
+    required double cellWidth,
+    required double cellHeight,
+    required double margin,
+  }) {
+    final left = head.column * cellWidth;
+    final top = head.row * cellHeight;
+    final centerX = left + cellWidth / 2;
+    final centerY = top + cellHeight / 2;
+
+    return switch (direction.arrowDirection) {
+      ArrowDirection.up => Offset(centerX, top + margin),
+      ArrowDirection.down => Offset(centerX, top + cellHeight - margin),
+      ArrowDirection.left => Offset(left + margin, centerY),
+      ArrowDirection.right => Offset(left + cellWidth - margin, centerY),
+    };
+  }
+
+  /// Base del triángulo de cabeza, donde debe terminar el trazo del cuerpo.
+  static Offset headBase({
+    required Offset tip,
+    required Direction direction,
+    required double headLength,
+  }) {
+    final angle = _angleFor(direction);
+    return tip - Offset(math.cos(angle), math.sin(angle)) * headLength;
+  }
+
+  static double _angleFor(Direction direction) {
+    return switch (direction.arrowDirection) {
+      ArrowDirection.right => 0,
+      ArrowDirection.down => math.pi / 2,
+      ArrowDirection.left => math.pi,
+      ArrowDirection.up => -math.pi / 2,
+    };
   }
 
   /// Elige la celda adyacente siguiente al encadenar el cuerpo de la flecha.
