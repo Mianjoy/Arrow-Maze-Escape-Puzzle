@@ -389,6 +389,17 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
   }
 
   /// Resuelve rutas de inicio, ajustes, auth, niveles, juego y resultados.
+  ///
+  /// Importante: `MaterialPageRoute.builder` se reinvoca en cada rebuild de
+  /// cualquier ancestro (p. ej. `ArrowMazeApp` al cambiar ajustes) — NO se
+  /// llama una sola vez por navegación como podría asumirse. Por eso todo
+  /// controlador construido vía `container.buildXController()` debe crearse
+  /// AQUÍ, fuera del `builder:`, y capturarse por closure: así el `builder`
+  /// devuelve siempre la MISMA instancia entre rebuilds. Construirlo dentro
+  /// del `builder:` genera una instancia nueva y nunca inicializada en cada
+  /// rebuild, sustituyendo la que ya arrancó — como pasaba con `GameScreen`:
+  /// el tablero desaparecía (spinner infinito) al volver de Ajustes si se
+  /// había togglear el mute mientras la partida seguía activa detrás.
   Route<dynamic> _onGenerateRoute(RouteSettings settings) {
     final container = widget.container;
 
@@ -404,26 +415,30 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
           builder: (_) => SettingsScreen(settingsController: container.appSettingsController),
         );
       case '/login':
+        final loginController = container.buildLoginController();
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => LoginScreen(controller: container.buildLoginController()),
+          builder: (_) => LoginScreen(controller: loginController),
         );
       case '/register':
+        final registerController = container.buildRegisterController();
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => RegisterScreen(controller: container.buildRegisterController()),
+          builder: (_) => RegisterScreen(controller: registerController),
         );
       case '/levels':
         if (!container.authSessionController.isAuthenticated) {
+          final loginController = container.buildLoginController();
           return MaterialPageRoute(
             settings: settings,
-            builder: (_) => LoginScreen(controller: container.buildLoginController()),
+            builder: (_) => LoginScreen(controller: loginController),
           );
         }
+        final levelSelectController = container.buildLevelSelectController();
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => LevelSelectScreen(
-            controller: container.buildLevelSelectController(),
+            controller: levelSelectController,
             authSessionController: container.authSessionController,
           ),
         );
@@ -432,27 +447,28 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
         if (args is LeaderboardRouteArgs || args is String) {
           final levelId = args is LeaderboardRouteArgs ? args.levelId : args as String;
           final levelTitle = args is LeaderboardRouteArgs ? args.levelTitle : null;
+          final leaderboardController = container.buildLeaderboardController();
           return MaterialPageRoute(
             settings: settings,
             builder: (_) => LeaderboardScreen(
-              controller: container.buildLeaderboardController(),
+              controller: leaderboardController,
               levelId: levelId,
               levelTitle: levelTitle,
             ),
           );
         }
+        final loadLevelsUseCase = LoadLevelsUseCase(levelRepository: container.levelRepository);
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => LeaderboardHubScreen(
-            loadLevelsUseCase: LoadLevelsUseCase(levelRepository: container.levelRepository),
-          ),
+          builder: (_) => LeaderboardHubScreen(loadLevelsUseCase: loadLevelsUseCase),
         );
       case '/game':
         final level = settings.arguments as Level;
+        final gameController = container.buildGameController();
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => GameScreen(
-            controller: container.buildGameController(),
+            controller: gameController,
             level: level,
           ),
         );
