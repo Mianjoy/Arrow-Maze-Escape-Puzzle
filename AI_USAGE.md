@@ -1375,3 +1375,92 @@ Dos mejoras de producto detectadas en pruebas: (1) en la pantalla de **Ajustes**
 - Los JSON de catálogo pueden incluir metadatos de presentación (`name`) que no llegan a la UI si el contrato wire no los expone; conviene mantener paridad estricta entre `docs/contract/` y `lib/contract/`.
 - El API de leaderboard sigue keyed por `levelId`; el nombre es solo capa de presentación y debe propagarse por argumentos de navegación cuando la pantalla no tiene el objeto `Level` cargado.
 - Ocultar iconos de navegación global debe aplicarse de forma simétrica (leaderboard en settings, settings en settings, leaderboard en leaderboard) para evitar acciones que no cambian de contexto.
+
+---
+
+## Consulta #30 — Sistema de efectos de sonido por contexto de juego y temporizador por nivel
+
+**Tarea o problema abordado.**
+
+Integrar los assets de audio aportados por el equipo en una experiencia sonora coherente con las reglas del juego, y completar la presión temporal de partida con cuenta regresiva visible. Se requería: (1) diagnosticar por qué `background.mp3` no reproducía música de fondo en la interfaz; (2) asignar cada carpeta de sonidos a un único contexto de uso — sin mezclar efectos entre tablero, botones de navegación y resultados de partida; (3) reproducir sonidos de extracción de flecha de forma aleatoria; (4) distinguir colisión flecha–flecha de bloqueo por muro; (5) calcular por nivel el tiempo disponible para completarlo (`maxTimeInSeconds` del wire format o estimación desde `optimalMoves`); (6) mostrar el temporizador en vivo durante la partida y reproducir `times_up.mp3` exclusivamente al agotarse el tiempo.
+
+**Herramienta de IA utilizada.**
+
+- Cursor Agent (Composer), con acceso a lectura/escritura del repositorio, terminal y exploración del árbol de assets.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Integrar el sistema de audio del juego con los assets en `assets/audio/`, respetando el contexto de cada carpeta:
+>
+> - **`background.mp3`**: música de fondo en bucle para toda la interfaz; diagnosticar por qué no suena al arrancar (especialmente en Flutter Web).
+> - **`Tap_sound/`** (5 variantes): reproducir **un sonido aleatorio** cada vez que una flecha **sale exitosamente** del tablero; no usar estos archivos en botones ni en otros eventos.
+> - **`General_Tap/`**: clic de **botones generales** de la UI (navegación, formularios, selección de nivel); no debe sonar al tocar celdas del tablero ni al ganar, perder o mover flechas.
+> - **`Level_Cleared/`**: sonido **exclusivo** al completar un nivel (victoria); no superponerlo con el tap de la última flecha extraída.
+> - **`Movement_Not_Allowe/`**: sonido **exclusivo** cuando una flecha **choca con otra flecha**; no debe sonar en bloqueos por muro ni en derrota por agotar movimientos.
+> - **`times_up.mp3`**: sonido **exclusivo** al agotar el tiempo del nivel; implementar temporizador en vivo calculado por nivel y mostrarlo en la pantalla de juego.
+>
+> Mantener la arquitectura existente (`IAudioService`, mute global, `NoOpAudioService` para tests) y documentar la consulta en `AI_USAGE.md`.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+| Asset / carpeta | Método en `IAudioService` | Cuándo suena |
+|-----------------|---------------------------|--------------|
+| `background.mp3` | `startBackgroundMusic()` / `stopBackgroundMusic()` | Bucle al iniciar la app (respeta mute); se detiene al silenciar |
+| `Tap_sound/tap_sound_1…5.mp3` | `playArrowExtracted()` | Tras `MoveResultType.extracted`, si la partida **no** terminó en victoria |
+| `General_Tap/general_click_sound.mp3` | `playButtonClick()` | Botones e ítems de navegación vía `withButtonClick` |
+| `Level_Cleared/level_cleared.mp3` | `playLevelCleared()` | Solo cuando `game.isWon` (nivel superado) |
+| `Movement_Not_Allowe/not_allowed_movement.mp3` | `playMovementNotAllowed()` | Solo si `MoveResult.isBlocked` **y** otra flecha ocupa la celda de bloqueo (no muro) |
+| `times_up.mp3` | `playTimeUp()` | Solo cuando `GameLossMessage.timeExceeded` (tiempo agotado) |
+| *(sin asset)* | `playDefeat()` | Solo derrota por movimientos agotados (`SystemSound`) |
+
+**Temporizador por nivel:**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Calculador | `level_time_limit_calculator.dart` | Usa `timeLimit` del wire format; si falta, estima `optimalMoves × seg/dificultad + margen` |
+| Dominio | `level.dart`, `game.dart` | `playableTimeLimitSeconds`, `remainingSeconds`, `isTimeRunningLow`; derrota cuando `elapsed >= limit` |
+| Controlador | `game_controller.dart` | `Timer.periodic` cada 1 s; `_playLossAudio` distingue tiempo vs. movimientos |
+| UI | `game_screen.dart`, `game_time_formatter.dart` | Muestra `Tiempo: mm:ss / mm:ss`; rojo en los últimos 10 s |
+| i18n | `app_strings.dart` | `timeRemainingLabel(remaining, total)` en es/en |
+
+**Componentes de audio implementados o modificados:**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Puerto de audio | `lib/application/ports/i_audio_service.dart` | API explícita por contexto de UX |
+| Implementación | `lib/infrastructure/audio/app_audio_service.dart` | Reproducción con `audioplayers`; selección aleatoria; verificación previa con `rootBundle.load` |
+| Scope + helpers UI | `audio_scope.dart`, `button_click.dart` | `AudioScope` envuelve `MaterialApp`; clic en botones generales |
+| Tests | `level_time_limit_calculator_test.dart`, `no_op_audio_service.dart` | Cobertura del cálculo de tiempo y dobles de audio |
+
+**Fragmento representativo del enrutamiento de audio en partida:**
+
+```dart
+if (outcome.game.isWon) {
+  await _audioService.playLevelCleared();
+} else if (outcome.game.isLost) {
+  await _playLossAudio(outcome.game); // playTimeUp o playDefeat
+} else if (outcome.result.isExtracted) {
+  await _audioService.playArrowExtracted();
+} else if (_isBlockedByAnotherArrow(outcome.game, outcome.result)) {
+  await _audioService.playMovementNotAllowed();
+}
+```
+
+**Diagnóstico de `background.mp3`:**
+
+- El asset y la ruta en `pubspec.yaml` (`assets/audio/`) estaban correctos.
+- En **Flutter Web**, la política de **autoplay** impide iniciar audio sin gesto del usuario; `startBackgroundMusic()` se invoca con `unawaited()` en `initialize()` para no bloquear `runApp()`.
+- Tras añadir o renombrar MP3 hace falta **restart completo** de la app, no hot reload.
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- El equipo aportó los archivos MP3 reales (`background.mp3`, variantes en `Tap_sound/`, `times_up.mp3`, etc.) y validó la asignación por carpeta en pruebas manuales.
+- `playDefeat()` sigue usando `SystemSound` del sistema: no hay asset dedicado de derrota por movimientos.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Un mismo `MoveResultType.blocked` en dominio puede representar causas distintas (muro vs. flecha); la capa de presentación debe filtrar antes de elegir el efecto sonoro.
+- Separar métodos en `IAudioService` por **intención de UX** evita acoplar sonidos genéricos al tablero.
+- Los nombres de archivo con espacios o apóstrofes (`Time's_Up.mp3`) son frágiles en bundles Web; se normalizó a `times_up.mp3`.
+- El temporizador en UI requiere `Timer.periodic` en el controlador además de la comprobación en dominio al mover, para derrotar al jugador aunque no toque el tablero.
+- En Web, cualquier efecto que dependa de `AudioContext` debe asumirse bloqueado hasta el primer gesto del usuario.

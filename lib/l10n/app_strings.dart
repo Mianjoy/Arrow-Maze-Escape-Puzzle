@@ -52,6 +52,9 @@ abstract class AppStrings {
   /// Etiqueta del puntaje.
   String get scoreLabel;
 
+  /// Etiqueta del temporizador con [remaining] y [total] en formato `mm:ss`.
+  String timeRemainingLabel(String remaining, String total);
+
   /// Título de la pantalla de victoria.
   String get victoryTitle;
 
@@ -177,6 +180,9 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get scoreLabel => 'Score';
+
+  @override
+  String timeRemainingLabel(String remaining, String total) => 'Time: $remaining / $total';
 
   @override
   String get victoryTitle => 'Level cleared!';
@@ -307,6 +313,9 @@ class AppStringsEs extends AppStrings {
 
   @override
   String get scoreLabel => 'Puntuación';
+
+  @override
+  String timeRemainingLabel(String remaining, String total) => 'Tiempo: $remaining / $total';
 
   @override
   String get victoryTitle => '¡Nivel superado!';

@@ -6,6 +6,7 @@ import '../result/result_screen_args.dart';
 import 'game_controller.dart';
 import '../widgets/app_nav_actions.dart';
 import 'widgets/board_view.dart';
+import 'game_time_formatter.dart';
 
 /// Pantalla de juego: tablero interactivo y navegación a victoria/derrota dedicadas.
 class GameScreen extends StatefulWidget {
@@ -29,6 +30,12 @@ class _GameScreenState extends State<GameScreen> {
   void initState() {
     super.initState();
     widget.controller.startGame(widget.level);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.disposeController();
+    super.dispose();
   }
 
   @override
@@ -65,10 +72,27 @@ class _GameScreenState extends State<GameScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  '${strings.movesLabel}: ${game.moveCount}/${game.level.parMoves} · '
-                  '${strings.scoreLabel}: ${game.score}',
-                  style: Theme.of(context).textTheme.titleMedium,
+                child: Column(
+                  children: [
+                    Text(
+                      '${strings.movesLabel}: ${game.moveCount}/${game.level.parMoves} · '
+                      '${strings.scoreLabel}: ${game.score}',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      strings.timeRemainingLabel(
+                        formatGameCountdown(game.remainingSeconds),
+                        formatGameCountdown(game.level.playableTimeLimitSeconds),
+                      ),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: game.isTimeRunningLow
+                                ? Theme.of(context).colorScheme.error
+                                : null,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                    ),
+                  ],
                 ),
               ),
               Expanded(

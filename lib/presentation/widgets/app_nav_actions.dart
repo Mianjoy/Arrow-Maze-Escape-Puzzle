@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
 import '../leaderboard/leaderboard_route_args.dart';
+import 'button_click.dart';
 
 /// Acciones globales de navegación: clasificación y ajustes.
 ///
@@ -58,14 +59,14 @@ class AppNavActions extends StatelessWidget {
           IconButton(
             key: const ValueKey('app-nav-leaderboard'),
             tooltip: strings.leaderboard,
-            onPressed: () => _openLeaderboard(context),
+            onPressed: withButtonClick(context, () => _openLeaderboard(context)),
             icon: const Icon(Icons.leaderboard_outlined),
           ),
         if (showSettings)
           IconButton(
             key: const ValueKey('app-nav-settings'),
             tooltip: strings.settingsTitle,
-            onPressed: () => _openSettings(context),
+            onPressed: withButtonClick(context, () => _openSettings(context)),
             icon: const Icon(Icons.settings_outlined),
           ),
       ],

@@ -42,6 +42,7 @@ export 'level/value_objects/level_generation_config.dart';
 export 'level/value_objects/player_start.dart';
 export 'level/value_objects/star_rating.dart';
 export 'level/factories/level_factory.dart';
+export 'level/services/level_time_limit_calculator.dart';
 export 'level/services/shortest_path_calculator.dart';
 export 'level/services/star_rating_calculator.dart';
 

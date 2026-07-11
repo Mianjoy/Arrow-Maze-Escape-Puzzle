@@ -65,6 +65,7 @@ import 'presentation/settings/app_settings_controller.dart';
 import 'presentation/settings/settings_screen.dart';
 import 'presentation/navigation/app_route_observer.dart';
 import 'presentation/theme/app_theme.dart';
+import 'presentation/widgets/audio_scope.dart';
 import 'presentation/widgets/phone_frame.dart';
 
 /// Punto de entrada: inicializa preferencias, progreso local y composition root.
@@ -369,7 +370,9 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
     return PhoneFrame(
       child: AppStringsScope(
         strings: strings,
-        child: MaterialApp(
+        child: AudioScope(
+          audioService: widget.container.audioService,
+          child: MaterialApp(
           title: strings.appTitle,
           locale: locale,
           theme: AppTheme.build(),
@@ -379,6 +382,7 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
             return child ?? const SizedBox.shrink();
           },
           onGenerateRoute: (settings) => _onGenerateRoute(settings),
+          ),
         ),
       ),
     );

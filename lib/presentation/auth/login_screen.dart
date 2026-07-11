@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
 import '../widgets/app_nav_actions.dart';
+import '../widgets/button_click.dart';
 import 'auth_error_message.dart';
 import 'login_controller.dart';
 
@@ -87,7 +88,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 24),
                   FilledButton(
                     key: const ValueKey('login-submit'),
-                    onPressed: widget.controller.isLoading ? null : _onSubmit,
+                    onPressed: widget.controller.isLoading
+                        ? null
+                        : withButtonClickAsync(context, _onSubmit),
                     child: widget.controller.isLoading
                         ? const SizedBox(
                             height: 20,
@@ -97,7 +100,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         : const Text('Sign in'),
                   ),
                   TextButton(
-                    onPressed: () => Navigator.of(context).pushReplacementNamed('/register'),
+                    onPressed: withButtonClick(
+                      context,
+                      () => Navigator.of(context).pushReplacementNamed('/register'),
+                    ),
                     child: const Text('Create account'),
                   ),
                 ],

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_strings.dart';
 import '../leaderboard/leaderboard_route_args.dart';
 import '../widgets/app_nav_actions.dart';
+import '../widgets/button_click.dart';
 import '../result/result_screen_args.dart';
 
 /// Pantalla dedicada de victoria con puntuación y opción de siguiente nivel.
@@ -60,22 +61,28 @@ class VictoryScreen extends StatelessWidget {
             if (args.nextLevel != null)
               FilledButton(
                 key: const ValueKey('victory-next-level'),
-                onPressed: () {
-                  Navigator.of(context).pushReplacementNamed('/game', arguments: args.nextLevel);
-                },
+                onPressed: withButtonClick(
+                  context,
+                  () {
+                    Navigator.of(context).pushReplacementNamed('/game', arguments: args.nextLevel);
+                  },
+                ),
                 child: Text(strings.nextLevel),
               ),
             const SizedBox(height: 8),
             OutlinedButton(
-              onPressed: () {
-                Navigator.of(context).pushNamed(
-                  '/leaderboard',
-                  arguments: LeaderboardRouteArgs(
-                    levelId: game.level.id.value,
-                    levelTitle: game.level.displayLabel,
-                  ),
-                );
-              },
+              onPressed: withButtonClick(
+                context,
+                () {
+                  Navigator.of(context).pushNamed(
+                    '/leaderboard',
+                    arguments: LeaderboardRouteArgs(
+                      levelId: game.level.id.value,
+                      levelTitle: game.level.displayLabel,
+                    ),
+                  );
+                },
+              ),
               child: Text(strings.leaderboard),
             ),
             const SizedBox(height: 8),
@@ -83,9 +90,12 @@ class VictoryScreen extends StatelessWidget {
               // `pushNamedAndRemoveUntil` (no `popUntil`) fuerza una ruta
               // `/levels` nueva con un `LevelSelectController` recién creado,
               // así el progreso recién ganado se refleja sin volver al home.
-              onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil(
-                '/levels',
-                (route) => route.settings.name == '/home',
+              onPressed: withButtonClick(
+                context,
+                () => Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/levels',
+                  (route) => route.settings.name == '/home',
+                ),
               ),
               child: Text(strings.backToLevels),
             ),

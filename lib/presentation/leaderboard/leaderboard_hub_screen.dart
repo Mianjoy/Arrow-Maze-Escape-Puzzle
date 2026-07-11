@@ -5,6 +5,7 @@ import '../../domain/domain.dart';
 import '../../l10n/app_strings.dart';
 import 'leaderboard_route_args.dart';
 import '../widgets/app_nav_actions.dart';
+import '../widgets/button_click.dart';
 
 /// Selector de nivel antes de abrir la tabla de clasificación global.
 class LeaderboardHubScreen extends StatefulWidget {
@@ -96,15 +97,18 @@ class _LeaderboardHubScreenState extends State<LeaderboardHubScreen> {
           title: Text(level.displayLabel),
           subtitle: Text(strings.difficultyLabel(level.difficulty.name)),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () {
-            Navigator.of(context).pushNamed(
-              '/leaderboard',
-              arguments: LeaderboardRouteArgs(
-                levelId: level.id.value,
-                levelTitle: level.displayLabel,
-              ),
-            );
-          },
+          onTap: withButtonClick(
+            context,
+            () {
+              Navigator.of(context).pushNamed(
+                '/leaderboard',
+                arguments: LeaderboardRouteArgs(
+                  levelId: level.id.value,
+                  levelTitle: level.displayLabel,
+                ),
+              );
+            },
+          ),
         );
       },
     );

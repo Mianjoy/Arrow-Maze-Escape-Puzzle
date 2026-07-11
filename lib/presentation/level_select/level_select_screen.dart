@@ -5,6 +5,7 @@ import '../auth/auth_session_controller.dart';
 import '../theme/app_colors.dart';
 import '../navigation/app_route_observer.dart';
 import '../widgets/app_nav_actions.dart';
+import '../widgets/button_click.dart';
 import 'level_select_controller.dart';
 
 /// Pantalla de selección de nivel con indicadores de bloqueo, estrellas y progreso.
@@ -91,7 +92,10 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> with RouteAware {
         title: Text(strings.levelSelectTitle),
         leading: IconButton(
           icon: const Icon(Icons.home),
-          onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false),
+          onPressed: withButtonClick(
+            context,
+            () => Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false),
+          ),
         ),
         actions: [
           IconButton(
@@ -99,7 +103,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> with RouteAware {
             tooltip: strings.refreshLevelsTooltip,
             onPressed: widget.controller.isRefreshing
                 ? null
-                : () => _refreshLevels(strings),
+                : withButtonClickAsync(context, () => _refreshLevels(strings)),
             icon: widget.controller.isRefreshing
                 ? const SizedBox(
                     width: 20,
@@ -119,7 +123,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> with RouteAware {
           IconButton(
             key: const ValueKey('logout-button'),
             tooltip: strings.signOut,
-            onPressed: _logout,
+            onPressed: withButtonClickAsync(context, _logout),
             icon: const Icon(Icons.logout),
           ),
         ],
@@ -166,7 +170,10 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> with RouteAware {
                 trailing: unlocked ? const Icon(Icons.play_arrow) : null,
                 enabled: unlocked,
                 onTap: unlocked
-                    ? () => Navigator.of(context).pushNamed('/game', arguments: level)
+                    ? withButtonClick(
+                        context,
+                        () => Navigator.of(context).pushNamed('/game', arguments: level),
+                      )
                     : null,
               );
             },

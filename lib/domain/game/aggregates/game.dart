@@ -89,6 +89,13 @@ class Game {
   /// Movimientos restantes antes de agotar el par del nivel.
   int get remainingMoves => (level.parMoves - moveCount).clamp(0, level.parMoves);
 
+  /// Segundos restantes antes de agotar el límite del nivel.
+  int get remainingSeconds =>
+      (level.playableTimeLimitSeconds - elapsedSeconds).clamp(0, level.playableTimeLimitSeconds);
+
+  /// Indica si quedan 10 segundos o menos en partida activa.
+  bool get isTimeRunningLow => isPlayable && remainingSeconds <= 10;
+
   /// Segundos transcurridos desde [startedAt] hasta [finishedAt] (o ahora si sigue activa).
   ///
   /// Usado al sincronizar progreso con el backend (`timeInSeconds` en `/progress/sync`).
@@ -234,12 +241,12 @@ class Game {
 
   /// Evalúa el límite de tiempo y retorna una partida perdida si se excedió.
   Game? _gameIfTimeExceeded() {
-    final limit = level.timeLimit;
+    final limit = level.playableTimeLimitSeconds;
     final start = startedAt;
-    if (limit == null || start == null) return null;
+    if (start == null) return null;
 
     final elapsed = DateTime.now().toUtc().difference(start).inSeconds;
-    if (elapsed > limit) {
+    if (elapsed >= limit) {
       return copyWith(
         status: GameStatus.lost,
         lossMessage: GameLossMessage.timeExceeded,

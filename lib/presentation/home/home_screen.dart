@@ -4,6 +4,7 @@ import '../../l10n/app_strings.dart';
 import '../auth/auth_session_controller.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_nav_actions.dart';
+import '../widgets/button_click.dart';
 
 /// Pantalla de inicio: título del juego, botón Jugar y acceso global.
 class HomeScreen extends StatelessWidget {
@@ -52,7 +53,7 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 48),
                 FilledButton.icon(
                   key: const ValueKey('home-play'),
-                  onPressed: () => _onPlay(context),
+                  onPressed: withButtonClick(context, () => _onPlay(context)),
                   icon: const Icon(Icons.play_arrow),
                   label: Text(strings.homePlay),
                 ),

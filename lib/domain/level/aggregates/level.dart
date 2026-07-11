@@ -8,6 +8,7 @@ import '../value_objects/level_board_definition.dart';
 import '../value_objects/level_difficulty.dart';
 import '../value_objects/player_start.dart';
 import '../services/shortest_path_calculator.dart';
+import '../services/level_time_limit_calculator.dart';
 
 /// Agregado raíz que define un nivel jugable cargado desde JSON.
 ///
@@ -66,6 +67,9 @@ class Level {
 
   /// Límite de tiempo opcional en segundos (`timeLimit` en JSON).
   final int? timeLimit;
+
+  /// Segundos disponibles para completar el nivel (`timeLimit` o cálculo).
+  int get playableTimeLimitSeconds => const LevelTimeLimitCalculator().resolve(this);
 
   /// Construye el [Board] inicial listo para iniciar una partida.
   ///
