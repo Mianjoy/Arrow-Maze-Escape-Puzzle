@@ -62,6 +62,7 @@ import 'presentation/result/result_screen_args.dart';
 import 'presentation/result/victory_screen.dart';
 import 'presentation/settings/app_settings_controller.dart';
 import 'presentation/settings/settings_screen.dart';
+import 'presentation/navigation/app_route_observer.dart';
 import 'presentation/theme/app_theme.dart';
 import 'presentation/widgets/phone_frame.dart';
 
@@ -372,6 +373,7 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
           locale: locale,
           theme: AppTheme.build(),
           initialRoute: '/home',
+          navigatorObservers: [appRouteObserver],
           builder: (context, child) {
             return child ?? const SizedBox.shrink();
           },

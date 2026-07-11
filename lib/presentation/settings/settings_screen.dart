@@ -19,7 +19,9 @@ class SettingsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(strings.settingsTitle),
-        actions: const [AppNavActions()],
+        actions: const [
+          AppNavActions(showSettings: false),
+        ],
       ),
       body: ListenableBuilder(
         listenable: settingsController,

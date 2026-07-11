@@ -16,7 +16,8 @@ class ArrowBoardPainter extends CustomPainter {
   });
 
   static const _strokeFactor = 0.12;
-  static const _headLengthFactor = 1.8;
+  static const _headLengthFactor = 2.8;
+  static const _headWidthFactor = 1.0;
   static const _headMarginFactor = 0.5;
   static const _cornerRadiusFactor = 1.4;
 
@@ -55,7 +56,7 @@ class ArrowBoardPainter extends CustomPainter {
     final color = _colorForArrow(arrow);
     final strokeWidth = math.min(cellWidth, cellHeight) * _strokeFactor;
     final headLength = strokeWidth * _headLengthFactor;
-    final headHalfWidth = strokeWidth / 2;
+    final headHalfWidth = strokeWidth * _headWidthFactor;
     final headMargin = strokeWidth * _headMarginFactor;
     final cornerRadius = strokeWidth * _cornerRadiusFactor;
 

@@ -37,8 +37,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('${strings.leaderboard} — ${widget.levelId}'),
-        actions: [
-          AppNavActions(leaderboardLevelId: widget.levelId),
+        actions: const [
+          AppNavActions(showLeaderboard: false),
         ],
       ),
       body: ListenableBuilder(
@@ -49,14 +49,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           }
 
           if (widget.controller.error != null) {
-            return Center(
-              child: Text('Could not load leaderboard: ${widget.controller.error}'),
-            );
+            return Center(child: Text(strings.leaderboardLoadFailed));
           }
 
           final entries = widget.controller.entries;
           if (entries.isEmpty) {
-            return const Center(child: Text('No scores yet for this level.'));
+            return Center(child: Text(strings.leaderboardNoScores));
           }
 
           return ListView.builder(

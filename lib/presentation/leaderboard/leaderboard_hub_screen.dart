@@ -19,7 +19,7 @@ class LeaderboardHubScreen extends StatefulWidget {
 
 class _LeaderboardHubScreenState extends State<LeaderboardHubScreen> {
   List<Level> _levels = const [];
-  Object? _error;
+  bool _loadFailed = false;
   bool _isLoading = true;
 
   @override
@@ -31,20 +31,27 @@ class _LeaderboardHubScreenState extends State<LeaderboardHubScreen> {
   Future<void> _loadLevels() async {
     setState(() {
       _isLoading = true;
-      _error = null;
+      _loadFailed = false;
     });
 
     try {
       final levels = await widget.loadLevelsUseCase.execute();
       if (!mounted) return;
+      final sorted = List<Level>.from(levels)
+        ..sort((a, b) {
+          final an = a.levelNumber ?? 0;
+          final bn = b.levelNumber ?? 0;
+          if (an != bn) return an.compareTo(bn);
+          return a.id.value.compareTo(b.id.value);
+        });
       setState(() {
-        _levels = levels..sort((a, b) => a.levelNumber.compareTo(b.levelNumber));
+        _levels = sorted;
         _isLoading = false;
       });
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = error;
+        _loadFailed = true;
         _isLoading = false;
       });
     }
@@ -57,7 +64,9 @@ class _LeaderboardHubScreenState extends State<LeaderboardHubScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(strings.leaderboard),
-        actions: const [AppNavActions()],
+        actions: const [
+          AppNavActions(showLeaderboard: false),
+        ],
       ),
       body: _buildBody(strings),
     );
@@ -68,12 +77,12 @@ class _LeaderboardHubScreenState extends State<LeaderboardHubScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_error != null) {
-      return Center(child: Text('$_error'));
+    if (_loadFailed) {
+      return Center(child: Text(strings.leaderboardHubLoadFailed));
     }
 
     if (_levels.isEmpty) {
-      return const Center(child: Text('No levels available.'));
+      return Center(child: Text(strings.leaderboardHubNoLevels));
     }
 
     return ListView.builder(

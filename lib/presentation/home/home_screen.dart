@@ -27,11 +27,14 @@ class HomeScreen extends StatelessWidget {
     final strings = AppStringsScope.of(context);
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(strings.appTitle),
-        actions: const [AppNavActions()],
-      ),
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          title: Text(strings.appTitle),
+          actions: const [AppNavActions()],
+        ),
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -57,6 +60,7 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
         ),
+      ),
       ),
     );
   }

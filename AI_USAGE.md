@@ -1296,3 +1296,43 @@ Tres mejoras de producto detectadas al probar niveles espirales (p. ej. `level-1
 - `StrokeCap.round` + triángulo separado siempre deja costura visible; `butt` + ancho de base igual al trazo integra mejor la cabeza.
 - El leaderboard del backend es **por nivel** (`GET /leaderboard/:levelId`); el hub centraliza el acceso global sin cambiar el contrato API.
 - `PhoneFrame` solo afecta web; builds nativos mantienen pantalla completa del dispositivo.
+
+---
+
+## Consulta #28 — Correcciones UX: leaderboard, navegación contextual, progreso y cabeza de flecha
+
+**Tarea o problema abordado.**
+
+Seis incidencias detectadas en pruebas manuales tras la Consulta #27: (1) crash en el hub de clasificación al ordenar una lista inmutable del repositorio; (2) icono de leaderboard redundante en pantallas de clasificación; (3) icono de ajustes redundante en la pantalla de settings; (4) flecha “atrás” visible en Home tras refrescar el navegador; (5) niveles completados no reflejados al volver del juego sin recrear la ruta de niveles; (6) cabeza de flecha demasiado pequeña para leer la dirección de disparo.
+
+**Herramienta de IA utilizada.**
+
+- Cursor Agent (Composer), con acceso a lectura/escritura del repositorio.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Corregir seis detalles de UX detectados en pruebas: manejo amigable del leaderboard vacío (evitar errores técnicos), ocultar iconos de navegación redundantes en clasificación y ajustes, eliminar la flecha atrás en la pantalla principal, refrescar el progreso de niveles completados al regresar del juego, y ampliar la cabeza de las flechas para que la dirección sea legible. Registrar la consulta en `AI_USAGE.md` con redacción técnica profesional.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Hub ranking | `leaderboard_hub_screen.dart` | `List<Level>.from(...)` antes de `sort`; mensajes i18n en vacío/error |
+| Detalle ranking | `leaderboard_screen.dart` | `leaderboardNoScores` / `leaderboardLoadFailed`; oculta icono leaderboard |
+| Nav contextual | `app_nav_actions.dart` | Flags `showLeaderboard` / `showSettings` |
+| Home raíz | `home_screen.dart` | `PopScope(canPop: false)` + `automaticallyImplyLeading: false` |
+| Progreso | `level_select_screen.dart` + `app_route_observer.dart` | `RouteAware.didPopNext` → `refreshProgress()` |
+| Flechas | `arrow_board_painter.dart` | `headLengthFactor 2.8`, `headWidthFactor 1.0` |
+| i18n | `app_strings.dart` | Cadenas EN/ES para estados vacío/error del leaderboard |
+| Tests | `leaderboard_screen_test.dart` | Mensajes i18n y ausencia del icono leaderboard en detalle |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Pendiente de revisión del equipo tras merge.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Repositorios que devuelven `List.unmodifiable` exigen copia defensiva antes de cualquier mutación in-place (`sort`, `add`, etc.).
+- Acciones globales de AppBar deben ser contextuales; un icono que navega a la pantalla actual confunde al usuario.
+- `LevelSelectController.load()` en `initState` no basta si la pantalla permanece en el stack: hace falta `RouteAware` o recrear la ruta al volver del juego.
+- Ampliar solo la longitud de la punta sin el ancho deja flechas “agujas”; conviene escalar ambos factores proporcionalmente al grosor del trazo.

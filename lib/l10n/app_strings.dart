@@ -120,6 +120,18 @@ abstract class AppStrings {
 
   /// Notificación cuando falla la actualización del catálogo.
   String get levelsRefreshFailed;
+
+  /// Mensaje cuando un nivel no tiene entradas en la clasificación.
+  String get leaderboardNoScores;
+
+  /// Mensaje cuando falla la carga del ranking de un nivel.
+  String get leaderboardLoadFailed;
+
+  /// Mensaje cuando el hub de clasificación no tiene niveles disponibles.
+  String get leaderboardHubNoLevels;
+
+  /// Mensaje cuando falla la carga del hub de clasificación.
+  String get leaderboardHubLoadFailed;
 }
 
 /// Cadenas en inglés (idioma por defecto).
@@ -238,6 +250,18 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get levelsRefreshFailed => 'Could not refresh the level catalog.';
+
+  @override
+  String get leaderboardNoScores => 'No scores recorded for this level yet.';
+
+  @override
+  String get leaderboardLoadFailed => 'Could not load the leaderboard. Try again later.';
+
+  @override
+  String get leaderboardHubNoLevels => 'No levels available to show rankings.';
+
+  @override
+  String get leaderboardHubLoadFailed => 'Could not load levels for the leaderboard.';
 }
 
 /// Cadenas en español.
@@ -357,6 +381,18 @@ class AppStringsEs extends AppStrings {
 
   @override
   String get levelsRefreshFailed => 'No se pudo actualizar el catálogo de niveles.';
+
+  @override
+  String get leaderboardNoScores => 'Aún no hay registros en este nivel.';
+
+  @override
+  String get leaderboardLoadFailed => 'No se pudo cargar la clasificación. Intenta más tarde.';
+
+  @override
+  String get leaderboardHubNoLevels => 'No hay niveles disponibles para mostrar clasificaciones.';
+
+  @override
+  String get leaderboardHubLoadFailed => 'No se pudieron cargar los niveles para la clasificación.';
 }
 
 /// Provee [AppStrings] a descendientes del árbol de widgets vía `of(context)`.

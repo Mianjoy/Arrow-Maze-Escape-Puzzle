@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_strings.dart';
 import '../auth/auth_session_controller.dart';
 import '../theme/app_colors.dart';
+import '../navigation/app_route_observer.dart';
 import '../widgets/app_nav_actions.dart';
 import 'level_select_controller.dart';
 
@@ -25,11 +26,31 @@ class LevelSelectScreen extends StatefulWidget {
   State<LevelSelectScreen> createState() => _LevelSelectScreenState();
 }
 
-class _LevelSelectScreenState extends State<LevelSelectScreen> {
+class _LevelSelectScreenState extends State<LevelSelectScreen> with RouteAware {
   @override
   void initState() {
     super.initState();
     widget.controller.load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute<void>) {
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    appRouteObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    widget.controller.refreshProgress();
   }
 
   /// Cierra sesión y vuelve al inicio.
