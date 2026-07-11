@@ -40,7 +40,7 @@ class ArrowBoardPainter extends CustomPainter {
   /// Dibuja puntos de rejilla tenues sobre el fondo del tablero.
   void _paintGrid(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.gridLine.withValues(alpha: 0.25)
+      ..color = AppColors.gridLine.withOpacity(0.25)
       ..strokeWidth = 1;
 
     for (var row = 0; row <= board.dimension.rows; row++) {
@@ -124,7 +124,7 @@ class ArrowBoardPainter extends CustomPainter {
     return switch (arrow.state) {
       ArrowState.blocked => AppColors.arrowBlocked,
       ArrowState.active => AppColors.arrow,
-      ArrowState.extracted => AppColors.arrow.withValues(alpha: 0.3),
+      ArrowState.extracted => AppColors.arrow.withOpacity(0.3),
     };
   }
 

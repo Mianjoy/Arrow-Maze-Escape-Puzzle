@@ -29,7 +29,7 @@ class BoardView extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.boardSurface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.gridLine.withValues(alpha: 0.4)),
+            border: Border.all(color: AppColors.gridLine.withOpacity(0.4)),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
