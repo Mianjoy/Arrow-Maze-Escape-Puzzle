@@ -174,6 +174,8 @@ void main() {
       expect(level.displayName, 'Primer Contacto');
       expect(level.displayLabel, 'Primer Contacto');
     });
+
+    test('should_reject_level_when_optimal_moves_exceed_max_moves', () {
       const dto = StructuredLevelJsonDto(
         id: 'too-many-moves',
         levelNumber: 7,

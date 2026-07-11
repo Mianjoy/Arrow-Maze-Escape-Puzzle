@@ -4,21 +4,20 @@ import 'package:test/test.dart';
 void main() {
   const calculator = LevelTimeLimitCalculator();
 
-  const baseLevel = Level(
-    id: Identifier('level-time-test'),
+  final baseLevel = Level(
+    id: const Identifier('level-time-test'),
     difficulty: LevelDifficulty.medium,
-    boardDefinition: LevelBoardDefinition(
+    boardDefinition: const LevelBoardDefinition(
       dimension: BoardDimension(rows: 3, columns: 3),
-      cells: const [],
     ),
-    playerStart: PlayerStart(position: Position(row: 0, column: 0)),
+    playerStart: const PlayerStart(position: Position(row: 0, column: 0)),
     parMoves: 10,
     optimalMoves: 5,
   );
 
   test('resolve uses configured timeLimit when present', () {
-    const level = Level(
-      id: Identifier('wired'),
+    final level = Level(
+      id: const Identifier('wired'),
       difficulty: LevelDifficulty.easy,
       boardDefinition: baseLevel.boardDefinition,
       playerStart: baseLevel.playerStart,
