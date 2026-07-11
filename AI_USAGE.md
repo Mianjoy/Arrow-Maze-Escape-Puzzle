@@ -1992,3 +1992,56 @@ Nota: `progress-sync-response.json` no se ejercita en este repo porque `Progress
 - No toda recomendación de la rúbrica aplica igual de bien a cualquier stack: Pact tiene soporte maduro para JVM/.NET/JS/Python/Go/Ruby, pero no para Dart/Flutter en el lado consumidor, lo que lo vuelve poco práctico como "primera opción" para este proyecto sin construir tooling propio desproporcionado al alcance.
 - Una prueba de contrato no necesita un framework dedicado para dar la garantía central que importa (que ambos lados coinciden en la forma de los datos): un fixture compartido más pruebas que ejercitan el cliente HTTP real de cada endpoint logra el mismo objetivo, al precio de sincronización manual entre repos en vez de automática.
 - Cuando un cliente descarta deliberadamente el cuerpo de una respuesta (como `syncProgress()`), no tiene sentido forzar una prueba de contrato sobre esa forma en este lado; documentar explícitamente por qué (en vez de omitirlo en silencio) evita que parezca una omisión no intencional.
+
+---
+
+## Consulta #40 — Fixture de `GET /levels`, fixtures de error y verificación de sincronización en CI
+
+**Tarea o problema abordado.**
+
+Como refinamiento sobre la extensión de pruebas de contrato (Consulta #39), se pidieron cuatro mejoras: (1) un fixture compartido para `GET /levels` (un nivel de ejemplo del catálogo); (2) validación de tipos con Zod del lado del backend (no aplica a este repo, que usa su propio sistema de tipos de Dart — ver detalle abajo); (3) fixtures para los errores 401 y 409; (4) un script o chequeo en CI que compare los fixtures de contrato entre los dos repos por hash.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5, sesión interactiva de terminal con acceso de lectura/escritura al repositorio, ejecución de `flutter test`/`flutter analyze` y del script de sincronización (incluyendo una prueba deliberada de divergencia en el repo backend para confirmar que el script sí falla cuando corresponde).
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Ahora: añadir fixture compartido para `GET /levels` (un nivel de ejemplo del catálogo). Validar tipos además de claves en el backend (p. ej. con Zod schemas para respuestas, no solo requests). Añadir fixtures de error: 401 Unauthorized, 409 UserAlreadyExists. Script o check en CI que compare hashes de fixtures entre repos (aunque sean repos separados).
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+```dart
+// El cliente HTTP REAL (LevelApiClient) y el mapper REAL (LevelDtoMapper)
+// procesan el fixture de punta a punta, no una re-implementación de su forma.
+final rawLevels = await api.fetchAllLevels();
+final levels = rawLevels.map(mapper.fromJson).toList();
+expect(levels.first.id.value, expected['id']);
+```
+
+```dart
+// El error 401/409 se valida a través de la excepción REAL que lanza el cliente.
+await expectLater(
+  api.login(username: 'ignored', password: 'ignored12'),
+  throwsA(isA<ApiException>()
+      .having((e) => e.statusCode, 'statusCode', 401)
+      .having((e) => e.message, 'message', (fixture['error'] as Map)['message'])),
+);
+```
+
+| Componente | Ubicación | Cambio |
+|------------|-----------|--------|
+| Fixtures nuevos | `docs/contract/fixtures/levels-get-response.json`, `error-401-unauthorized.json`, `error-409-user-already-exists.json` | Idénticos a los del repo backend |
+| Prueba de contrato | `test/infrastructure/http/contract_fixtures_test.dart` | Nuevo grupo para `LevelApiClient`/`LevelDtoMapper` contra `GET /levels`; nuevo grupo para el sobre de error 401/409 vía `ApiException` |
+| Script de sincronización | `scripts/check-contract-fixtures-sync.sh` | Compara SHA-256 de cada fixture contra el repo backend (checkout hermano en local, clon superficial en CI); falla solo ante una divergencia real de contenido |
+| CI | `.github/workflows/ci.yml` | Nuevo paso que corre el script tras `flutter test` |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna; se verificó con `flutter analyze` y `flutter test` (108/108 tests) en este repo, y con `npm run lint`, `npm run build` y `npm test` (172/172 tests) en el backend, antes de commitear.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- La validación de tipos con Zod pedida en el punto 2 es específica del backend (Node/TypeScript, sin chequeo de tipos en runtime propio); este repo ya valida tipos implícitamente en cada parseo (`json['highScore'] as int`, etc. lanza en runtime si el tipo no coincide) como parte de sus propios modelos, así que no había un gap equivalente que cerrar aquí — se documenta explícitamente para que no parezca una omisión.
+- Verificar la excepción real que lanza un cliente HTTP ante un error (en vez de solo inspeccionar el parseo del cuerpo) confirma que el `statusCode` y el `message` observables por quien use el cliente coinciden con el contrato, no solo que el JSON se parsea correctamente.
+- Un chequeo de sincronización entre dos repos independientes en CI debe decidir explícitamente qué hacer cuando no puede acceder al otro repo (privado, sin red): reportarlo sin fallar el build es el comportamiento correcto para una red de seguridad adicional, no un gate obligatorio.
