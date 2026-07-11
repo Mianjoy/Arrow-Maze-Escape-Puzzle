@@ -1835,3 +1835,53 @@ Se construyó un test de widgets que reproduce la estructura real de `ArrowMazeA
 - `MaterialPageRoute.builder` no es una fábrica de un solo uso por navegación: se reinvoca en cada rebuild de cualquier ancestro del `Navigator`, incluido un `setState({})` en la raíz de la app. Cualquier dependencia construida dentro de ese `builder:` debe tratarse como potencialmente recreada en cualquier momento.
 - Cuando la interacción manual con la UI no es reproducible de forma fiable (limitación del entorno de automatización), un test de widgets que reproduce la estructura real de navegación de la app es una vía de diagnóstico determinística y más rápida que iterar sobre hipótesis sin verificar.
 - Confirmar un bug mediante un test que falla sin el fix y pasa con él (no solo mediante lectura de código) da mayor certeza de que la causa raíz identificada es la correcta.
+
+---
+
+## Consulta #37 — Cronómetro de partida congelado tras pausar y reanudar
+
+**Tarea o problema abordado.**
+
+El equipo reportó que el temporizador de la partida se detenía al entrar a Leaderboard o Ajustes durante el juego y no volvía a avanzar al regresar, dejando el tiempo restante fijo por el resto de la partida.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5, agente con acceso a terminal y ejecución de tests de dominio.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Ahora hay otro bug: el tiempo se detiene al entrar en "leaderboard" o "ajustes" cuando estás jugando un nivel. Corrijámoslo.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+`Game.resume()` invocaba `copyWith(pausedAt: null, ...)` para limpiar la marca de pausa. Sin embargo, `copyWith` resuelve cada parámetro nulo opcional con el patrón `pausedAt ?? this.pausedAt`, por lo que pasar `null` explícitamente nunca sobrescribe el valor anterior — `copyWith` ya exponía un flag `clearPausedAt` pensado exactamente para este caso, que `resume()` no utilizaba. Efecto: tras el primer ciclo de pausa/reanudación, la resta de "tiempo en pausa" en `elapsedSeconds` crecía al mismo ritmo que el tiempo real transcurrido, cancelándose exactamente y congelando el cronómetro para el resto de la partida.
+
+```dart
+// Antes (bug): `pausedAt: null` nunca limpia el campo vía `copyWith`.
+return copyWith(
+  status: GameStatus.inProgress,
+  pausedAt: null,
+  totalPausedDuration: totalPausedDuration + now.difference(pauseStarted),
+);
+
+// Después: usa el flag que copyWith ya exponía para este caso.
+return copyWith(
+  status: GameStatus.inProgress,
+  clearPausedAt: true,
+  totalPausedDuration: totalPausedDuration + now.difference(pauseStarted),
+);
+```
+
+| Componente | Ubicación | Cambio |
+|------------|-----------|--------|
+| Dominio | `lib/domain/game/aggregates/game.dart` → `Game.resume()` | `pausedAt: null` → `clearPausedAt: true` |
+| Tests | `test/domain/game/game_test.dart` | `should_clear_pausedAt_after_resume`, `should_not_double_subtract_pause_duration_after_resume` |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- El equipo verificó el fix en su propio entorno (Windows, con audio funcional) y confirmó que el cronómetro ya avanza correctamente tras volver de Ajustes o Leaderboard.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- El patrón `campo: parámetro ?? this.campo` en un `copyWith` no puede limpiar un campo nulable pasando `null` explícitamente, porque `null ?? this.campo` siempre resuelve al valor previo; se necesita un flag dedicado (`clearCampo: true`) para ese caso, y debe usarse consistentemente en todo el dominio.
+- Verificar un fix de temporización con un test que falla sin él (reproduciendo el estado exacto: pausado con `pausedAt` fijo) es más confiable que inspeccionar el código a simple vista, dado que el efecto (congelamiento) solo se manifiesta al combinar dos términos que se cancelan algebraicamente con el paso del tiempo real.
