@@ -1256,3 +1256,43 @@ static const _headMarginFactor = 0.5;     // inset desde el borde de celda
 - Acortar el trazo antes de la cabeza evita el efecto “doble grosor” más que agrandar la punta.
 - Quitar la rejilla no afecta la capa de toques (`_BoardTouchGrid`): la detección por celda sigue intacta.
 - En niveles muy densos, un grosor menor puede reducir el área táctil visual; si hiciera falta, el ajuste fino sería subir `_strokeFactor` a `0.13` sin reintroducir la rejilla.
+
+---
+
+## Consulta #27 — Flechas con esquinas limpias, navegación global y marco móvil en web
+
+**Tarea o problema abordado.**
+
+Tres mejoras de producto detectadas al probar niveles espirales (p. ej. `level-17`): (1) renderizado de flechas con codos, cabezas desalineadas y cruces irregulares frente a la referencia visual del equipo; (2) acceso inconsistente a **Ajustes** y **Clasificación** (solo en algunas pantallas); (3) en Flutter Web la app ocupaba todo el viewport del navegador en lugar de simular un dispositivo móvil.
+
+**Herramienta de IA utilizada.**
+
+- Cursor Agent (Composer), con acceso a lectura/escritura del repositorio.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Corregir el renderizado de flechas para que los cruces y la unión cabeza–cuerpo coincidan con la referencia visual (trazo continuo, esquinas redondeadas, punta integrada). Añadir botones de Ajustes y Clasificación en todas las pantallas; en web, mostrar la aplicación dentro de un marco con proporciones de teléfono móvil; habilitar acceso al leaderboard global desde cualquier vista. Registrar la consulta en `AI_USAGE.md` con redacción técnica profesional.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Geometría | `arrow_path_geometry.dart` | `simplifyCollinear()`, `buildBodyPath()` con esquinas `quadraticBezierTo` y tramos axis-aligned hacia cabeza |
+| Pintor | `arrow_board_painter.dart` | `StrokeCap.butt`, base del triángulo = `strokeWidth/2`, cuerpo vía `buildBodyPath` |
+| Nav global | `app_nav_actions.dart` | Iconos leaderboard + settings reutilizables; `leaderboardLevelId` opcional |
+| Hub ranking | `leaderboard_hub_screen.dart` | Lista niveles → ranking por `levelId` cuando no hay contexto de partida |
+| Marco web | `phone_frame.dart` | En `kIsWeb`, escala 390×844 con bezel y sombra |
+| Pantallas | home, login, register, levels, game, victory, defeat, settings, leaderboard | `AppBar.actions` con `AppNavActions` |
+| Rutas | `main.dart` | `/leaderboard` sin args → hub; con `String` → detalle; `PhoneFrame` envuelve `MaterialApp` |
+| Tests | `arrow_path_geometry_test.dart`, `home_screen_test.dart` | Colinealidad, esquina L, navegación a settings vía `app-nav-settings` |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Pendiente de revisión del equipo tras merge.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Los vértices por celda en polilíneas largas generan artefactos de unión aunque la línea sea recta; simplificar colineales antes de pintar es obligatorio en grids densos.
+- `StrokeCap.round` + triángulo separado siempre deja costura visible; `butt` + ancho de base igual al trazo integra mejor la cabeza.
+- El leaderboard del backend es **por nivel** (`GET /leaderboard/:levelId`); el hub centraliza el acceso global sin cambiar el contrato API.
+- `PhoneFrame` solo afecta web; builds nativos mantienen pantalla completa del dispositivo.

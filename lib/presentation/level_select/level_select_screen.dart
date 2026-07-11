@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_strings.dart';
 import '../auth/auth_session_controller.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_nav_actions.dart';
 import 'level_select_controller.dart';
 
 /// Pantalla de selección de nivel con indicadores de bloqueo, estrellas y progreso.
@@ -93,6 +94,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                 child: Text(username, style: Theme.of(context).textTheme.bodyMedium),
               ),
             ),
+          const AppNavActions(),
           IconButton(
             key: const ValueKey('logout-button'),
             tooltip: strings.signOut,

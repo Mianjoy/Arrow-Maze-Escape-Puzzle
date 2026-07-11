@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
+import '../widgets/app_nav_actions.dart';
 import 'auth_error_message.dart';
 import 'register_controller.dart';
 
@@ -46,7 +47,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Arrow Maze — Register')),
+      appBar: AppBar(
+        title: const Text('Arrow Maze — Register'),
+        actions: const [AppNavActions()],
+      ),
       body: ListenableBuilder(
         listenable: widget.controller,
         builder: (context, _) {

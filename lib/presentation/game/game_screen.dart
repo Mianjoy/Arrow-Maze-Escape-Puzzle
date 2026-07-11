@@ -4,6 +4,7 @@ import '../../domain/domain.dart';
 import '../../l10n/app_strings.dart';
 import '../result/result_screen_args.dart';
 import 'game_controller.dart';
+import '../widgets/app_nav_actions.dart';
 import 'widgets/board_view.dart';
 
 /// Pantalla de juego: tablero interactivo y navegación a victoria/derrota dedicadas.
@@ -35,7 +36,12 @@ class _GameScreenState extends State<GameScreen> {
     final strings = AppStringsScope.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.level.id.value)),
+      appBar: AppBar(
+        title: Text(widget.level.id.value),
+        actions: [
+          AppNavActions(leaderboardLevelId: widget.level.id.value),
+        ],
+      ),
       body: ListenableBuilder(
         listenable: widget.controller,
         builder: (context, _) {

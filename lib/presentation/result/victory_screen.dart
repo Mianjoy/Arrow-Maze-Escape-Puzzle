@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
+import '../widgets/app_nav_actions.dart';
 import '../result/result_screen_args.dart';
 
 /// Pantalla dedicada de victoria con puntuación y opción de siguiente nivel.
@@ -18,7 +19,12 @@ class VictoryScreen extends StatelessWidget {
     final stars = game.starsEarned?.value ?? 0;
 
     return Scaffold(
-      appBar: AppBar(title: Text(strings.victoryTitle)),
+      appBar: AppBar(
+        title: Text(strings.victoryTitle),
+        actions: [
+          AppNavActions(leaderboardLevelId: game.level.id.value),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

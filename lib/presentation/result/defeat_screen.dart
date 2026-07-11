@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
 import '../game/game_controller.dart';
+import '../widgets/app_nav_actions.dart';
 import '../result/result_screen_args.dart';
 
 /// Pantalla dedicada de derrota con opción de reintentar el nivel.
@@ -25,7 +26,12 @@ class DefeatScreen extends StatelessWidget {
     final lossText = args.game.lossMessage?.text ?? strings.defeatMessage;
 
     return Scaffold(
-      appBar: AppBar(title: Text(strings.defeatTitle)),
+      appBar: AppBar(
+        title: Text(strings.defeatTitle),
+        actions: [
+          AppNavActions(leaderboardLevelId: args.game.level.id.value),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

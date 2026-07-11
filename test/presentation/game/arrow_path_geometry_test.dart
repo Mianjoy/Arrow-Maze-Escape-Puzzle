@@ -66,5 +66,34 @@ void main() {
       expect(base.dx, closeTo(100, 0.001));
       expect(base.dy, closeTo(16, 0.001));
     });
+    test('should_simplify_collinear_points_on_straight_arrow', () {
+      const positions = [
+        Position(row: 8, column: 8),
+        Position(row: 7, column: 8),
+        Position(row: 6, column: 8),
+        Position(row: 5, column: 8),
+        Position(row: 1, column: 8),
+      ];
+
+      final simplified = ArrowPathGeometry.simplifyCollinear(positions);
+
+      expect(simplified, [
+        const Position(row: 8, column: 8),
+        const Position(row: 1, column: 8),
+      ]);
+    });
+
+    test('should_keep_corner_point_on_L_shaped_arrow', () {
+      const positions = [
+        Position(row: 2, column: 2),
+        Position(row: 2, column: 3),
+        Position(row: 1, column: 3),
+      ];
+
+      final simplified = ArrowPathGeometry.simplifyCollinear(positions);
+
+      expect(simplified.length, 3);
+      expect(simplified[1], const Position(row: 2, column: 3));
+    });
   });
 }

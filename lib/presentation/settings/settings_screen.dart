@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
+import '../widgets/app_nav_actions.dart';
 import 'app_settings_controller.dart';
 
 /// Pantalla de ajustes: silenciar audio y elegir idioma (es/en).
@@ -16,7 +17,10 @@ class SettingsScreen extends StatelessWidget {
     final strings = AppStringsScope.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(strings.settingsTitle)),
+      appBar: AppBar(
+        title: Text(strings.settingsTitle),
+        actions: const [AppNavActions()],
+      ),
       body: ListenableBuilder(
         listenable: settingsController,
         builder: (context, _) {

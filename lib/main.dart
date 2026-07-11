@@ -53,6 +53,7 @@ import 'presentation/game/game_controller.dart';
 import 'presentation/game/game_screen.dart';
 import 'presentation/home/home_screen.dart';
 import 'presentation/leaderboard/leaderboard_controller.dart';
+import 'presentation/leaderboard/leaderboard_hub_screen.dart';
 import 'presentation/leaderboard/leaderboard_screen.dart';
 import 'presentation/level_select/level_select_controller.dart';
 import 'presentation/level_select/level_select_screen.dart';
@@ -62,6 +63,7 @@ import 'presentation/result/victory_screen.dart';
 import 'presentation/settings/app_settings_controller.dart';
 import 'presentation/settings/settings_screen.dart';
 import 'presentation/theme/app_theme.dart';
+import 'presentation/widgets/phone_frame.dart';
 
 /// Punto de entrada: inicializa preferencias, progreso local y composition root.
 Future<void> main() async {
@@ -362,14 +364,19 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
     final locale = widget.container.appSettingsController.locale;
     final strings = AppStrings.forLocale(locale);
 
-    return AppStringsScope(
-      strings: strings,
-      child: MaterialApp(
-        title: strings.appTitle,
-        locale: locale,
-        theme: AppTheme.build(),
-        initialRoute: '/home',
-        onGenerateRoute: (settings) => _onGenerateRoute(settings),
+    return PhoneFrame(
+      child: AppStringsScope(
+        strings: strings,
+        child: MaterialApp(
+          title: strings.appTitle,
+          locale: locale,
+          theme: AppTheme.build(),
+          initialRoute: '/home',
+          builder: (context, child) {
+            return child ?? const SizedBox.shrink();
+          },
+          onGenerateRoute: (settings) => _onGenerateRoute(settings),
+        ),
       ),
     );
   }
@@ -414,12 +421,20 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
           ),
         );
       case '/leaderboard':
-        final levelId = settings.arguments as String;
+        final levelId = settings.arguments as String?;
+        if (levelId != null) {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => LeaderboardScreen(
+              controller: container.buildLeaderboardController(),
+              levelId: levelId,
+            ),
+          );
+        }
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => LeaderboardScreen(
-            controller: container.buildLeaderboardController(),
-            levelId: levelId,
+          builder: (_) => LeaderboardHubScreen(
+            loadLevelsUseCase: LoadLevelsUseCase(levelRepository: container.levelRepository),
           ),
         );
       case '/game':

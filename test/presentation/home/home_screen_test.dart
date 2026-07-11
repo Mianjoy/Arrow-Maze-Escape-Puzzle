@@ -100,7 +100,7 @@ void main() {
     );
 
     // Act
-    await tester.tap(find.byKey(const ValueKey('home-settings')));
+    await tester.tap(find.byKey(const ValueKey('app-nav-settings')));
     await tester.pumpAndSettle();
 
     // Assert

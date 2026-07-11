@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_strings.dart';
+import '../widgets/app_nav_actions.dart';
 import 'leaderboard_controller.dart';
 
 /// Pantalla que muestra el ranking de un nivel (`GET /leaderboard/:levelId`).
@@ -30,8 +32,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStringsScope.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: Text('Leaderboard — ${widget.levelId}')),
+      appBar: AppBar(
+        title: Text('${strings.leaderboard} — ${widget.levelId}'),
+        actions: [
+          AppNavActions(leaderboardLevelId: widget.levelId),
+        ],
+      ),
       body: ListenableBuilder(
         listenable: widget.controller,
         builder: (context, _) {
