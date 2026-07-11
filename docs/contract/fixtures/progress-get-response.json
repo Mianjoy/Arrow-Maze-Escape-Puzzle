@@ -1,0 +1,13 @@
+{
+  "userId": "user-1",
+  "levels": [
+    {
+      "userId": "user-1",
+      "levelId": "level-1",
+      "highScore": 300,
+      "minMoves": 5,
+      "minTimeInSeconds": 42,
+      "isCompleted": true
+    }
+  ]
+}
