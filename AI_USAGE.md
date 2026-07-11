@@ -1800,3 +1800,38 @@ Ambos archivos tenían defectos de naturaleza distinta, ninguno relacionado con 
 - Un mensaje de error del analizador de Dart puede parecer indicar un problema de tipos cuando en realidad es una restricción del evaluador de expresiones constantes; declarar los datos de prueba como `final` en vez de `const` evita la restricción sin perder ninguna garantía relevante para un test.
 - Un `test(...)` faltante produce errores de compilación genéricos ("Expected a method, getter, setter...") que no señalan directamente el bloque anterior como causa; conviene revisar el archivo completo, no solo la línea reportada, ante errores de sintaxis inesperados en archivos de test.
 - Diagnosticar antes de corregir (como se pidió explícitamente) evitó aplicar el mismo tipo de fix a dos problemas de naturaleza distinta.
+
+---
+
+## Consulta #36 — Tablero perdido al volver de Ajustes tras cambiar una preferencia durante la partida
+
+**Tarea o problema abordado.**
+
+Bug reportado por el equipo: al estar jugando un nivel, abrir Ajustes, activar el interruptor de silencio y volver atrás, la pantalla de juego quedaba mostrando un indicador de carga indefinido en lugar del tablero. El síntoma solo se reproducía al togglear una preferencia mientras la partida seguía activa detrás de Ajustes; no ocurría al entrar y salir de Ajustes sin tocar ningún control. Dado que la interacción directa con la app no era reproducible de forma fiable en el entorno de automatización disponible, el diagnóstico se realizó mediante un test de widgets construido para replicar la estructura exacta de navegación de `main.dart`.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5, agente con acceso a terminal, ejecución de tests de widgets como método de reproducción determinística, y navegador para verificación visual complementaria.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Cuando estamos en un nivel y entramos a ajustes, cuando le damos al botón "atrás", el tablero ya no se ve. ¿Qué problema ocasiona eso? [Tras una primera hipótesis descartada por falta de reproducción directa:] Se ve así [tablero en blanco con spinner]. Esto solo ocurre si toco el botón de mute; si no lo hago, no hay problema alguno.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+Se construyó un test de widgets que reproduce la estructura real de `ArrowMazeApp` (un `StatefulWidget` raíz que escucha `AppSettingsController` y hace `setState({})` en cada cambio) para aislar el mecanismo exacto. Se confirmó que `MaterialPageRoute.builder` se reinvoca en **cada rebuild de cualquier ancestro del `Navigator`**, no una sola vez por navegación. Como `_onGenerateRoute` construía cada controlador de pantalla (`container.buildGameController()`, entre otros) **dentro** del `builder:`, cada rebuild del árbol — disparado por `notifyListeners()` al togglear cualquier ajuste — reemplazaba silenciosamente el `GameController` ya iniciado por uno nuevo y nunca iniciado, sin que `GameScreen` (sin `key` ni `didUpdateWidget`) lo notara.
+
+| Componente | Ubicación | Cambio |
+|------------|-----------|--------|
+| Rutas afectadas | `main.dart` → `_onGenerateRoute` (`/game`, `/login`, `/register`, `/levels` ×2, `/leaderboard` ×2) | El controlador/caso de uso se construye una sola vez por navegación, **fuera** del `builder:`, capturado por closure |
+| Test de regresión | `test/presentation/game/game_controller_survives_ancestor_rebuild_test.dart` | Reproduce el escenario exacto (push a Ajustes, disparo de un `ChangeNotifier`, `pop`) y falla sin el fix |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Pendiente de verificación del equipo en su propio entorno (con audio funcional) antes del merge; el equipo confirmó el fix tras probarlo.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- `MaterialPageRoute.builder` no es una fábrica de un solo uso por navegación: se reinvoca en cada rebuild de cualquier ancestro del `Navigator`, incluido un `setState({})` en la raíz de la app. Cualquier dependencia construida dentro de ese `builder:` debe tratarse como potencialmente recreada en cualquier momento.
+- Cuando la interacción manual con la UI no es reproducible de forma fiable (limitación del entorno de automatización), un test de widgets que reproduce la estructura real de navegación de la app es una vía de diagnóstico determinística y más rápida que iterar sobre hipótesis sin verificar.
+- Confirmar un bug mediante un test que falla sin el fix y pasa con él (no solo mediante lectura de código) da mayor certeza de que la causa raíz identificada es la correcta.
