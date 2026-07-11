@@ -6,16 +6,12 @@ import 'app_colors.dart';
 abstract final class AppTheme {
   /// Crea un tema Material 3 alineado a [AppColors].
   static ThemeData build() {
-    const scheme = ColorScheme(
+    final scheme = ColorScheme.fromSeed(
+      seedColor: AppColors.arrow,
       brightness: Brightness.light,
-      primary: AppColors.arrow,
-      onPrimary: Colors.white,
-      secondary: AppColors.sand,
-      onSecondary: AppColors.textPrimary,
-      error: AppColors.arrowBlocked,
-      onError: Colors.white,
       surface: AppColors.background,
       onSurface: AppColors.textPrimary,
+      error: AppColors.arrowBlocked,
     );
 
     return ThemeData(

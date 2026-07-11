@@ -6,11 +6,10 @@ import '../../../domain/domain.dart';
 import '../../theme/app_colors.dart';
 import 'arrow_path_geometry.dart';
 
-/// Pinta el tablero completo: rejilla, muros y flechas como trazos continuos.
+/// Pinta el tablero: muros y flechas como trazos finos continuos (sin rejilla).
 ///
-/// Inspirado en el logo del laberinto: líneas gruesas con extremos redondeados
-/// y punta triangular en la cabeza. Cada flecha puede abarcar cualquier
-/// cantidad de celdas (cabeza + al menos 1 celda de cuerpo).
+/// La cabeza se ancla al borde de su celda en la dirección de disparo para
+/// evitar solapamientos con el cuerpo, sobre todo en flechas verticales largas.
 class ArrowBoardPainter extends CustomPainter {
   /// Crea el painter para [board] con el tamaño de celda ya calculado.
   const ArrowBoardPainter({
@@ -18,6 +17,11 @@ class ArrowBoardPainter extends CustomPainter {
     required this.cellWidth,
     required this.cellHeight,
   });
+
+  static const _strokeFactor = 0.12;
+  static const _headLengthFactor = 1.8;
+  static const _headWidthFactor = 1.2;
+  static const _headMarginFactor = 0.5;
 
   /// Estado del tablero a renderizar.
   final Board board;
@@ -30,26 +34,9 @@ class ArrowBoardPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    _paintGrid(canvas, size);
     _paintWalls(canvas);
     for (final arrow in board.arrows.where((a) => !a.isExtracted)) {
       _paintArrow(canvas, arrow);
-    }
-  }
-
-  /// Dibuja puntos de rejilla tenues sobre el fondo del tablero.
-  void _paintGrid(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColors.gridLine.withValues(alpha: 0.25)
-      ..strokeWidth = 1;
-
-    for (var row = 0; row <= board.dimension.rows; row++) {
-      final y = row * cellHeight;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
-    for (var col = 0; col <= board.dimension.columns; col++) {
-      final x = col * cellWidth;
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
     }
   }
 
@@ -70,26 +57,32 @@ class ArrowBoardPainter extends CustomPainter {
     }
   }
 
-  /// Traza una flecha completa (hasta 3 celdas) con punta en la cabeza.
+  /// Traza una flecha completa con punta en el borde de la celda de cabeza.
   void _paintArrow(Canvas canvas, Arrow arrow) {
     final positions = ArrowPathGeometry.tailToHead(arrow);
     if (positions.isEmpty) return;
 
-    final points = positions
-        .map(
-          (p) => ArrowPathGeometry.cellCenter(
-            p,
-            cellWidth: cellWidth,
-            cellHeight: cellHeight,
-          ),
-        )
-        .toList();
-
     final color = _colorForArrow(arrow);
-    final strokeWidth = math.min(cellWidth, cellHeight) * 0.18;
+    final strokeWidth = math.min(cellWidth, cellHeight) * _strokeFactor;
+    final headLength = strokeWidth * _headLengthFactor;
+    final headWidth = strokeWidth * _headWidthFactor;
+    final headMargin = strokeWidth * _headMarginFactor;
 
-    if (points.length == 1) {
-      _paintArrowHead(canvas, points.first, arrow.direction, color, strokeWidth);
+    final tip = ArrowPathGeometry.headTip(
+      head: arrow.position,
+      direction: arrow.direction,
+      cellWidth: cellWidth,
+      cellHeight: cellHeight,
+      margin: headMargin,
+    );
+    final base = ArrowPathGeometry.headBase(
+      tip: tip,
+      direction: arrow.direction,
+      headLength: headLength,
+    );
+
+    if (positions.length == 1) {
+      _paintArrowHead(canvas, tip: tip, base: base, color: color, headWidth: headWidth);
       return;
     }
 
@@ -100,23 +93,26 @@ class ArrowBoardPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    final path = Path()..moveTo(points.first.dx, points.first.dy);
-    for (var i = 1; i < points.length; i++) {
-      path.lineTo(points[i].dx, points[i].dy);
-    }
-    canvas.drawPath(path, pathPaint);
+    final path = Path();
+    final tail = ArrowPathGeometry.cellCenter(
+      positions.first,
+      cellWidth: cellWidth,
+      cellHeight: cellHeight,
+    );
+    path.moveTo(tail.dx, tail.dy);
 
-    _paintArrowHead(
-      canvas,
-      ArrowPathGeometry.cellCenter(
-        arrow.position,
+    for (var i = 1; i < positions.length - 1; i++) {
+      final point = ArrowPathGeometry.cellCenter(
+        positions[i],
         cellWidth: cellWidth,
         cellHeight: cellHeight,
-      ),
-      arrow.direction,
-      color,
-      strokeWidth,
-    );
+      );
+      path.lineTo(point.dx, point.dy);
+    }
+    path.lineTo(base.dx, base.dy);
+    canvas.drawPath(path, pathPaint);
+
+    _paintArrowHead(canvas, tip: tip, base: base, color: color, headWidth: headWidth);
   }
 
   /// Asigna color según el estado de la flecha.
@@ -128,39 +124,27 @@ class ArrowBoardPainter extends CustomPainter {
     };
   }
 
-  /// Dibuja la punta triangular orientada según [direction] en [center].
+  /// Dibuja la punta triangular entre [tip] y [base].
   void _paintArrowHead(
-    Canvas canvas,
-    Offset center,
-    Direction direction,
-    Color color,
-    double strokeWidth,
-  ) {
-    final angle = _angleFor(direction);
-    final headLength = strokeWidth * 2.2;
-    final headWidth = strokeWidth * 1.6;
+    Canvas canvas, {
+    required Offset tip,
+    required Offset base,
+    required Color color,
+    required double headWidth,
+  }) {
+    final axis = tip - base;
+    if (axis.distance < 0.001) return;
 
-    final tip = center + Offset(math.cos(angle), math.sin(angle)) * headLength * 0.6;
-    final baseCenter = center - Offset(math.cos(angle), math.sin(angle)) * headLength * 0.4;
-    final perpendicular = Offset(-math.sin(angle), math.cos(angle));
+    final unit = axis / axis.distance;
+    final perpendicular = Offset(-unit.dy, unit.dx);
 
     final path = Path()
       ..moveTo(tip.dx, tip.dy)
-      ..lineTo(baseCenter.dx + perpendicular.dx * headWidth, baseCenter.dy + perpendicular.dy * headWidth)
-      ..lineTo(baseCenter.dx - perpendicular.dx * headWidth, baseCenter.dy - perpendicular.dy * headWidth)
+      ..lineTo(base.dx + perpendicular.dx * headWidth, base.dy + perpendicular.dy * headWidth)
+      ..lineTo(base.dx - perpendicular.dx * headWidth, base.dy - perpendicular.dy * headWidth)
       ..close();
 
     canvas.drawPath(path, Paint()..color = color);
-  }
-
-  /// Convierte la dirección de dominio al ángulo en radianes (0 = derecha).
-  double _angleFor(Direction direction) {
-    return switch (direction.arrowDirection) {
-      ArrowDirection.right => 0,
-      ArrowDirection.down => math.pi / 2,
-      ArrowDirection.left => math.pi,
-      ArrowDirection.up => -math.pi / 2,
-    };
   }
 
   @override
