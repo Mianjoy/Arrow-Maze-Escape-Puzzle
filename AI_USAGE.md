@@ -1134,3 +1134,125 @@ El backend ya podía sembrar niveles desde `levels/*.json` y sincronizarlos en c
 
 - `RefreshLevelsUseCase` depende de que la segunda llamada a `findAll()` vea datos distintos; en producción eso ocurre cuando el backend ya upserteó el JSON nuevo (watcher) y la app invalida caché antes de `GET /levels`.
 - Los niveles nuevos aparecen bloqueados hasta completar el anterior: `EnsureInitialProgressUseCase` no se re-ejecuta en el refresh (comportamiento deseado para no resetear progreso).
+
+---
+
+## Consulta #24 — Diseño visual minimalista: paleta Tollens, flechas multi-celda y tablero
+
+**Tarea o problema abordado.**
+
+Alinear la interfaz del cliente con la identidad visual acordada por el equipo (paleta Tollens minimalista + logo del laberinto): flechas dibujadas como trazos continuos de hasta **3 celdas** (cabeza + 2 segmentos de cuerpo), tablero con bordes redondeados y rejilla suave, y tema global coherente en lugar del `deepPurple` genérico de Material.
+
+**Herramienta de IA utilizada.**
+
+- Cursor Agent (Composer), con acceso a lectura/escritura del repositorio y ejecución de tests.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Implementar el rediseño visual del cliente Flutter según la paleta Tollens y el logo del laberinto: flechas con trazo continuo que abarquen hasta tres celdas del tablero, tablero minimalista con esquinas redondeadas, tema global coherente, validación del límite de segmentos en el contrato compartido, documentación dartdoc en español en cada función nueva, y registro en `AI_USAGE.md` con redacción técnica profesional.
+
+**Resultado obtenido.**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Paleta | `lib/presentation/theme/app_colors.dart` | Colores Tollens + acentos del logo (slate, rosa bloqueo, azul activo, verde éxito) |
+| Tema | `lib/presentation/theme/app_theme.dart` | `ThemeData` Material 3; wiring en `main.dart` |
+| Geometría | `lib/presentation/game/widgets/arrow_path_geometry.dart` | Ordena cola→cabeza; valida `body.length ≤ 2` |
+| Pintor | `lib/presentation/game/widgets/arrow_board_painter.dart` | `CustomPainter`: rejilla, muros, trazos gruesos y punta triangular |
+| Tablero | `lib/presentation/game/widgets/board_view.dart` | `Stack`: pintor + capa de toques transparente |
+| Contrato | `lib/contract/level_contract.dart` | `kMaxArrowBodySegments = 2`; rechaza JSON inválido en `fromJson` |
+| UI | `home_screen.dart`, `level_select_screen.dart` | Iconos y estados con `AppColors` |
+| Tests | `test/presentation/game/arrow_path_geometry_test.dart` | Orden L-shaped, línea recta, validación de límite |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Pendiente de revisión del equipo tras merge.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Separar **capa visual** (`CustomPaint`) de **capa de toques** (`GestureDetector` por celda) permite flechas multi-celda sin perder las `ValueKey` que usan los widget tests existentes.
+- El límite de 3 celdas debe validarse en el contrato wire y en el backend para que el pintor nunca reciba geometrías inesperadas.
+- Flechas en forma de L requieren encadenar segmentos por adyacencia, no solo ordenar por fila/columna.
+
+---
+
+## Consulta #25 — Flechas de longitud arbitraria, `optimalMoves` desde el backend y fix de navegación en Retry
+
+**Tarea o problema abordado.**
+
+Tres problemas encontrados al probar la app con niveles reales de mayor tamaño y variedad: (1) el límite de 3 celdas por flecha (Consulta #24) era una limitación visual mal convertida en regla de negocio — la regla real es "mínimo 1 celda de cuerpo, sin máximo"; (2) `LevelDtoMapper.fromDto` recalculaba la ruta óptima con un BFS exhaustivo sobre el espacio de estados al cargar cada nivel, lo que congelaba la pestaña completa con niveles de muchas flechas (48 en un caso real); (3) el botón "Reintentar" de la pantalla de derrota hacía `Navigator.pop()`, lo que revelaba la instancia original (y desactualizada) de `LevelSelectScreen` en vez de reabrir el nivel — causando que niveles ya superados aparecieran como no completados.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Claude Sonnet 5), sesión interactiva de terminal con acceso de lectura/escritura al repositorio, ejecución de `flutter test` y control de versiones.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Solucionar que las flechas tengan cualquier longitud (no solo 5); deben tener al menos una cabeza y una celda de cuerpo. El cliente se congela al cargar niveles grandes — mover el cálculo de la ruta óptima al backend. Si estoy jugando el nivel 19 y lo superó, juego el 20 y lo superó, pero pierdo en el 21 y le doy retry, no reabre el nivel 21 sino que sale a la pantalla de niveles y el 19/20 aparecen como no superados.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Contrato | `lib/contract/level_contract.dart` | `kMinArrowBodySegments = 1`; `optimalMoves` opcional, leído del servidor |
+| Mapper | `lib/interface_adapters/level_dto_mapper.dart` | Ya no ejecuta `ShortestPathCalculator`; usa `dto.optimalMoves ?? arrows.length` |
+| Navegación | `lib/presentation/result/defeat_screen.dart` | El botón Retry ahora hace `pushReplacementNamed('/game', arguments: level)` en vez de `pop()` |
+| Tests | `level_dto_mapper_test.dart`, `defeat_screen_test.dart` | Cobertura del respaldo `arrows.length`, del valor del servidor, y de la navegación de Retry |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- El equipo decidió explícitamente no mantener una verificación de solvabilidad redundante en el cliente tras mover `optimalMoves` al backend, confiando en que el backend ya valida cada nivel antes de aceptarlo (single source of truth).
+- Se identificó que `ShortestPathCalculator` sigue siendo necesario para `LevelFactory` (generación procedural de niveles, camino distinto al de carga desde el backend) y se dejó sin tocar.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Un límite de validación "copiado" de una limitación visual en lugar de derivado de la regla de negocio real (cada disparo retira exactamente una flecha, así que el óptimo siempre es `arrows.length`) es fácil de introducir sin darse cuenta, y solo se detectó al medir con datos reales.
+- Todo el flujo Game→Victory→Game→…→Defeat usa `pushReplacementNamed`, así que cualquier pantalla que necesite "volver" debe forzar una ruta nueva en vez de `pop()`, o revelará una instancia congelada de la pantalla anterior — el equipo ya había resuelto esto para los botones "volver a niveles", pero se pasó por alto en "Retry".
+- Medir antes de optimizar: se verificó con un script aislado que la validación de solubilidad del backend tarda milisegundos incluso con 48 flechas, evitando construir una optimización (caché por hash de contenido) que no hacía falta todavía.
+
+---
+
+## Consulta #26 — Refinamiento del tablero: trazo fino, cabeza al borde y fondo sin rejilla
+
+**Tarea o problema abordado.**
+
+Tras el rediseño visual (Consulta #24), al probar niveles con flechas verticales largas (p. ej. espiral con cabeza apuntando hacia arriba en el borde del tablero) se observaron tres problemas de legibilidad: (1) la punta triangular se dibujaba centrada en la celda de la cabeza y el trazo del cuerpo llegaba hasta el mismo centro, generando solapamiento en la unión; (2) el grosor del trazo (18 % del tamaño de celda) ocultaba demasiado los cruces entre flechas; (3) la rejilla de fondo competía visualmente con el estilo minimalista acordado — se pidió dejar solo muros y fondo liso.
+
+**Herramienta de IA utilizada.**
+
+- Cursor Agent (Composer), con acceso a lectura/escritura del repositorio.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Refinar el renderizado del tablero en `ArrowBoardPainter` para mejorar la legibilidad de flechas largas con cabeza orientada hacia arriba: corregir la posición de la punta triangular (evitar solapamiento con el trazo del cuerpo), reducir el grosor del trazo para que los cruces entre flechas se distingan con claridad, y eliminar la cuadrícula de fondo dejando únicamente los muros y el fondo liso del tablero.
+>
+> Implementar las mejoras propuestas en el código, añadir tests unitarios de la geometría de cabeza cuando aplique, registrar la consulta en `AI_USAGE.md` conforme a las normas del proyecto (Consulta #7), y proponer un mensaje de commit en Conventional Commits.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Geometría de cabeza | `lib/presentation/game/widgets/arrow_path_geometry.dart` | `headTip()` ancla la punta al borde de la celda según `Direction`; `headBase()` calcula dónde debe terminar el trazo del cuerpo |
+| Pintor | `lib/presentation/game/widgets/arrow_board_painter.dart` | Elimina `_paintGrid()`; grosor `0.12×` celda; cuerpo termina en `headBase`, no en el centro; punta más estrecha (`headLength × 1.8`, `headWidth × 1.2`) |
+| Contenedor | `lib/presentation/game/widgets/board_view.dart` | Borde del tablero suavizado (`AppColors.sand`) sin líneas de rejilla |
+| Tests | `test/presentation/game/arrow_path_geometry_test.dart` | Casos para `headTip` (flecha `UP` en fila 0) y `headBase` |
+
+**Constantes de renderizado aplicadas:**
+
+```dart
+static const _strokeFactor = 0.12;      // antes 0.18
+static const _headLengthFactor = 1.8;     // antes 2.2
+static const _headWidthFactor = 1.2;      // antes 1.6
+static const _headMarginFactor = 0.5;     // inset desde el borde de celda
+```
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Pendiente de revisión del equipo tras merge.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Separar **geometría** (`headTip` / `headBase`) del **pintado** facilita probar posicionamiento sin widget tests de `CustomPainter`.
+- Acortar el trazo antes de la cabeza evita el efecto “doble grosor” más que agrandar la punta.
+- Quitar la rejilla no afecta la capa de toques (`_BoardTouchGrid`): la detección por celda sigue intacta.
+- En niveles muy densos, un grosor menor puede reducir el área táctil visual; si hiciera falta, el ajuste fino sería subir `_strokeFactor` a `0.13` sin reintroducir la rejilla.

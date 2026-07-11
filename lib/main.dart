@@ -61,6 +61,7 @@ import 'presentation/result/result_screen_args.dart';
 import 'presentation/result/victory_screen.dart';
 import 'presentation/settings/app_settings_controller.dart';
 import 'presentation/settings/settings_screen.dart';
+import 'presentation/theme/app_theme.dart';
 
 /// Punto de entrada: inicializa preferencias, progreso local y composition root.
 Future<void> main() async {
@@ -366,10 +367,7 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
       child: MaterialApp(
         title: strings.appTitle,
         locale: locale,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          useMaterial3: true,
-        ),
+        theme: AppTheme.build(),
         initialRoute: '/home',
         onGenerateRoute: (settings) => _onGenerateRoute(settings),
       ),

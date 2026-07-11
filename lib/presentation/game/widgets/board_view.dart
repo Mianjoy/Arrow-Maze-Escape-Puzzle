@@ -1,83 +1,102 @@
 import 'package:flutter/material.dart';
 
 import '../../../domain/domain.dart';
+import '../../theme/app_colors.dart';
+import 'arrow_board_painter.dart';
 
-/// Renderiza el [Board] de una partida como una cuadrícula, y notifica
-/// [onCellTapped] con la [Position] tocada.
+/// Renderiza el [Board] con fondo liso, muros y flechas de trazo continuo.
 ///
-/// Puramente presentacional: no conoce casos de uso ni el [Game] completo,
-/// solo el [Board] a dibujar (matching Clean Architecture — esta clase
-/// vive en Interface Adapters / presentación, no en dominio ni aplicación).
+/// Separa la capa visual ([ArrowBoardPainter]) de la capa de toques invisible
+/// para que flechas multi-celda se dibujen como un solo camino.
 class BoardView extends StatelessWidget {
-  /// Crea la vista para dibujar [board] y notificar toques vía [onCellTapped].
+  /// Crea la vista para [board] y notificar toques con [onCellTapped].
   const BoardView({super.key, required this.board, required this.onCellTapped});
 
   /// Tablero a renderizar.
   final Board board;
 
-  /// Callback invocado con la posición de la celda tocada.
+  /// Callback con la [Position] de la celda tocada.
   final ValueChanged<Position> onCellTapped;
 
   @override
   Widget build(BuildContext context) {
     return AspectRatio(
       aspectRatio: board.dimension.columns / board.dimension.rows,
-      child: GridView.builder(
-        physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(8),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: board.dimension.columns,
-        ),
-        itemCount: board.cells.length,
-        itemBuilder: (context, index) {
-          final cell = board.cells[index];
-          final arrowId = cell.arrowId;
-          final arrow = arrowId != null ? board.arrowById(arrowId) : null;
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppColors.boardSurface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.sand.withValues(alpha: 0.6)),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final cellWidth = constraints.maxWidth / board.dimension.columns;
+                final cellHeight = constraints.maxHeight / board.dimension.rows;
 
-          return GestureDetector(
-            key: ValueKey('cell-${cell.position.row}-${cell.position.column}'),
-            onTap: () => onCellTapped(cell.position),
-            child: Container(
-              margin: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: _cellColor(context, arrow, cell),
-                border: Border.all(color: Theme.of(context).dividerColor),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: arrow != null
-                  ? Transform.rotate(
-                      angle: _rotationFor(arrow.direction.arrowDirection),
-                      child: const Icon(Icons.arrow_forward),
-                    )
-                  : null,
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CustomPaint(
+                      painter: ArrowBoardPainter(
+                        board: board,
+                        cellWidth: cellWidth,
+                        cellHeight: cellHeight,
+                      ),
+                    ),
+                    _BoardTouchGrid(
+                      board: board,
+                      cellWidth: cellWidth,
+                      cellHeight: cellHeight,
+                      onCellTapped: onCellTapped,
+                    ),
+                  ],
+                );
+              },
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
+}
 
-  /// Asigna color de fondo según tipo de celda y estado de la flecha.
-  ///
-  /// Muros (wire format) usan un gris del tema; flechas bloqueadas, rojo suave.
-  Color? _cellColor(BuildContext context, Arrow? arrow, Cell cell) {
-    if (cell.isWall) {
-      return Theme.of(context).colorScheme.surfaceContainerHighest;
-    }
-    if (arrow == null) return null;
-    if (arrow.state == ArrowState.blocked) {
-      return Theme.of(context).colorScheme.errorContainer;
-    }
-    return Theme.of(context).colorScheme.primaryContainer;
-  }
+/// Capa invisible de detección de toques, una celda por hijo del [Stack].
+///
+/// Mantiene las `ValueKey('cell-row-col')` que usan los tests de widget.
+class _BoardTouchGrid extends StatelessWidget {
+  const _BoardTouchGrid({
+    required this.board,
+    required this.cellWidth,
+    required this.cellHeight,
+    required this.onCellTapped,
+  });
 
-  /// Convierte la dirección de dominio a radianes para [Transform.rotate].
-  double _rotationFor(ArrowDirection direction) {
-    return switch (direction) {
-      ArrowDirection.right => 0,
-      ArrowDirection.down => 1.5708, // pi/2
-      ArrowDirection.left => 3.14159, // pi
-      ArrowDirection.up => -1.5708, // -pi/2
-    };
+  final Board board;
+  final double cellWidth;
+  final double cellHeight;
+  final ValueChanged<Position> onCellTapped;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        for (final cell in board.cells)
+          Positioned(
+            left: cell.position.column * cellWidth,
+            top: cell.position.row * cellHeight,
+            width: cellWidth,
+            height: cellHeight,
+            child: GestureDetector(
+              key: ValueKey('cell-${cell.position.row}-${cell.position.column}'),
+              behavior: HitTestBehavior.translucent,
+              onTap: () => onCellTapped(cell.position),
+            ),
+          ),
+      ],
+    );
   }
 }

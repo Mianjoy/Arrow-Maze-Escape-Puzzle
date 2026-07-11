@@ -43,10 +43,15 @@ class DefeatScreen extends StatelessWidget {
             const Spacer(),
             FilledButton(
               key: const ValueKey('defeat-retry'),
-              onPressed: () async {
-                await gameController.retry();
-                if (!context.mounted) return;
-                Navigator.of(context).pop();
+              onPressed: () {
+                // No usar `pop()`: todo el flujo Game→Victory→Game→...→Defeat
+                // usa `pushReplacementNamed`, así que debajo de esta pantalla
+                // sigue la instancia original de LevelSelectScreen (progreso
+                // congelado desde antes de jugar este nivel), no la partida.
+                // Reabrimos el mismo nivel con una ruta `/game` nueva (que
+                // arranca su propio controlador en `initState`), igual que
+                // el botón "siguiente nivel" de VictoryScreen.
+                Navigator.of(context).pushReplacementNamed('/game', arguments: args.game.level);
               },
               child: Text(strings.retry),
             ),
