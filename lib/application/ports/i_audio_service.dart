@@ -1,7 +1,7 @@
 /// Puerto de reproducción de efectos de sonido y música de fondo.
 ///
-/// La implementación concreta respeta [IAppSettings.isMuted] solo en la música
-/// de fondo; los efectos de juego no dependen de ese flag.
+/// La implementación concreta usa dos flags independientes: `isMuted` (solo
+/// música de fondo) y `isEffectsMuted` (todos los demás sonidos del juego).
 abstract interface class IAudioService {
   /// Desbloquea audio tras el primer gesto del usuario (p. ej. autoplay Web).
   Future<void> ensureAudioUnlocked();

@@ -15,9 +15,8 @@ import '../../application/ports/i_audio_service.dart';
 /// `assets/assets/` de [AssetSource].
 ///
 /// [IAppSettings.isMuted] silencia solo la música de fondo (`background.mp3`).
-/// [IAppSettings.isEffectsMuted] silencia victoria, derrota (sin movimientos
-/// o sin tiempo) y flecha extraída; el resto de efectos (clic de botones,
-/// movimiento bloqueado) se reproducen siempre.
+/// [IAppSettings.isEffectsMuted] silencia todo el resto de sonidos del juego
+/// (clic de botones, movimiento bloqueado, flecha extraída, victoria, derrota).
 class AppAudioService implements IAudioService {
   /// Crea el servicio leyendo mute desde [settings].
   AppAudioService({required IAppSettings settings}) : _settings = settings {
@@ -72,10 +71,7 @@ class AppAudioService implements IAudioService {
 
   @override
   /// Sonido aleatorio cuando una flecha sale del tablero.
-  ///
-  /// Respeta [IAppSettings.isEffectsMuted].
   Future<void> playArrowExtracted() async {
-    if (_settings.isEffectsMuted) return;
     final index = _random.nextInt(_arrowExtractedSounds.length);
     await _playSfx(_arrowExtractedSounds[index], fallback: SystemSoundType.click);
   }
@@ -88,28 +84,19 @@ class AppAudioService implements IAudioService {
 
   @override
   /// Sonido exclusivo al completar un nivel con éxito.
-  ///
-  /// Respeta [IAppSettings.isEffectsMuted].
   Future<void> playLevelCleared() async {
-    if (_settings.isEffectsMuted) return;
     await _playSfx(_levelCleared);
   }
 
   @override
   /// Sonido exclusivo al agotar los movimientos del nivel.
-  ///
-  /// Respeta [IAppSettings.isEffectsMuted].
   Future<void> playNoMovementsLeft() async {
-    if (_settings.isEffectsMuted) return;
     await _playSfx(_noMovementsLeft);
   }
 
   @override
   /// Sonido exclusivo al agotar el tiempo del nivel.
-  ///
-  /// Respeta [IAppSettings.isEffectsMuted].
   Future<void> playTimeUp() async {
-    if (_settings.isEffectsMuted) return;
     await _playSfx(_timeUp);
   }
 
@@ -144,8 +131,9 @@ class AppAudioService implements IAudioService {
     });
   }
 
-  /// Reproduce un efecto corto con pool rotativo (independiente del mute).
+  /// Reproduce un efecto corto con pool rotativo; respeta [IAppSettings.isEffectsMuted].
   Future<void> _playSfx(String bundleKey, {SystemSoundType? fallback}) async {
+    if (_settings.isEffectsMuted) return;
     try {
       final bytes = await _loadAssetBytes(bundleKey);
       final player = _sfxPool[_sfxPoolIndex];

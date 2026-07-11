@@ -12,7 +12,7 @@ class InMemoryAppSettings implements IAppSettings {
   @override
   bool get isMuted => _muted;
 
-  /// Indica si los efectos de victoria, derrota y flecha extraída están silenciados.
+  /// Indica si todos los efectos de sonido del juego están silenciados (no la música de fondo).
   @override
   bool get isEffectsMuted => _effectsMuted;
 

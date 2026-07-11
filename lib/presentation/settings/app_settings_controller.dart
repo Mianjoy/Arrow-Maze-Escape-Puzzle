@@ -14,7 +14,7 @@ class AppSettingsController extends ChangeNotifier {
   /// Indica si la música de fondo está silenciada.
   bool get isMuted => _settings.isMuted;
 
-  /// Indica si los efectos de victoria, derrota y flecha extraída están silenciados.
+  /// Indica si todos los efectos de sonido del juego están silenciados (no la música de fondo).
   bool get isEffectsMuted => _settings.isEffectsMuted;
 
   /// Locale activo de la interfaz.
