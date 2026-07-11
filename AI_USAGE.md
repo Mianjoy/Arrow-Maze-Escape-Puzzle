@@ -1728,3 +1728,40 @@ await player.play(BytesSource(bytes, mimeType: 'audio/mpeg'));
 - `BytesSource` reproduce desde memoria y evita la capa HTTP de `AudioCache` en Web.
 - Listar assets **explícitamente** en `pubspec.yaml` reduce el riesgo de que archivos no entren al bundle Web tras cambios de formato o renombrado.
 - Tras modificar assets o `pubspec`: **`flutter clean`** + restart completo obligatorio.
+
+---
+
+## Consulta #34 — Interruptor de silencio para efectos de victoria, derrota y flecha extraída
+
+**Tarea o problema abordado.**
+
+El equipo solicitó un segundo interruptor en la pantalla de Ajustes, independiente del mute de música de fondo ya existente, que permita silenciar específicamente los efectos de sonido de victoria (nivel completado), derrota (por movimientos o tiempo agotados) y flecha extraída del tablero, sin afectar el clic de botones ni el sonido de movimiento bloqueado.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5, agente con acceso a terminal y sistema de archivos del repositorio.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Quiero un botón, que esté en la ventana "ajustes", el cual permita silenciar el juego, que los sonidos que ocurren cuando se gana, se pierde, una flecha sale del tablero, dejen de sonar. El botón de mute que ya existe déjalo y no lo modifiques.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Puerto | `i_app_settings.dart` | `isEffectsMuted` / `setEffectsMuted(bool)`, independiente de `isMuted` |
+| Persistencia | `shared_preferences_app_settings.dart` | Clave `settings_effects_muted` en `SharedPreferences` |
+| En memoria | `in_memory_app_settings.dart` | Misma interfaz para tests |
+| Controlador | `app_settings_controller.dart` | Expone `isEffectsMuted` / `setEffectsMuted` a la UI |
+| UI | `settings_screen.dart` | Nuevo `SwitchListTile` (`key: settings-mute-effects`) bajo el mute existente, sin tocarlo |
+| Audio | `app_audio_service.dart` | `playLevelCleared()`, `playNoMovementsLeft()`, `playTimeUp()` y `playArrowExtracted()` respetan el nuevo flag; `playButtonClick()` y `playMovementNotAllowed()` quedan fuera de su alcance |
+| i18n | `app_strings.dart` | Etiquetas en inglés y español |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Pendiente de revisión del equipo tras el merge.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Separar el mute de música de fondo del mute de efectos de resultado de partida en dos flags independientes evita acoplar preferencias de audio con semántica distinta (ambiente vs. feedback de juego).
+- Delimitar explícitamente qué eventos de sonido quedan fuera del alcance de un nuevo control (clic de botones, movimiento bloqueado) previene que una función nueva silencie más de lo solicitado.
