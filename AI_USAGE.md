@@ -1937,3 +1937,58 @@ Future<void> _playSfx(String bundleKey, {SystemSoundType? fallback}) async {
 
 - Centralizar una regla transversal (como un flag de silencio) en el punto único por el que pasan todas las llamadas afectadas, en lugar de repetirla en cada método público, evita que una nueva función de audio quede fuera de su alcance por omisión.
 - Cuando el entorno de desarrollo no coincide con el de prueba final del equipo (macOS vs. Windows, en este caso), la verificación funcional del comportamiento de audio queda pendiente de confirmación por quienes sí pueden reproducirlo, y así debe quedar explícito en la documentación.
+
+---
+
+## Consulta #39 — Extensión de pruebas de contrato a auth, progress y leaderboard (sin Pact)
+
+**Tarea o problema abordado.**
+
+El enunciado del proyecto recomienda explícitamente usar **Pact** (o herramienta equivalente) para pruebas de contrato consumer-driven entre el cliente del juego y el backend. Ya existía una prueba de contrato para el DTO de nivel (fixture compartido `docs/levels/simple-1.json`), pero cubría solo una de las cinco fronteras HTTP que este repo comparte con el backend. Se solicitó extender el mismo patrón a `POST /auth/register`, `POST /auth/login`, `POST /progress/sync` (request y response), `GET /progress` y `GET /leaderboard/:levelId`, explícitamente sin adoptar Pact, y documentar el razonamiento.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5. La decisión de no usar Pact se validó investigando primero el estado real de su soporte para Dart/Flutter (sin SDK de consumidor oficial ni bien mantenido); la extensión del patrón se diseñó en modo de planificación con aprobación explícita antes de implementar, y se ejecutó de forma simétrica en ambos repos (backend y frontend).
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> [Sobre la recomendación de Pact del enunciado, mostrando la captura de la rúbrica:] ¿Debo aplicar esto según el enunciado del proyecto? ¿Crees que lo estamos cumpliendo según lo realizado, o hay que mejorarlo? [Tras la evaluación, con la brecha identificada:] Estoy de acuerdo, aplícalo a todos los endpoints compartidos como estás sugiriendo, sin la necesidad de usar Pact. Agrega ese razonamiento en la documentación.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+Se agregaron seis fixtures JSON compartidos con el backend (bit-a-bit idénticos en ambos repos) bajo `docs/contract/fixtures/`, con una prueba en este repo por cada fixture que ejercita el **cliente HTTP real** (no una re-implementación de su forma), usando el `MockHttpClient` existente que reenvía la petición real al handler de prueba.
+
+```dart
+// El cliente HTTP REAL debe parsear el fixture de respuesta en el modelo esperado.
+final client = MockHttpClient((request) async => http.Response(jsonEncode(fixture), 200));
+final api = AuthApiClient(config: config, httpClient: client);
+final session = await api.login(username: 'ignored', password: 'ignored12');
+expect(session.token, fixture['token']);
+
+// Para el request de sync, se captura el cuerpo REAL enviado por el cliente
+// y se compara contra el fixture compartido.
+final client = MockHttpClient((request) async {
+  sentBody = jsonDecode(request.body) as Map<String, dynamic>;
+  return http.Response('{}', 200);
+});
+// ...
+expect(sentBody, fixture);
+```
+
+| Componente | Ubicación | Rol |
+|------------|-----------|-----|
+| Fixtures | `docs/contract/fixtures/*.json` (6 archivos, idénticos al backend) | Forma compartida de cada frontera HTTP |
+| Razonamiento documentado | `docs/contract/fixtures/README.md` | Por qué fixtures compartidos en vez de Pact, y la limitación aceptada |
+| Prueba de contrato | `test/infrastructure/http/contract_fixtures_test.dart` | `AuthApiClient`, `ProgressApiClient` y `LeaderboardApiClient` reales parseando cada fixture de respuesta; el body real de `syncProgress()` comparado contra el fixture de request |
+
+Nota: `progress-sync-response.json` no se ejercita en este repo porque `ProgressApiClient.syncProgress()` descarta el cuerpo de esa respuesta (devuelve `void`) una vez confirma el 200; ese fixture lo verifica el backend, que sí produce y necesita mantener esa forma.
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna; se verificó con `flutter analyze` y `flutter test` (104/104 tests) en este repo, y con `npm run lint`, `npm run build` y `npm test` (169/169 tests) en el backend, antes de commitear.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- No toda recomendación de la rúbrica aplica igual de bien a cualquier stack: Pact tiene soporte maduro para JVM/.NET/JS/Python/Go/Ruby, pero no para Dart/Flutter en el lado consumidor, lo que lo vuelve poco práctico como "primera opción" para este proyecto sin construir tooling propio desproporcionado al alcance.
+- Una prueba de contrato no necesita un framework dedicado para dar la garantía central que importa (que ambos lados coinciden en la forma de los datos): un fixture compartido más pruebas que ejercitan el cliente HTTP real de cada endpoint logra el mismo objetivo, al precio de sincronización manual entre repos en vez de automática.
+- Cuando un cliente descarta deliberadamente el cuerpo de una respuesta (como `syncProgress()`), no tiene sentido forzar una prueba de contrato sobre esa forma en este lado; documentar explícitamente por qué (en vez de omitirlo en silencio) evita que parezca una omisión no intencional.
