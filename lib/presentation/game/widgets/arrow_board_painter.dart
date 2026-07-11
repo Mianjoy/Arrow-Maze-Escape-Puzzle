@@ -120,7 +120,7 @@ class ArrowBoardPainter extends CustomPainter {
     return switch (arrow.state) {
       ArrowState.blocked => AppColors.arrowBlocked,
       ArrowState.active => AppColors.arrow,
-      ArrowState.extracted => AppColors.arrow.withOpacity(0.3),
+      ArrowState.extracted => AppColors.arrow.withValues(alpha: 0.3),
     };
   }
 
