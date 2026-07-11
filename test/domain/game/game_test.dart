@@ -96,6 +96,47 @@ void main() {
 
       expect(paused.elapsedSeconds, started.elapsedSeconds);
     });
+
+    test('should_clear_pausedAt_after_resume', () {
+      // Arrange
+      final paused = buildStartedGame().pause();
+
+      // Act
+      final resumed = paused.resume();
+
+      // Assert: `copyWith` resuelve parámetros nulos con `?? this.campo`, así
+      // que `resume()` debe usar `clearPausedAt: true` (no `pausedAt: null`)
+      // para que de verdad se limpie; si no, `elapsedSeconds` queda congelado
+      // para siempre tras la primera pausa/reanudación (p. ej. al visitar
+      // Ajustes o Leaderboard durante una partida).
+      expect(resumed.pausedAt, isNull);
+    });
+
+    test('should_not_double_subtract_pause_duration_after_resume', () async {
+      // Arrange: una partida que empezó hace 10s, se pausó por 3s y ya reanudó.
+      final now = DateTime.now().toUtc();
+      final game = Game(
+        id: const Identifier('game-test'),
+        playerId: const Identifier('player-test'),
+        level: buildLevel(),
+        board: buildSingleArrowBoard(),
+        status: GameStatus.paused,
+        startedAt: now.subtract(const Duration(seconds: 10)),
+        pausedAt: now.subtract(const Duration(seconds: 3)),
+      );
+
+      // Act
+      final resumed = game.resume();
+      final elapsedRightAfterResume = resumed.elapsedSeconds;
+      await Future<void>.delayed(const Duration(seconds: 2));
+      final elapsedLater = resumed.elapsedSeconds;
+
+      // Assert: sin el bug (`pausedAt` colgado del pause anterior), el tiempo
+      // transcurrido debe seguir avanzando con el reloj real tras reanudar —
+      // con el bug quedaba congelado (la resta de `now - pausedAt` crecía al
+      // mismo ritmo que `now - startedAt`, cancelándose exactamente).
+      expect(elapsedLater, greaterThanOrEqualTo(elapsedRightAfterResume + 2));
+    });
   });
 
   group('Game.performMove — score and progress percentage', () {

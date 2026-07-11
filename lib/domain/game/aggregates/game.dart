@@ -188,7 +188,7 @@ class Game {
     final now = DateTime.now().toUtc();
     return copyWith(
       status: GameStatus.inProgress,
-      pausedAt: null,
+      clearPausedAt: true,
       totalPausedDuration: totalPausedDuration + now.difference(pauseStarted),
     );
   }
