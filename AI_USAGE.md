@@ -1885,3 +1885,55 @@ return copyWith(
 
 - El patrón `campo: parámetro ?? this.campo` en un `copyWith` no puede limpiar un campo nulable pasando `null` explícitamente, porque `null ?? this.campo` siempre resuelve al valor previo; se necesita un flag dedicado (`clearCampo: true`) para ese caso, y debe usarse consistentemente en todo el dominio.
 - Verificar un fix de temporización con un test que falla sin él (reproduciendo el estado exacto: pausado con `pausedAt` fijo) es más confiable que inspeccionar el código a simple vista, dado que el efecto (congelamiento) solo se manifiesta al combinar dos términos que se cancelan algebraicamente con el paso del tiempo real.
+
+---
+
+## Consulta #38 — Ampliación del alcance del interruptor de silencio de efectos
+
+**Tarea o problema abordado.**
+
+El interruptor de silencio de efectos introducido en la Consulta #34 solo cubría los sonidos de victoria, derrota y flecha extraída. El equipo identificó que aún quedaban acciones que producían sonido con el interruptor activado: el clic de botones generales de la interfaz y el sonido de movimiento bloqueado. Se solicitó ampliar el alcance del control para que silencie la totalidad de los efectos de sonido del juego, dejando intacta la música de fondo y el interruptor que la gobierna.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5, agente con acceso a terminal y sistema de archivos del repositorio.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Ahora necesito modifiques lo que hace el botón de mute que hicimos. Quiero que ese botón silencie todo el sonido que no es el de background music; hay acciones que todavía generan sonido.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+La comprobación de `isEffectsMuted`, antes duplicada en cada método público que reproducía un efecto, se centralizó en el helper privado `_playSfx()` que todos ellos comparten. De este modo, cualquier efecto que se agregue a futuro a través de ese helper queda cubierto por el interruptor sin necesidad de repetir la condición.
+
+```dart
+// Antes: la comprobación solo estaba en algunos métodos (victoria, derrota,
+// flecha extraída); playButtonClick() y playMovementNotAllowed() sonaban siempre.
+Future<void> playLevelCleared() async {
+  if (_settings.isEffectsMuted) return;
+  await _playSfx(_levelCleared);
+}
+
+// Después: un único punto de control en el helper compartido.
+Future<void> _playSfx(String bundleKey, {SystemSoundType? fallback}) async {
+  if (_settings.isEffectsMuted) return;
+  // ... carga y reproducción del efecto
+}
+```
+
+| Componente | Ubicación | Cambio |
+|------------|-----------|--------|
+| Audio | `lib/infrastructure/audio/app_audio_service.dart` | Comprobación de `isEffectsMuted` centralizada en `_playSfx()`; retirada de los métodos públicos individuales |
+| Puertos | `i_app_settings.dart`, `i_audio_service.dart` | Documentación actualizada: `isEffectsMuted` cubre todos los efectos, no solo resultado de partida |
+| Controlador y persistencia | `app_settings_controller.dart`, `shared_preferences_app_settings.dart`, `in_memory_app_settings.dart` | Comentarios de documentación alineados con el nuevo alcance |
+| i18n | `app_strings.dart` | Etiqueta actualizada a "Mute all sound effects" / "Silenciar todos los efectos de sonido" |
+| UI | `settings_screen.dart` | Comentario de pantalla actualizado |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Pendiente de verificación del equipo, dado que la sesión de desarrollo se realizó en macOS, entorno donde la reproducción de audio no pudo confirmarse de forma directa (ver limitaciones de audio en Flutter Web documentadas en consultas previas).
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Centralizar una regla transversal (como un flag de silencio) en el punto único por el que pasan todas las llamadas afectadas, en lugar de repetirla en cada método público, evita que una nueva función de audio quede fuera de su alcance por omisión.
+- Cuando el entorno de desarrollo no coincide con el de prueba final del equipo (macOS vs. Windows, en este caso), la verificación funcional del comportamiento de audio queda pendiente de confirmación por quienes sí pueden reproducirlo, y así debe quedar explícito en la documentación.
