@@ -1765,3 +1765,38 @@ El equipo solicitó un segundo interruptor en la pantalla de Ajustes, independie
 
 - Separar el mute de música de fondo del mute de efectos de resultado de partida en dos flags independientes evita acoplar preferencias de audio con semántica distinta (ambiente vs. feedback de juego).
 - Delimitar explícitamente qué eventos de sonido quedan fuera del alcance de un nuevo control (clic de botones, movimiento bloqueado) previene que una función nueva silencie más de lo solicitado.
+
+---
+
+## Consulta #35 — Corrección de dos archivos de test que bloqueaban `flutter test`
+
+**Tarea o problema abordado.**
+
+Dos archivos de test fallaban en tiempo de análisis/compilación, impidiendo ejecutar la suite completa: `test/domain/level/level_time_limit_calculator_test.dart` y `test/interface_adapters/level_dto_mapper_test.dart`. Se solicitó diagnosticar la causa raíz de cada uno antes de aplicar cualquier corrección.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5, agente con acceso a terminal, análisis estático (`flutter analyze`) y ejecución de la suite de tests.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Ahora necesito que resolvamos el problema de los 2 tests que están fallando; identifica qué pasa con esos tests primero.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+Ambos archivos tenían defectos de naturaleza distinta, ninguno relacionado con lógica de dominio:
+
+| Archivo | Causa raíz | Corrección |
+|---------|-----------|------------|
+| `level_time_limit_calculator_test.dart` | Un `Level` declarado `const` intentaba construirse reutilizando campos (`boardDefinition`, `playerStart`) de otro `Level` también `const` — el evaluador de expresiones constantes de Dart no permite leer el campo de una instancia `const` para componer otra expresión `const` en este caso, aunque el tipo sea inmutable. | Los objetos de prueba no necesitan ser constantes de compilación: se declararon como `final` en lugar de `const`. |
+| `level_dto_mapper_test.dart` | Al bloque de test `should_map_display_name_from_wire_format` le seguía el cuerpo de otro caso de prueba **sin su envoltorio `test('...', () { ... })`** — probablemente perdido en una edición o fusión previa, dejando una sentencia suelta a nivel de `main()`. | Se restauró el envoltorio faltante con un nombre acorde al resto de la suite: `should_reject_level_when_optimal_moves_exceed_max_moves`. |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Pendiente de revisión del equipo tras el merge.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Un mensaje de error del analizador de Dart puede parecer indicar un problema de tipos cuando en realidad es una restricción del evaluador de expresiones constantes; declarar los datos de prueba como `final` en vez de `const` evita la restricción sin perder ninguna garantía relevante para un test.
+- Un `test(...)` faltante produce errores de compilación genéricos ("Expected a method, getter, setter...") que no señalan directamente el bloque anterior como causa; conviene revisar el archivo completo, no solo la línea reportada, ante errores de sintaxis inesperados en archivos de test.
+- Diagnosticar antes de corregir (como se pidió explícitamente) evitó aplicar el mismo tipo de fix a dos problemas de naturaleza distinta.
