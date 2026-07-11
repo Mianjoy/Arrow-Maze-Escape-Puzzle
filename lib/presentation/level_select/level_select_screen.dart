@@ -156,7 +156,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> with RouteAware {
                       ? (completed ? AppColors.success : AppColors.arrow)
                       : AppColors.gridLine,
                 ),
-                title: Text(level.id.value),
+                title: Text(level.displayLabel),
                 subtitle: Text(
                   '${strings.difficultyLabel(level.difficulty.name)} · '
                   '${strings.parMovesLabel(level.parMoves)}'

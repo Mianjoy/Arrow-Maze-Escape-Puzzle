@@ -37,9 +37,12 @@ class _GameScreenState extends State<GameScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.level.id.value),
+        title: Text(widget.level.displayLabel),
         actions: [
-          AppNavActions(leaderboardLevelId: widget.level.id.value),
+          AppNavActions(
+            leaderboardLevelId: widget.level.id.value,
+            leaderboardLevelTitle: widget.level.displayLabel,
+          ),
         ],
       ),
       body: ListenableBuilder(

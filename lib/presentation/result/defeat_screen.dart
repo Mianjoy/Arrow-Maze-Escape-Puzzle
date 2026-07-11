@@ -29,7 +29,10 @@ class DefeatScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(strings.defeatTitle),
         actions: [
-          AppNavActions(leaderboardLevelId: args.game.level.id.value),
+          AppNavActions(
+            leaderboardLevelId: args.game.level.id.value,
+            leaderboardLevelTitle: args.game.level.displayLabel,
+          ),
         ],
       ),
       body: Padding(

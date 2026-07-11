@@ -53,6 +53,7 @@ import 'presentation/game/game_controller.dart';
 import 'presentation/game/game_screen.dart';
 import 'presentation/home/home_screen.dart';
 import 'presentation/leaderboard/leaderboard_controller.dart';
+import 'presentation/leaderboard/leaderboard_route_args.dart';
 import 'presentation/leaderboard/leaderboard_hub_screen.dart';
 import 'presentation/leaderboard/leaderboard_screen.dart';
 import 'presentation/level_select/level_select_controller.dart';
@@ -423,13 +424,16 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
           ),
         );
       case '/leaderboard':
-        final levelId = settings.arguments as String?;
-        if (levelId != null) {
+        final args = settings.arguments;
+        if (args is LeaderboardRouteArgs || args is String) {
+          final levelId = args is LeaderboardRouteArgs ? args.levelId : args as String;
+          final levelTitle = args is LeaderboardRouteArgs ? args.levelTitle : null;
           return MaterialPageRoute(
             settings: settings,
             builder: (_) => LeaderboardScreen(
               controller: container.buildLeaderboardController(),
               levelId: levelId,
+              levelTitle: levelTitle,
             ),
           );
         }

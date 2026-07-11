@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
+import '../leaderboard/leaderboard_route_args.dart';
 
 /// Acciones globales de navegación: clasificación y ajustes.
 ///
@@ -12,12 +13,16 @@ class AppNavActions extends StatelessWidget {
   const AppNavActions({
     super.key,
     this.leaderboardLevelId,
+    this.leaderboardLevelTitle,
     this.showLeaderboard = true,
     this.showSettings = true,
   });
 
   /// Identificador de nivel para abrir su leaderboard directamente.
   final String? leaderboardLevelId;
+
+  /// Nombre visible del nivel en el título del ranking.
+  final String? leaderboardLevelTitle;
 
   /// Si es `false`, oculta el botón de clasificación (p. ej. ya en leaderboard).
   final bool showLeaderboard;
@@ -30,9 +35,15 @@ class AppNavActions extends StatelessWidget {
   }
 
   void _openLeaderboard(BuildContext context) {
+    final levelId = leaderboardLevelId;
     Navigator.of(context).pushNamed(
       '/leaderboard',
-      arguments: leaderboardLevelId,
+      arguments: levelId == null
+          ? null
+          : LeaderboardRouteArgs(
+              levelId: levelId,
+              levelTitle: leaderboardLevelTitle,
+            ),
     );
   }
 

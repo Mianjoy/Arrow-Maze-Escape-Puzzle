@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
 import '../widgets/app_nav_actions.dart';
+import 'leaderboard_route_args.dart';
 import 'leaderboard_controller.dart';
 
 /// Pantalla que muestra el ranking de un nivel (`GET /leaderboard/:levelId`).
@@ -11,6 +12,7 @@ class LeaderboardScreen extends StatefulWidget {
     super.key,
     required this.controller,
     required this.levelId,
+    this.levelTitle,
   });
 
   /// Controlador que carga las entradas del ranking.
@@ -18,6 +20,9 @@ class LeaderboardScreen extends StatefulWidget {
 
   /// Identificador del nivel cuyo top se muestra.
   final String levelId;
+
+  /// Nombre legible del nivel para el título; si es null, se usa [levelId].
+  final String? levelTitle;
 
   @override
   State<LeaderboardScreen> createState() => _LeaderboardScreenState();
@@ -36,7 +41,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${strings.leaderboard} — ${widget.levelId}'),
+        title: Text('${strings.leaderboard} — ${widget.levelTitle ?? widget.levelId}'),
         actions: const [
           AppNavActions(showLeaderboard: false),
         ],

@@ -149,7 +149,31 @@ void main() {
       expect(level.optimalMoves, 2);
     });
 
-    test('should_reject_when_optimalMoves_exceeds_maxMoves', () {
+    test('should_map_display_name_from_wire_format', () {
+      const dto = StructuredLevelJsonDto(
+        id: 'level-1',
+        name: 'Primer Contacto',
+        levelNumber: 1,
+        difficulty: LevelDifficultyDto.easy,
+        maxMoves: 5,
+        maxTimeInSeconds: 60,
+        width: 2,
+        height: 1,
+        exit: CellPositionDto(row: 0, col: 1),
+        arrows: [
+          StructuredArrowJsonDto(
+            id: 'f1',
+            direction: ArrowDirectionDto.right,
+            head: CellPositionDto(row: 0, col: 0),
+          ),
+        ],
+      );
+
+      final level = mapper.fromDto(dto);
+
+      expect(level.displayName, 'Primer Contacto');
+      expect(level.displayLabel, 'Primer Contacto');
+    });
       const dto = StructuredLevelJsonDto(
         id: 'too-many-moves',
         levelNumber: 7,

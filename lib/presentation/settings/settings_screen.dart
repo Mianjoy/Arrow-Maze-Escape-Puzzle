@@ -20,7 +20,7 @@ class SettingsScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(strings.settingsTitle),
         actions: const [
-          AppNavActions(showSettings: false),
+          AppNavActions(showSettings: false, showLeaderboard: false),
         ],
       ),
       body: ListenableBuilder(

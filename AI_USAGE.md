@@ -1336,3 +1336,42 @@ Seis incidencias detectadas en pruebas manuales tras la Consulta #27: (1) crash 
 - Acciones globales de AppBar deben ser contextuales; un icono que navega a la pantalla actual confunde al usuario.
 - `LevelSelectController.load()` en `initState` no basta si la pantalla permanece en el stack: hace falta `RouteAware` o recrear la ruta al volver del juego.
 - Ampliar solo la longitud de la punta sin el ancho deja flechas “agujas”; conviene escalar ambos factores proporcionalmente al grosor del trazo.
+
+---
+
+## Consulta #29 — Nombres visibles de niveles y navegación en Ajustes
+
+**Tarea o problema abordado.**
+
+Dos mejoras de producto detectadas en pruebas: (1) en la pantalla de **Ajustes** seguía visible el icono de clasificación, redundante con el acceso global desde otras vistas; (2) la UI mostraba el identificador técnico del nivel (`level-01`, `simple-1`) en lugar del campo **`name`** definido en los JSON del catálogo (p. ej. “Primer Contacto”), porque el contrato compartido backend–frontend no transportaba ese campo hasta el dominio Flutter.
+
+**Herramienta de IA utilizada.**
+
+- Cursor Agent (Composer), con acceso a lectura/escritura de los repositorios frontend y backend.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Implementar los ajustes pendientes de la revisión UX: ocultar el botón de clasificación en la pantalla de Ajustes; extender el contrato compartido de niveles con el campo `name` y mostrar ese nombre legible en la UI (selector de niveles, partida, hub y detalle de ranking) en lugar del identificador interno. Actualizar mappers, entidades y pruebas en backend y frontend. Registrar la consulta en `AI_USAGE.md` con redacción técnica profesional.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Contrato wire | `docs/contract/level.contract.ts` + `lib/contract/level_contract.dart` | Campo opcional `name` en `StructuredLevelJsonDto` |
+| Dominio BE | `LevelDefinition`, `LevelBuilder`, `LevelJsonMapper` | Propiedad `name`; fallback `name ?? id` al mapear |
+| Dominio FE | `level.dart` | `displayName` + getter `displayLabel` (fallback a `id`) |
+| Mapper FE | `level_dto_mapper.dart` | `displayName: dto.name?.trim() ?? ''` |
+| UI | `level_select_screen`, `game_screen`, `leaderboard_hub_screen`, `leaderboard_screen` | Títulos con `displayLabel` / `levelTitle` |
+| Nav | `settings_screen.dart` | `AppNavActions(showSettings: false, showLeaderboard: false)` |
+| Rutas | `leaderboard_route_args.dart`, `main.dart`, `app_nav_actions.dart` | Pasar `levelId` + título visible al abrir ranking |
+| Tests | `level_dto_mapper_test.dart`, `LevelJsonMapper.spec.ts`, `LevelDefinition.test.ts` | Round-trip de `name` y etiqueta visible |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Pendiente de revisión del equipo tras merge.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Los JSON de catálogo pueden incluir metadatos de presentación (`name`) que no llegan a la UI si el contrato wire no los expone; conviene mantener paridad estricta entre `docs/contract/` y `lib/contract/`.
+- El API de leaderboard sigue keyed por `levelId`; el nombre es solo capa de presentación y debe propagarse por argumentos de navegación cuando la pantalla no tiene el objeto `Level` cargado.
+- Ocultar iconos de navegación global debe aplicarse de forma simétrica (leaderboard en settings, settings en settings, leaderboard en leaderboard) para evitar acciones que no cambian de contexto.

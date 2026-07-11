@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../application/use_cases/load_levels_use_case.dart';
 import '../../domain/domain.dart';
 import '../../l10n/app_strings.dart';
+import 'leaderboard_route_args.dart';
 import '../widgets/app_nav_actions.dart';
 
 /// Selector de nivel antes de abrir la tabla de clasificación global.
@@ -92,13 +93,16 @@ class _LeaderboardHubScreenState extends State<LeaderboardHubScreen> {
         return ListTile(
           key: ValueKey('leaderboard-level-${level.id.value}'),
           leading: const Icon(Icons.emoji_events_outlined),
-          title: Text(level.id.value),
+          title: Text(level.displayLabel),
           subtitle: Text(strings.difficultyLabel(level.difficulty.name)),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             Navigator.of(context).pushNamed(
               '/leaderboard',
-              arguments: level.id.value,
+              arguments: LeaderboardRouteArgs(
+                levelId: level.id.value,
+                levelTitle: level.displayLabel,
+              ),
             );
           },
         );

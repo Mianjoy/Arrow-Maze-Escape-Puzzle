@@ -208,12 +208,16 @@ class StructuredLevelJsonDto {
     required this.height,
     required this.exit,
     required this.arrows,
+    this.name,
     this.walls,
     this.optimalMoves,
   });
 
   /// Identificador único del nivel (p. ej. `"simple-1"`, `"level-01"`).
   final String id;
+
+  /// Nombre visible del nivel en la UI (p. ej. "Primer Contacto").
+  final String? name;
 
   /// Orden en la progresión del jugador (entero ≥ 1).
   final int levelNumber;
@@ -269,6 +273,7 @@ class StructuredLevelJsonDto {
 
     return StructuredLevelJsonDto(
       id: json['id'] as String,
+      name: json['name'] as String?,
       levelNumber: _requireInt(json, 'levelNumber'),
       difficulty: LevelDifficultyDto.fromWire(json['difficulty'] as String),
       maxMoves: _requireInt(json, 'maxMoves'),
@@ -287,6 +292,7 @@ class StructuredLevelJsonDto {
   /// Serializa al JSON del contrato (para pruebas o escritura de niveles).
   Map<String, dynamic> toJson() => {
         'id': id,
+        if (name != null && name!.isNotEmpty) 'name': name,
         'levelNumber': levelNumber,
         'difficulty': difficulty.wireValue,
         'maxMoves': maxMoves,

@@ -26,6 +26,7 @@ class Level {
     required this.optimalMoves,
     this.levelNumber,
     this.timeLimit,
+    this.displayName = '',
   })  : assert(parMoves > 0, 'parMoves must be positive'),
         assert(optimalMoves > 0, 'optimalMoves must be positive'),
         assert(
@@ -35,6 +36,15 @@ class Level {
 
   /// Identificador único del nivel (string del JSON).
   final Identifier id;
+
+  /// Nombre visible del nivel en catálogos y UI (wire format `name`).
+  final String displayName;
+
+  /// Etiqueta legible: [displayName] si existe; si no, [id].
+  String get displayLabel {
+    final trimmed = displayName.trim();
+    return trimmed.isNotEmpty ? trimmed : id.value;
+  }
 
   /// Número ordinal en la progresión (wire format `levelNumber`).
   final int? levelNumber;

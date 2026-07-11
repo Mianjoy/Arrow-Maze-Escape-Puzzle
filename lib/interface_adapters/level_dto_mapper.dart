@@ -45,6 +45,7 @@ class LevelDtoMapper {
     return Level(
       id: provisional.id,
       levelNumber: provisional.levelNumber,
+      displayName: dto.name?.trim() ?? '',
       difficulty: provisional.difficulty,
       boardDefinition: provisional.boardDefinition,
       playerStart: provisional.playerStart,

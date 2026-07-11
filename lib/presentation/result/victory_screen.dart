@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
+import '../leaderboard/leaderboard_route_args.dart';
 import '../widgets/app_nav_actions.dart';
 import '../result/result_screen_args.dart';
 
@@ -22,7 +23,10 @@ class VictoryScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(strings.victoryTitle),
         actions: [
-          AppNavActions(leaderboardLevelId: game.level.id.value),
+          AppNavActions(
+            leaderboardLevelId: game.level.id.value,
+            leaderboardLevelTitle: game.level.displayLabel,
+          ),
         ],
       ),
       body: Padding(
@@ -66,7 +70,10 @@ class VictoryScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.of(context).pushNamed(
                   '/leaderboard',
-                  arguments: game.level.id.value,
+                  arguments: LeaderboardRouteArgs(
+                    levelId: game.level.id.value,
+                    levelTitle: game.level.displayLabel,
+                  ),
                 );
               },
               child: Text(strings.leaderboard),
