@@ -3,9 +3,12 @@ import 'dart:io';
 
 import 'package:arrow_maze_escape_puzzle/application/models/auth_session.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/http/api_config.dart';
+import 'package:arrow_maze_escape_puzzle/infrastructure/http/api_exception.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/http/auth_api_client.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/http/leaderboard_api_client.dart';
+import 'package:arrow_maze_escape_puzzle/infrastructure/http/level_api_client.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/http/progress_api_client.dart';
+import 'package:arrow_maze_escape_puzzle/interface_adapters/level_dto_mapper.dart';
 import 'package:http/http.dart' as http;
 import 'package:test/test.dart';
 
@@ -124,6 +127,67 @@ void main() {
       expect(entries.first.highScore, first['highScore']);
       expect(entries.first.minMoves, first['minMoves']);
       expect(entries.first.minTimeInSeconds, first['minTimeInSeconds']);
+    });
+  });
+
+  group('LevelApiClient — contract fixtures (GET /levels)', () {
+    test('should_map_the_shared_levels_get_response_fixture_via_real_client_and_mapper', () async {
+      final fixture = loadFixtureList('levels-get-response.json');
+      final client = MockHttpClient((request) async {
+        return http.Response(jsonEncode(fixture), 200);
+      });
+      final api = LevelApiClient(config: config, httpClient: client);
+      const mapper = LevelDtoMapper();
+
+      final rawLevels = await api.fetchAllLevels();
+      final levels = rawLevels.map(mapper.fromJson).toList();
+
+      final expected = fixture.first as Map<String, dynamic>;
+      expect(levels, hasLength(fixture.length));
+      expect(levels.first.id.value, expected['id']);
+      expect(levels.first.displayName, expected['name']);
+      expect(levels.first.levelNumber, expected['levelNumber']);
+      expect(levels.first.parMoves, expected['maxMoves']);
+      expect(levels.first.timeLimit, expected['maxTimeInSeconds']);
+      expect(levels.first.boardDefinition.dimension.rows, expected['height']);
+      expect(levels.first.boardDefinition.dimension.columns, expected['width']);
+      expect(levels.first.boardDefinition.arrowPlacements, hasLength((expected['arrows'] as List).length));
+    });
+  });
+
+  group('Error envelope — contract fixtures', () {
+    test('should_map_the_shared_401_fixture_to_an_ApiException_with_the_matching_status', () async {
+      final fixture = loadFixture('error-401-unauthorized.json');
+      final client = MockHttpClient((request) async {
+        return http.Response(jsonEncode(fixture), 401);
+      });
+      final api = AuthApiClient(config: config, httpClient: client);
+
+      await expectLater(
+        api.login(username: 'ignored', password: 'ignored12'),
+        throwsA(
+          isA<ApiException>()
+              .having((e) => e.statusCode, 'statusCode', 401)
+              .having((e) => e.message, 'message', (fixture['error'] as Map)['message']),
+        ),
+      );
+    });
+
+    test('should_map_the_shared_409_fixture_to_an_ApiException_with_the_matching_status', () async {
+      final fixture = loadFixture('error-409-user-already-exists.json');
+      final client = MockHttpClient((request) async {
+        return http.Response(jsonEncode(fixture), 409);
+      });
+      final api = AuthApiClient(config: config, httpClient: client);
+
+      await expectLater(
+        api.register(username: 'ignored', password: 'ignored12'),
+        throwsA(
+          isA<ApiException>()
+              .having((e) => e.statusCode, 'statusCode', 409)
+              .having((e) => e.message, 'message', (fixture['error'] as Map)['message']),
+        ),
+      );
     });
   });
 }

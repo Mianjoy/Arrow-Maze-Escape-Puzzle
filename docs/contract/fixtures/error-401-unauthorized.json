@@ -1,0 +1,5 @@
+{
+  "error": {
+    "message": "Missing or malformed Authorization header"
+  }
+}

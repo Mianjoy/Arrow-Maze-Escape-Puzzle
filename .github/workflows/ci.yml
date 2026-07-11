@@ -25,3 +25,6 @@ jobs:
 
       - name: Run tests
         run: flutter test
+
+      - name: Verify contract fixtures match the backend repo
+        run: scripts/check-contract-fixtures-sync.sh
