@@ -28,6 +28,10 @@ abstract class AppStrings {
   /// Etiqueta del interruptor de silenciar audio.
   String get settingsMute;
 
+  /// Etiqueta del interruptor de silenciar efectos de victoria, derrota y
+  /// flecha extraída.
+  String get settingsMuteEffects;
+
   /// Etiqueta de la sección de idioma en ajustes.
   String get settingsLanguage;
 
@@ -156,6 +160,9 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get settingsMute => 'Mute background music';
+
+  @override
+  String get settingsMuteEffects => 'Mute win/lose/arrow sounds';
 
   @override
   String get settingsLanguage => 'Language';
@@ -289,6 +296,9 @@ class AppStringsEs extends AppStrings {
 
   @override
   String get settingsMute => 'Silenciar música de fondo';
+
+  @override
+  String get settingsMuteEffects => 'Silenciar sonidos de victoria/derrota/flecha';
 
   @override
   String get settingsLanguage => 'Idioma';

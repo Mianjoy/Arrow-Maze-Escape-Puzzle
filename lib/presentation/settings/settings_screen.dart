@@ -4,7 +4,8 @@ import '../../l10n/app_strings.dart';
 import '../widgets/app_nav_actions.dart';
 import 'app_settings_controller.dart';
 
-/// Pantalla de ajustes: silenciar música de fondo y elegir idioma (es/en).
+/// Pantalla de ajustes: silenciar música de fondo, silenciar efectos de
+/// victoria/derrota/flecha extraída y elegir idioma (es/en).
 class SettingsScreen extends StatelessWidget {
   /// Crea la pantalla con el [settingsController] observable.
   const SettingsScreen({super.key, required this.settingsController});
@@ -33,6 +34,12 @@ class SettingsScreen extends StatelessWidget {
                 title: Text(strings.settingsMute),
                 value: settingsController.isMuted,
                 onChanged: settingsController.setMuted,
+              ),
+              SwitchListTile(
+                key: const ValueKey('settings-mute-effects'),
+                title: Text(strings.settingsMuteEffects),
+                value: settingsController.isEffectsMuted,
+                onChanged: settingsController.setEffectsMuted,
               ),
               ListTile(
                 title: Text(strings.settingsLanguage),

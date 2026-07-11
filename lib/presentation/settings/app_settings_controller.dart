@@ -14,6 +14,9 @@ class AppSettingsController extends ChangeNotifier {
   /// Indica si la música de fondo está silenciada.
   bool get isMuted => _settings.isMuted;
 
+  /// Indica si los efectos de victoria, derrota y flecha extraída están silenciados.
+  bool get isEffectsMuted => _settings.isEffectsMuted;
+
   /// Locale activo de la interfaz.
   Locale get locale => _settings.locale;
 
@@ -26,6 +29,12 @@ class AppSettingsController extends ChangeNotifier {
   /// Cambia el estado de silencio y persiste.
   Future<void> setMuted(bool muted) async {
     await _settings.setMuted(muted);
+    notifyListeners();
+  }
+
+  /// Cambia el estado de silencio de los efectos de resultado y persiste.
+  Future<void> setEffectsMuted(bool muted) async {
+    await _settings.setEffectsMuted(muted);
     notifyListeners();
   }
 
