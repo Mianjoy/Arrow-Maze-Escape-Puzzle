@@ -155,7 +155,7 @@ class AppStringsEn extends AppStrings {
   String get settingsTitle => 'Settings';
 
   @override
-  String get settingsMute => 'Mute audio';
+  String get settingsMute => 'Mute background music';
 
   @override
   String get settingsLanguage => 'Language';
@@ -288,7 +288,7 @@ class AppStringsEs extends AppStrings {
   String get settingsTitle => 'Ajustes';
 
   @override
-  String get settingsMute => 'Silenciar audio';
+  String get settingsMute => 'Silenciar música de fondo';
 
   @override
   String get settingsLanguage => 'Idioma';

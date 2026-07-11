@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 ///
 /// Aísla la capa de presentación de `SharedPreferences` u otro almacén local.
 abstract interface class IAppSettings {
-  /// Indica si el audio (efectos y música) está silenciado.
+  /// Indica si la música de fondo está silenciada (no afecta efectos de juego).
   bool get isMuted;
 
   /// Locale activo de la interfaz (`en` o `es`).
@@ -13,7 +13,7 @@ abstract interface class IAppSettings {
   /// Carga las preferencias persistidas (llamar al arrancar la app).
   Future<void> load();
 
-  /// Activa o desactiva el silencio global del audio.
+  /// Activa o desactiva el silencio de la música de fondo (no afecta efectos).
   Future<void> setMuted(bool muted);
 
   /// Cambia el idioma de la interfaz y lo persiste.

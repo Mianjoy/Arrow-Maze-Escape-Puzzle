@@ -11,7 +11,7 @@ class AppSettingsController extends ChangeNotifier {
 
   final IAppSettings _settings;
 
-  /// Indica si el audio está silenciado.
+  /// Indica si la música de fondo está silenciada.
   bool get isMuted => _settings.isMuted;
 
   /// Locale activo de la interfaz.

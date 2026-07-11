@@ -1476,7 +1476,7 @@ if (outcome.game.isWon) {
 
 **Tarea o problema abordado.**
 
-El equipo convirtió la biblioteca completa de sonidos del juego de **MP3** a **WAV** (PCM sin compresión con pérdida). Se requería alinear el código, la documentación de assets y el registro de IA con el nuevo formato, manteniendo intacta la asignación contextual de cada sonido definida en la Consulta #30 (misma carpeta → mismo evento de UX; solo cambia la extensión y el códec del archivo).
+El equipo decidió convertir la biblioteca completa de sonidos del juego de **MP3** (comprimido con pérdida) a **WAV** (PCM sin compresión), con el objetivo de mejorar la calidad percibida y unificar el códec de los assets. Se requería alinear el código Flutter, la documentación de `assets/audio/` y el registro de IA con el nuevo formato, **sin alterar** la asignación contextual de cada sonido definida en la Consulta #30 (misma carpeta → mismo evento de UX; solo cambian extensión y códec del archivo).
 
 **Herramienta de IA utilizada.**
 
@@ -1484,7 +1484,13 @@ El equipo convirtió la biblioteca completa de sonidos del juego de **MP3** a **
 
 **Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
 
-> Se reemplazaron todos los assets de audio del proyecto de MP3 a WAV. Actualizar el sistema para que cargue y reproduzca los archivos `.wav` en lugar de `.mp3`: rutas en `AppAudioService`, tabla de `assets/audio/README.md`, y cualquier referencia en documentación. Mantener la misma estructura de carpetas y la misma lógica de asignación por contexto (Tap_sound, General_Tap, Level_Cleared, Movement_Not_Allowe, times_up, no_movements_left, background). Registrar el cambio en `AI_USAGE.md` con redacción técnica profesional.
+> El equipo ha reemplazado todos los assets de audio del proyecto de **MP3** a **WAV**. Actualizar el sistema para que cargue y reproduzca archivos `.wav` en lugar de `.mp3`:
+>
+> - Actualizar las rutas en `AppAudioService` y cualquier referencia en código o documentación.
+> - Mantener la **misma estructura de carpetas** y la **misma lógica de asignación por contexto** (`Tap_sound`, `General_Tap`, `Level_Cleared`, `Movement_Not_Allowe`, `times_up`, `no_movements_left`, `background`).
+> - Actualizar la tabla de referencia en `assets/audio/README.md`.
+> - No modificar `IAudioService`, controladores ni la semántica de los métodos por contexto de UX.
+> - Registrar la consulta en `AI_USAGE.md` con redacción técnica profesional.
 
 **Resultado obtenido (fragmento de código, diseño, explicación).**
 
@@ -1502,8 +1508,8 @@ El equipo convirtió la biblioteca completa de sonidos del juego de **MP3** a **
 
 | Archivo | Cambio |
 |---------|--------|
-| `lib/infrastructure/audio/app_audio_service.dart` | Constantes `AssetSource` de `.mp3` → `.wav`; comentario de clase actualizado |
-| `assets/audio/README.md` | Tabla de assets en formato WAV; nota sobre `audioplayers` |
+| `lib/infrastructure/audio/app_audio_service.dart` | Constantes de ruta de `.mp3` → `.wav`; comentario de clase actualizado |
+| `assets/audio/README.md` | Tabla de assets en formato WAV |
 | `assets/audio/**` | Sustitución de archivos `.mp3` por `.wav` equivalentes (mismos nombres base) |
 
 **Fragmento representativo:**
@@ -1513,6 +1519,7 @@ static const _backgroundMusic = 'audio/background.wav';
 static const _timeUp = 'audio/times_up.wav';
 static const _arrowExtractedSounds = [
   'audio/Tap_sound/tap_sound_1.wav',
+  'audio/Tap_sound/tap_sound_2.wav',
   // ...
 ];
 ```
@@ -1525,6 +1532,109 @@ static const _arrowExtractedSounds = [
 **Lecciones aprendidas o limitaciones identificadas.**
 
 - La API de `audioplayers` (`AssetSource`) es agnóstica al contenedor; basta actualizar la ruta del asset — no hace falta cambiar `IAudioService` ni los controladores.
-- WAV sin comprimir aumenta el tamaño del bundle respecto a MP3; conviene monitorizar el peso total de `assets/audio/` en builds Web y móvil.
+- WAV sin comprimir **aumenta el peso del bundle** respecto a MP3; conviene monitorizar el tamaño total de `assets/audio/` en builds Web y móvil.
 - Tras sustituir assets de audio hace falta **restart completo** de la app; hot reload no recarga el bundle de assets.
 - Centralizar rutas en constantes de `AppAudioService` evita regresiones al cambiar formato o nombre de archivo.
+- En pruebas posteriores (Consulta #32), la migración a WAV resultó **problemática en Flutter Web (Brave/macOS)**: errores de reproducción y archivos WAV no estándar pueden fallar en el decodificador HTML5 del navegador.
+
+---
+
+## Consulta #32 — Reversión a MP3, corrección de carga en Web y mute acotado a música de fondo
+
+**Tarea o problema abordado.**
+
+Tras la migración a WAV (Consulta #31), la reproducción de audio falló en **Brave/macOS (Flutter Web)**: consola con `Uncaught Error` y/o HTTP **404** al cargar assets (`assets/assets/audio/...`). El equipo revirtió los archivos a **MP3**. Se requería: (1) restaurar todas las rutas `.wav` → `.mp3` en código y documentación; (2) endurecer la capa de reproducción para Web; (3) redefinir el toggle de **Mute** para que silencie **únicamente** `background.mp3`, manteniendo activos todos los efectos de juego (taps, clics, victoria, derrota, colisiones).
+
+**Herramienta de IA utilizada.**
+
+- Cursor Agent (Composer), con acceso a lectura/escritura del repositorio, terminal y consola del navegador.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> He revertido los assets de audio a **MP3** (misma estructura de carpetas que antes). Realizar los siguientes cambios:
+>
+> - **Rutas y documentación:** sustituir todas las referencias a `.wav` por `.mp3` en `AppAudioService`, `assets/audio/README.md` y documentación relacionada.
+> - **Reproducción robusta en Web:** corregir los errores de carga observados en consola (HTTP 404 con rutas duplicadas `assets/assets/...`); garantizar que los efectos y la música se reproduzcan de forma fiable en Flutter Web (Brave/macOS).
+> - **Comportamiento del mute:** el interruptor de Ajustes debe silenciar **solo** la música de fondo (`background.mp3`). Los efectos de juego (`Tap_sound/`, `General_Tap/`, `Level_Cleared/`, `Movement_Not_Allowe/`, `times_up.mp3`, `no_movements_left.mp3`) deben seguir reproduciéndose con el mute activado.
+> - **Arquitectura:** mantener `IAudioService`, `NoOpAudioService` para tests y la asignación por contexto de la Consulta #30.
+> - Registrar la consulta en `AI_USAGE.md` con redacción técnica profesional.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+**Semántica del toggle de mute:**
+
+| Asset MP3 | Método en `IAudioService` | ¿Afectado por mute? |
+|-----------|---------------------------|---------------------|
+| `background.mp3` | `startBackgroundMusic()` / `stopBackgroundMusic()` | **Sí** — se detiene al activar mute; se reanuda al desactivarlo |
+| `Tap_sound/tap_sound_1…5.mp3` | `playArrowExtracted()` | **No** |
+| `General_Tap/general_click_sound.mp3` | `playButtonClick()` | **No** |
+| `Level_Cleared/level_cleared.mp3` | `playLevelCleared()` | **No** |
+| `Movement_Not_Allowe/not_allowed_movement.mp3` | `playMovementNotAllowed()` | **No** |
+| `times_up.mp3` | `playTimeUp()` | **No** |
+| `no_movements_left.mp3` | `playNoMovementsLeft()` | **No** |
+
+**Cambios técnicos en `AppAudioService`:**
+
+| Aspecto | Implementación |
+|---------|----------------|
+| Formato | Rutas `.mp3` restauradas en constantes |
+| Carga Web | `AssetSource('audio/...')` **sin** prefijo `assets/` (evita URL `assets/assets/audio/...` → 404) |
+| Efectos solapados | Pool rotativo de 3 `AudioPlayer` para SFX |
+| Música de fondo | Reproductor dedicado; `startBackgroundMusic()` y `ensureAudioUnlocked()` respetan `isMuted` |
+| Fallback nativo | `SystemSound` solo cuando `!kIsWeb` (no disponible en Web) |
+
+**Integración con Ajustes y arranque:**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Toggle mute | `settings_screen.dart` | Persiste `isMuted` vía `AppSettingsController` |
+| Reacción al mute | `main.dart` → `_onSettingsChanged()` | `stopBackgroundMusic()` si mute ON; `startBackgroundMusic()` si mute OFF |
+| Etiqueta i18n | `app_strings.dart` | “Silenciar música de fondo” / “Mute background music” |
+| Puertos | `i_app_settings.dart`, `i_audio_service.dart` | Documentación: `isMuted` aplica solo a BGM |
+
+**Diagnóstico del error 404 en Web:**
+
+- Un intento intermedio con `rootBundle.load('assets/$path')` + `BytesSource` provocaba peticiones a **`assets/assets/audio/...`** (doble prefijo).
+- **Solución definitiva:** pasar a `AssetSource` rutas relativas al directorio declarado en `pubspec.yaml` (`audio/Tap_sound/tap_sound_1.mp3`), dejando que `audioplayers` resuelva la URL correcta (`assets/audio/...`).
+
+**Archivos modificados:**
+
+| Archivo | Cambio |
+|---------|--------|
+| `lib/infrastructure/audio/app_audio_service.dart` | MP3, `AssetSource`, pool SFX, mute solo en BGM |
+| `lib/application/ports/i_audio_service.dart` | Documentación de mute vs. efectos |
+| `lib/application/ports/i_app_settings.dart` | `isMuted` = silencio de música de fondo |
+| `lib/main.dart` | Stop/start de BGM al togglear mute |
+| `lib/l10n/app_strings.dart` | Etiqueta “Silenciar música de fondo” |
+| `lib/presentation/settings/settings_screen.dart` | Comentario de pantalla actualizado |
+| `assets/audio/README.md` | Tabla MP3; nota sobre rutas sin prefijo `assets/` |
+
+**Fragmento representativo:**
+
+```dart
+/// [IAppSettings.isMuted] silencia solo la música de fondo (`background.mp3`);
+/// los efectos de juego se reproducen siempre.
+
+Future<void> startBackgroundMusic() async {
+  if (_settings.isMuted || _musicStarted) return;
+  await _musicPlayer.play(AssetSource(_backgroundMusic)); // audio/background.mp3
+}
+
+Future<void> _playSfx(String assetPath, {SystemSoundType? fallback}) async {
+  // Sin comprobación de isMuted — efectos siempre activos
+  await player.play(AssetSource(assetPath));
+}
+```
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- El equipo revirtió manualmente los archivos de `assets/audio/` de WAV a MP3 y validó la reproducción en Brave/macOS tras `flutter clean` y restart completo.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- **MP3** sigue siendo el formato más compatible en navegadores para Flutter Web frente a WAV no estándar o de gran tamaño.
+- **No anteponer `assets/`** a rutas de `AssetSource`; en Web la URL resultante sería `assets/assets/...` → HTTP 404.
+- Acotar el mute a la **música de fondo** permite al jugador silenciar el ambiente sin perder feedback sonoro del tablero (taps, victoria, derrota).
+- Un pool de reproductores SFX evita condiciones de carrera al solapar sonidos consecutivos (`stop()` + `play()` en el mismo `AudioPlayer`).
+- Tras cambiar assets o rutas: **`flutter clean`** + restart completo; hot reload no recarga el bundle.
+- En Web, la política de **autoplay** sigue exigiendo un gesto del usuario antes de iniciar `background.mp3`; `ensureAudioUnlocked()` se invoca desde `withButtonClick` y `onCellTapped` (Consulta #30).

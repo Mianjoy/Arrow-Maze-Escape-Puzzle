@@ -1,7 +1,7 @@
 /// Puerto de reproducción de efectos de sonido y música de fondo.
 ///
-/// La implementación concreta respeta [IAppSettings.isMuted] sin que la UI
-/// tenga que comprobar el flag en cada interacción.
+/// La implementación concreta respeta [IAppSettings.isMuted] solo en la música
+/// de fondo; los efectos de juego no dependen de ese flag.
 abstract interface class IAudioService {
   /// Desbloquea audio tras el primer gesto del usuario (p. ej. autoplay Web).
   Future<void> ensureAudioUnlocked();
@@ -24,7 +24,7 @@ abstract interface class IAudioService {
   /// Reproduce el sonido al agotar el tiempo del nivel.
   Future<void> playTimeUp();
 
-  /// Inicia la música de fondo en bucle (si no está silenciado).
+  /// Inicia la música de fondo en bucle (respeta el toggle de mute).
   Future<void> startBackgroundMusic();
 
   /// Detiene la música de fondo.

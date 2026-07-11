@@ -1,37 +1,50 @@
 import 'dart:math';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../../application/ports/i_app_settings.dart';
 import '../../application/ports/i_audio_service.dart';
 
-/// Reproduce efectos desde assets WAV y música de fondo con [AudioPlayer].
+/// Reproduce efectos desde assets MP3 y música de fondo con [AudioPlayer].
 ///
-/// Respeta [IAppSettings.isMuted] en cada llamada.
+/// [IAppSettings.isMuted] silencia solo la música de fondo (`background.mp3`);
+/// los efectos de juego se reproducen siempre.
 class AppAudioService implements IAudioService {
   /// Crea el servicio leyendo mute desde [settings].
-  AppAudioService({required IAppSettings settings}) : _settings = settings;
+  AppAudioService({required IAppSettings settings}) : _settings = settings {
+    for (final player in _sfxPool) {
+      player.setReleaseMode(ReleaseMode.stop);
+    }
+  }
+
+  static const _sfxPoolSize = 3;
 
   final IAppSettings _settings;
   final AudioPlayer _musicPlayer = AudioPlayer();
-  final AudioPlayer _sfxPlayer = AudioPlayer();
+  final List<AudioPlayer> _sfxPool =
+      List.generate(_sfxPoolSize, (_) => AudioPlayer());
   final Random _random = Random();
-  bool _musicStarted = false;
 
-  static const _generalTap = 'audio/General_Tap/general_click_sound.wav';
-  static const _blockedMove = 'audio/Movement_Not_Allowe/not_allowed_movement.wav';
-  static const _levelCleared = 'audio/Level_Cleared/level_cleared.wav';
-  static const _timeUp = 'audio/times_up.wav';
-  static const _noMovementsLeft = 'audio/no_movements_left.wav';
-  static const _backgroundMusic = 'audio/background.wav';
+  bool _musicStarted = false;
+  int _sfxPoolIndex = 0;
+
+  /// Rutas relativas al directorio `assets/` declarado en [pubspec.yaml]
+  /// (sin prefijo `assets/` — [AssetSource] lo añade internamente en Web).
+  static const _generalTap = 'audio/General_Tap/general_click_sound.mp3';
+  static const _blockedMove = 'audio/Movement_Not_Allowe/not_allowed_movement.mp3';
+  static const _levelCleared = 'audio/Level_Cleared/level_cleared.mp3';
+  static const _timeUp = 'audio/times_up.mp3';
+  static const _noMovementsLeft = 'audio/no_movements_left.mp3';
+  static const _backgroundMusic = 'audio/background.mp3';
 
   static const _arrowExtractedSounds = [
-    'audio/Tap_sound/tap_sound_1.wav',
-    'audio/Tap_sound/tap_sound_2.wav',
-    'audio/Tap_sound/tap_sound_3.wav',
-    'audio/Tap_sound/tap_sound_4.wav',
-    'audio/Tap_sound/tap_sound_5.wav',
+    'audio/Tap_sound/tap_sound_1.mp3',
+    'audio/Tap_sound/tap_sound_2.mp3',
+    'audio/Tap_sound/tap_sound_3.mp3',
+    'audio/Tap_sound/tap_sound_4.mp3',
+    'audio/Tap_sound/tap_sound_5.mp3',
   ];
 
   @override
@@ -79,14 +92,9 @@ class AppAudioService implements IAudioService {
   }
 
   @override
-  /// Inicia música de fondo en bucle desde assets (si existe el archivo).
+  /// Inicia música de fondo en bucle (respeta el toggle de mute).
   Future<void> startBackgroundMusic() async {
     if (_settings.isMuted || _musicStarted) return;
-    try {
-      await rootBundle.load('assets/$_backgroundMusic');
-    } catch (_) {
-      return;
-    }
     try {
       await _musicPlayer.setReleaseMode(ReleaseMode.loop);
       await _musicPlayer.setVolume(0.35);
@@ -105,15 +113,15 @@ class AppAudioService implements IAudioService {
     _musicStarted = false;
   }
 
-  /// Reproduce un efecto corto desde assets, con fallback opcional al sistema.
+  /// Reproduce un efecto corto con pool rotativo (independiente del mute).
   Future<void> _playSfx(String assetPath, {SystemSoundType? fallback}) async {
-    if (_settings.isMuted) return;
     try {
-      await rootBundle.load('assets/$assetPath');
-      await _sfxPlayer.stop();
-      await _sfxPlayer.play(AssetSource(assetPath));
+      final player = _sfxPool[_sfxPoolIndex];
+      _sfxPoolIndex = (_sfxPoolIndex + 1) % _sfxPool.length;
+      await player.stop();
+      await player.play(AssetSource(assetPath));
     } catch (_) {
-      if (fallback != null) {
+      if (fallback != null && !kIsWeb) {
         await SystemSound.play(fallback);
       }
     }
@@ -122,6 +130,8 @@ class AppAudioService implements IAudioService {
   /// Libera los reproductores de audio (llamar al cerrar la app si aplica).
   Future<void> dispose() async {
     await _musicPlayer.dispose();
-    await _sfxPlayer.dispose();
+    for (final player in _sfxPool) {
+      await player.dispose();
+    }
   }
 }

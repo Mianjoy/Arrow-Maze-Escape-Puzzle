@@ -351,7 +351,7 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
     super.dispose();
   }
 
-  /// Reconstruye el árbol cuando cambian idioma o mute.
+  /// Reconstruye el árbol cuando cambian idioma o mute de música de fondo.
   void _onSettingsChanged() {
     setState(() {});
     final muted = widget.container.appSettingsController.isMuted;
