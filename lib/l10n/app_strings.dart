@@ -74,6 +74,12 @@ abstract class AppStrings {
   /// Mensaje de la pantalla de derrota.
   String get defeatMessage;
 
+  /// Mensaje de derrota cuando se agotaron los movimientos permitidos.
+  String get defeatMovesExceededMessage;
+
+  /// Mensaje de derrota cuando se agotó el tiempo límite del nivel.
+  String get defeatTimeExceededMessage;
+
   /// Etiqueta del botón "Reintentar".
   String get retry;
 
@@ -205,6 +211,14 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get defeatMessage => 'You ran out of moves or time. Try again!';
+
+  @override
+  String get defeatMovesExceededMessage =>
+      'You have exceeded the maximum number of moves allowed. You lost!';
+
+  @override
+  String get defeatTimeExceededMessage =>
+      'The level time limit ran out. You lost!';
 
   @override
   String get retry => 'Retry';
@@ -341,6 +355,14 @@ class AppStringsEs extends AppStrings {
 
   @override
   String get defeatMessage => 'Agotaste movimientos o tiempo. ¡Inténtalo de nuevo!';
+
+  @override
+  String get defeatMovesExceededMessage =>
+      'Has superado el número máximo de movimientos permitidos. ¡Has perdido!';
+
+  @override
+  String get defeatTimeExceededMessage =>
+      'Se agotó el tiempo límite del nivel. ¡Has perdido!';
 
   @override
   String get retry => 'Reintentar';

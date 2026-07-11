@@ -1,18 +1,28 @@
-/// Mensajes de derrota estandarizados para la capa de presentación.
-class GameLossMessage {
-  /// Crea un mensaje de derrota personalizado.
-  const GameLossMessage(this.text);
-
+/// Motivo por el que una partida terminó en derrota.
+enum GameLossReason {
   /// Se agotaron los movimientos permitidos ([Level.parMoves]).
-  static const movesExceeded = GameLossMessage(
-    'Has superado el número máximo de movimientos permitidos. ¡Has perdido!',
-  );
+  movesExceeded,
 
   /// Se agotó el tiempo límite del nivel.
-  static const timeExceeded = GameLossMessage(
-    'Se agotó el tiempo límite del nivel. ¡Has perdido!',
-  );
+  timeExceeded,
+}
 
-  /// Texto legible para mostrar al jugador.
-  final String text;
+/// Mensaje de derrota estandarizado para la capa de presentación.
+///
+/// Transporta únicamente el [reason]; el texto localizado se resuelve en la
+/// capa de presentación vía `AppStrings`, para que el idioma mostrado
+/// dependa del idioma seleccionado en la app y no quede fijo en el idioma en
+/// el que se escribió el dominio.
+class GameLossMessage {
+  /// Crea un mensaje de derrota con el [reason] indicado.
+  const GameLossMessage(this.reason);
+
+  /// Se agotaron los movimientos permitidos ([Level.parMoves]).
+  static const movesExceeded = GameLossMessage(GameLossReason.movesExceeded);
+
+  /// Se agotó el tiempo límite del nivel.
+  static const timeExceeded = GameLossMessage(GameLossReason.timeExceeded);
+
+  /// Motivo de la derrota.
+  final GameLossReason reason;
 }

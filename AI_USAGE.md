@@ -2045,3 +2045,43 @@ await expectLater(
 - La validación de tipos con Zod pedida en el punto 2 es específica del backend (Node/TypeScript, sin chequeo de tipos en runtime propio); este repo ya valida tipos implícitamente en cada parseo (`json['highScore'] as int`, etc. lanza en runtime si el tipo no coincide) como parte de sus propios modelos, así que no había un gap equivalente que cerrar aquí — se documenta explícitamente para que no parezca una omisión.
 - Verificar la excepción real que lanza un cliente HTTP ante un error (en vez de solo inspeccionar el parseo del cuerpo) confirma que el `statusCode` y el `message` observables por quien use el cliente coinciden con el contrato, no solo que el JSON se parsea correctamente.
 - Un chequeo de sincronización entre dos repos independientes en CI debe decidir explícitamente qué hacer cuando no puede acceder al otro repo (privado, sin red): reportarlo sin fallar el build es el comportamiento correcto para una red de seguridad adicional, no un gate obligatorio.
+
+## Consulta #41 — Mensajes de derrota hardcodeados en español y diagnóstico del nombre genérico en el catálogo
+
+**Tarea o problema abordado.**
+
+El usuario reportó que, con el idioma de la app en inglés, el diálogo de derrota mostraba el título correctamente localizado ("Level failed") pero el mensaje del cuerpo aparecía siempre en español (p. ej. "Has superado el número máximo de movimientos permitidos. ¡Has perdido!"), tanto al agotar movimientos como al agotar el tiempo. También reportó que el catálogo de niveles mostraba un nombre genérico ("Nivel N") en vez del nombre propio de algunos niveles.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5, sesión interactiva de terminal con acceso de lectura/escritura al repositorio y al repositorio backend, y ejecución de `flutter analyze`/`flutter test`.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Cuando el idioma es en inglés, los errores se muestran en español, ejemplo cuando se acaba el tiempo o los intentos, corrígelo por favor. También corrige que los idiomas mostrados en el catálogo de niveles en la app, sean nombres propios y no un nombre genérico que digan "nivel 1".
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+Diagnóstico del primer problema: `GameLossMessage` (`lib/domain/game/value_objects/game_loss_message.dart`) transportaba el texto final ya redactado en español como constante de dominio, en vez de solo el motivo de la derrota — por eso ignoraba el locale activo. Se refactorizó para transportar únicamente un `enum GameLossReason` (`movesExceeded`/`timeExceeded`), y se resolvió el texto localizado en la capa de presentación:
+
+```dart
+// lib/presentation/result/defeat_screen.dart
+final lossText = switch (args.game.lossMessage?.reason) {
+  GameLossReason.movesExceeded => strings.defeatMovesExceededMessage,
+  GameLossReason.timeExceeded => strings.defeatTimeExceededMessage,
+  null => strings.defeatMessage,
+};
+```
+
+Se agregaron las claves `defeatMovesExceededMessage`/`defeatTimeExceededMessage` a `AppStrings` (`lib/l10n/app_strings.dart`), con su traducción en `AppStringsEn` y `AppStringsEs`.
+
+Diagnóstico del segundo problema (nombre genérico en el catálogo): se auditó el código real antes de tocar nada. `level_select_screen.dart` ya usa `level.displayLabel`, que en `lib/domain/level/aggregates/level.dart` prioriza `displayName` (mapeado desde el campo `name` del DTO) y solo cae al `id` (p. ej. `"level-21"`) si `displayName` viene vacío — **no** hay ningún lugar del código que sintetice un texto genérico tipo `"Nivel N"`. Al revisar el catálogo real del backend (`BackEnd-ArrowMaze/levels/*.json`), se confirmó que `level-21.json` y `level-22.json` eran los únicos dos de 22 archivos sin campo `"name"` — por eso mostraban su id crudo en vez de un título. Se corrigió agregando `"name": "Simetría Perfecta"` y `"name": "Todos los Tamaños"` respectivamente, en el repo backend.
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna; se verificó con `flutter analyze` (sin nuevas advertencias) y `flutter test` (107/107 tests, incluyendo `defeat_screen_test.dart`) en este repo, y con `npm run lint`, `npm run build` y `npm test` (172/172 tests) en el backend tras agregar los nombres faltantes.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Un mensaje de error "traducido" que en realidad es una constante de texto fijo en la capa de dominio es un bug de localización parcial fácil de pasar por alto, porque el resto de la pantalla (título, botones) sí se ve correctamente traducido — hay que revisar explícitamente el origen de cada string mostrado al usuario, no solo la pantalla como un todo.
+- Antes de asumir que un síntoma reportado por el usuario es un bug de código, vale la pena confirmar dónde vive realmente el dato: en este caso el código de presentación ya estaba bien diseñado (prioriza nombre propio, cae a un identificador solo como último recurso) y el síntoma real era un vacío de datos en el catálogo del backend, no un defecto del frontend.

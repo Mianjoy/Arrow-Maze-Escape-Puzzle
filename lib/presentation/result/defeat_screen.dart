@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/game/value_objects/game_loss_message.dart';
 import '../../l10n/app_strings.dart';
 import '../game/game_controller.dart';
 import '../widgets/app_nav_actions.dart';
@@ -24,7 +25,11 @@ class DefeatScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppStringsScope.of(context);
-    final lossText = args.game.lossMessage?.text ?? strings.defeatMessage;
+    final lossText = switch (args.game.lossMessage?.reason) {
+      GameLossReason.movesExceeded => strings.defeatMovesExceededMessage,
+      GameLossReason.timeExceeded => strings.defeatTimeExceededMessage,
+      null => strings.defeatMessage,
+    };
 
     return Scaffold(
       appBar: AppBar(

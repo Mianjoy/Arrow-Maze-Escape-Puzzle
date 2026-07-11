@@ -208,7 +208,9 @@ class Game {
     if (timeLoss != null) {
       return (
         game: timeLoss,
-        result: MoveResult.invalid(message: GameLossMessage.timeExceeded.text),
+        result: MoveResult.invalid(
+          message: GameLossMessage.timeExceeded.reason.name,
+        ),
       );
     }
 
