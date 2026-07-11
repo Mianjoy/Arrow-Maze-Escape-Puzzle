@@ -8,5 +8,6 @@
 | `Movement_Not_Allowe/not_allowed_movement.mp3` | Colisión de una flecha con otra flecha |
 | `Level_Cleared/level_cleared.mp3` | Nivel completado con éxito (todas las flechas extraídas) |
 | `times_up.mp3` | Tiempo del nivel agotado |
+| `no_movements_left.mp3` | Movimientos del nivel agotados |
 
 Tras añadir o renombrar archivos, reinicia la app por completo (no basta hot reload).

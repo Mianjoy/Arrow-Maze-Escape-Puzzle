@@ -30,6 +30,8 @@ class Game {
     this.lossMessage,
     this.startedAt,
     this.finishedAt,
+    this.totalPausedDuration = Duration.zero,
+    this.pausedAt,
     StarRatingCalculator? starRatingCalculator,
   })  : assert(moveCount >= 0, 'moveCount must be non-negative'),
         assert(score >= 0, 'score must be non-negative'),
@@ -77,6 +79,12 @@ class Game {
   /// Momento en que finalizó la partida.
   final DateTime? finishedAt;
 
+  /// Tiempo acumulado en pausa (p. ej. al abrir Leaderboard o Ajustes).
+  final Duration totalPausedDuration;
+
+  /// Marca de inicio de la pausa activa; `null` si la partida no está pausada.
+  final DateTime? pausedAt;
+
   /// Indica si la partida acepta movimientos.
   bool get isPlayable => status == GameStatus.inProgress;
 
@@ -93,17 +101,25 @@ class Game {
   int get remainingSeconds =>
       (level.playableTimeLimitSeconds - elapsedSeconds).clamp(0, level.playableTimeLimitSeconds);
 
-  /// Indica si quedan 10 segundos o menos en partida activa.
-  bool get isTimeRunningLow => isPlayable && remainingSeconds <= 10;
+  /// Indica si quedan 10 segundos o menos en partida activa o pausada.
+  bool get isTimeRunningLow =>
+      (isPlayable || status == GameStatus.paused) && remainingSeconds <= 10;
 
-  /// Segundos transcurridos desde [startedAt] hasta [finishedAt] (o ahora si sigue activa).
+  /// Segundos transcurridos desde [startedAt], descontando pausas.
   ///
   /// Usado al sincronizar progreso con el backend (`timeInSeconds` en `/progress/sync`).
   int get elapsedSeconds {
     final start = startedAt;
     if (start == null) return 0;
+
     final end = finishedAt ?? DateTime.now().toUtc();
-    return end.difference(start).inSeconds;
+    var active = end.difference(start) - totalPausedDuration;
+
+    if (pausedAt != null && finishedAt == null) {
+      active -= DateTime.now().toUtc().difference(pausedAt!);
+    }
+
+    return active.inSeconds.clamp(0, 1 << 30);
   }
 
   /// Porcentaje de flechas extraídas respecto al total del tablero (0–100).
@@ -150,7 +166,10 @@ class Game {
     if (status != GameStatus.inProgress) {
       throw InvalidMoveException('Game $id cannot be paused from status $status.');
     }
-    return copyWith(status: GameStatus.paused);
+    return copyWith(
+      status: GameStatus.paused,
+      pausedAt: DateTime.now().toUtc(),
+    );
   }
 
   /// Reanuda una partida pausada, volviendo a [GameStatus.inProgress].
@@ -161,7 +180,17 @@ class Game {
     if (status != GameStatus.paused) {
       throw InvalidMoveException('Game $id cannot be resumed from status $status.');
     }
-    return copyWith(status: GameStatus.inProgress);
+    final pauseStarted = pausedAt;
+    if (pauseStarted == null) {
+      throw InvalidMoveException('Game $id cannot be resumed without a pause timestamp.');
+    }
+
+    final now = DateTime.now().toUtc();
+    return copyWith(
+      status: GameStatus.inProgress,
+      pausedAt: null,
+      totalPausedDuration: totalPausedDuration + now.difference(pauseStarted),
+    );
   }
 
   /// Ejecuta un movimiento sobre una flecha usando el [movementEngine].
@@ -245,7 +274,7 @@ class Game {
     final start = startedAt;
     if (start == null) return null;
 
-    final elapsed = DateTime.now().toUtc().difference(start).inSeconds;
+    final elapsed = elapsedSeconds;
     if (elapsed >= limit) {
       return copyWith(
         status: GameStatus.lost,
@@ -270,6 +299,9 @@ class Game {
     bool clearLossMessage = false,
     DateTime? startedAt,
     DateTime? finishedAt,
+    Duration? totalPausedDuration,
+    DateTime? pausedAt,
+    bool clearPausedAt = false,
   }) {
     return Game(
       id: id ?? this.id,
@@ -283,6 +315,8 @@ class Game {
       lossMessage: clearLossMessage ? null : (lossMessage ?? this.lossMessage),
       startedAt: startedAt ?? this.startedAt,
       finishedAt: finishedAt ?? this.finishedAt,
+      totalPausedDuration: totalPausedDuration ?? this.totalPausedDuration,
+      pausedAt: clearPausedAt ? null : (pausedAt ?? this.pausedAt),
       starRatingCalculator: _starRatingCalculator,
     );
   }

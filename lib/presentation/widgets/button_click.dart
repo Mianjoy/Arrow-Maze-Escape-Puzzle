@@ -14,7 +14,10 @@ VoidCallback? withButtonClick(BuildContext context, VoidCallback? callback) {
   if (callback == null) return null;
   return () {
     final audio = _audioServiceOf(context);
-    if (audio != null) unawaited(audio.playButtonClick());
+    if (audio != null) {
+      unawaited(audio.ensureAudioUnlocked());
+      unawaited(audio.playButtonClick());
+    }
     callback();
   };
 }
@@ -27,7 +30,10 @@ Future<void> Function()? withButtonClickAsync(
   if (callback == null) return null;
   return () async {
     final audio = _audioServiceOf(context);
-    if (audio != null) unawaited(audio.playButtonClick());
+    if (audio != null) {
+      unawaited(audio.ensureAudioUnlocked());
+      unawaited(audio.playButtonClick());
+    }
     await callback();
   };
 }

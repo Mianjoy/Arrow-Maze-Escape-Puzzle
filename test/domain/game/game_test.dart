@@ -89,6 +89,13 @@ void main() {
       // Act & Assert
       expect(() => game.resume(), throwsA(isA<InvalidMoveException>()));
     });
+
+    test('should_freeze_elapsedSeconds_while_paused', () {
+      final started = buildStartedGame();
+      final paused = started.pause();
+
+      expect(paused.elapsedSeconds, started.elapsedSeconds);
+    });
   });
 
   group('Game.performMove — score and progress percentage', () {

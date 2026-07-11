@@ -23,6 +23,7 @@ class AppAudioService implements IAudioService {
   static const _blockedMove = 'audio/Movement_Not_Allowe/not_allowed_movement.mp3';
   static const _levelCleared = 'audio/Level_Cleared/level_cleared.mp3';
   static const _timeUp = 'audio/times_up.mp3';
+  static const _noMovementsLeft = 'audio/no_movements_left.mp3';
   static const _backgroundMusic = 'audio/background.mp3';
 
   static const _arrowExtractedSounds = [
@@ -34,6 +35,13 @@ class AppAudioService implements IAudioService {
   ];
 
   @override
+  /// Reintenta música de fondo tras un gesto del usuario (autoplay Web).
+  Future<void> ensureAudioUnlocked() async {
+    if (_settings.isMuted) return;
+    await startBackgroundMusic();
+  }
+
+  @override
   /// Clic de botones generales de la interfaz.
   Future<void> playButtonClick() async {
     await _playSfx(_generalTap, fallback: SystemSoundType.click);
@@ -42,7 +50,6 @@ class AppAudioService implements IAudioService {
   @override
   /// Sonido aleatorio cuando una flecha sale del tablero.
   Future<void> playArrowExtracted() async {
-    if (_settings.isMuted) return;
     final index = _random.nextInt(_arrowExtractedSounds.length);
     await _playSfx(_arrowExtractedSounds[index], fallback: SystemSoundType.click);
   }
@@ -60,10 +67,9 @@ class AppAudioService implements IAudioService {
   }
 
   @override
-  /// Sonido de derrota por movimientos agotados.
-  Future<void> playDefeat() async {
-    if (_settings.isMuted) return;
-    await SystemSound.play(SystemSoundType.alert);
+  /// Sonido exclusivo al agotar los movimientos del nivel.
+  Future<void> playNoMovementsLeft() async {
+    await _playSfx(_noMovementsLeft);
   }
 
   @override
@@ -74,12 +80,6 @@ class AppAudioService implements IAudioService {
 
   @override
   /// Inicia música de fondo en bucle desde assets (si existe el archivo).
-  ///
-  /// Verifica primero que el asset exista vía [rootBundle]: en Flutter Web,
-  /// `AudioPlayer.play()` con un archivo faltante falla de forma asíncrona
-  /// dentro del elemento `<audio>` del navegador, fuera del try/catch de
-  /// Dart, y aparece como una excepción no capturada en consola aunque no
-  /// rompa la app. Comprobar el asset antes evita ese ruido.
   Future<void> startBackgroundMusic() async {
     if (_settings.isMuted || _musicStarted) return;
     try {
@@ -93,7 +93,8 @@ class AppAudioService implements IAudioService {
       await _musicPlayer.play(AssetSource(_backgroundMusic));
       _musicStarted = true;
     } catch (_) {
-      // Si falla la reproducción por otro motivo, la música se omite sin romper la app.
+      // En Web el autoplay puede fallar hasta el primer gesto; _musicStarted
+      // permanece false para que ensureAudioUnlocked pueda reintentar.
     }
   }
 

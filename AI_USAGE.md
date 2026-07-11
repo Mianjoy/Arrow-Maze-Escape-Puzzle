@@ -1382,7 +1382,7 @@ Dos mejoras de producto detectadas en pruebas: (1) en la pantalla de **Ajustes**
 
 **Tarea o problema abordado.**
 
-Integrar los assets de audio aportados por el equipo en una experiencia sonora coherente con las reglas del juego, y completar la presión temporal de partida con cuenta regresiva visible. Se requería: (1) diagnosticar por qué `background.mp3` no reproducía música de fondo en la interfaz; (2) asignar cada carpeta de sonidos a un único contexto de uso — sin mezclar efectos entre tablero, botones de navegación y resultados de partida; (3) reproducir sonidos de extracción de flecha de forma aleatoria; (4) distinguir colisión flecha–flecha de bloqueo por muro; (5) calcular por nivel el tiempo disponible para completarlo (`maxTimeInSeconds` del wire format o estimación desde `optimalMoves`); (6) mostrar el temporizador en vivo durante la partida y reproducir `times_up.mp3` exclusivamente al agotarse el tiempo.
+Integrar los assets de audio aportados por el equipo en una experiencia sonora coherente con las reglas del juego, completar la presión temporal de partida con cuenta regresiva visible, y corregir tres problemas detectados en pruebas manuales: (1) diagnóstico de `background.mp3`; (2) asignación de cada carpeta de sonidos a un único contexto de UX; (3) sonido dedicado al agotar movimientos; (4) pausa del temporizador al navegar a Leaderboard/Ajustes desde la partida; (5) desbloqueo de audio en Web tras el primer gesto del usuario (síntoma: parecía todo muteado hasta togglear silencio).
 
 **Herramienta de IA utilizada.**
 
@@ -1398,6 +1398,9 @@ Integrar los assets de audio aportados por el equipo en una experiencia sonora c
 > - **`Level_Cleared/`**: sonido **exclusivo** al completar un nivel (victoria); no superponerlo con el tap de la última flecha extraída.
 > - **`Movement_Not_Allowe/`**: sonido **exclusivo** cuando una flecha **choca con otra flecha**; no debe sonar en bloqueos por muro ni en derrota por agotar movimientos.
 > - **`times_up.mp3`**: sonido **exclusivo** al agotar el tiempo del nivel; implementar temporizador en vivo calculado por nivel y mostrarlo en la pantalla de juego.
+> - **`no_movements_left.mp3`** (orig. `0_movements.mp3`): sonido **exclusivo** al agotar los movimientos permitidos; no usarlo en derrota por tiempo ni en otros eventos.
+> - **Temporizador en pausa**: al salir de la partida hacia **Leaderboard** o **Ajustes**, detener la cuenta regresiva y reanudarla al volver, sin consumir tiempo mientras la pantalla de juego no está visible.
+> - **Desbloqueo de audio en Web**: corregir el comportamiento en el que la app parece silenciada al iniciar hasta togglear mute; el audio debe activarse tras el primer gesto real del usuario.
 >
 > Mantener la arquitectura existente (`IAudioService`, mute global, `NoOpAudioService` para tests) y documentar la consulta en `AI_USAGE.md`.
 
@@ -1411,7 +1414,7 @@ Integrar los assets de audio aportados por el equipo en una experiencia sonora c
 | `Level_Cleared/level_cleared.mp3` | `playLevelCleared()` | Solo cuando `game.isWon` (nivel superado) |
 | `Movement_Not_Allowe/not_allowed_movement.mp3` | `playMovementNotAllowed()` | Solo si `MoveResult.isBlocked` **y** otra flecha ocupa la celda de bloqueo (no muro) |
 | `times_up.mp3` | `playTimeUp()` | Solo cuando `GameLossMessage.timeExceeded` (tiempo agotado) |
-| *(sin asset)* | `playDefeat()` | Solo derrota por movimientos agotados (`SystemSound`) |
+| `no_movements_left.mp3` | `playNoMovementsLeft()` | Solo cuando `GameLossMessage.movesExceeded` (movimientos agotados) |
 
 **Temporizador por nivel:**
 
@@ -1419,8 +1422,10 @@ Integrar los assets de audio aportados por el equipo en una experiencia sonora c
 |------------|-----------|-----------------|
 | Calculador | `level_time_limit_calculator.dart` | Usa `timeLimit` del wire format; si falta, estima `optimalMoves × seg/dificultad + margen` |
 | Dominio | `level.dart`, `game.dart` | `playableTimeLimitSeconds`, `remainingSeconds`, `isTimeRunningLow`; derrota cuando `elapsed >= limit` |
-| Controlador | `game_controller.dart` | `Timer.periodic` cada 1 s; `_playLossAudio` distingue tiempo vs. movimientos |
-| UI | `game_screen.dart`, `game_time_formatter.dart` | Muestra `Tiempo: mm:ss / mm:ss`; rojo en los últimos 10 s |
+| Controlador | `game_controller.dart` | `Timer.periodic` cada 1 s; `pauseGame`/`resumeGame`; `_playLossAudio` distingue tiempo vs. movimientos; `ensureAudioUnlocked` en cada toque |
+| UI | `game_screen.dart`, `game_time_formatter.dart` | Muestra `Tiempo: mm:ss / mm:ss`; `RouteAware` pausa al abrir Leaderboard/Ajustes |
+| Dominio (pausa) | `game.dart` | `totalPausedDuration` + `pausedAt`; `elapsedSeconds` excluye tiempo en pausa |
+| Audio Web | `ensureAudioUnlocked()` | Reintenta `startBackgroundMusic` tras gesto; invocado desde `withButtonClick` y `onCellTapped` |
 | i18n | `app_strings.dart` | `timeRemainingLabel(remaining, total)` en es/en |
 
 **Componentes de audio implementados o modificados:**
@@ -1438,7 +1443,7 @@ Integrar los assets de audio aportados por el equipo en una experiencia sonora c
 if (outcome.game.isWon) {
   await _audioService.playLevelCleared();
 } else if (outcome.game.isLost) {
-  await _playLossAudio(outcome.game); // playTimeUp o playDefeat
+  await _playLossAudio(outcome.game); // playTimeUp o playNoMovementsLeft
 } else if (outcome.result.isExtracted) {
   await _audioService.playArrowExtracted();
 } else if (_isBlockedByAnotherArrow(outcome.game, outcome.result)) {
@@ -1454,13 +1459,13 @@ if (outcome.game.isWon) {
 
 **Modificaciones realizadas por el equipo al resultado de la IA.**
 
-- El equipo aportó los archivos MP3 reales (`background.mp3`, variantes en `Tap_sound/`, `times_up.mp3`, etc.) y validó la asignación por carpeta en pruebas manuales.
-- `playDefeat()` sigue usando `SystemSound` del sistema: no hay asset dedicado de derrota por movimientos.
+- El equipo aportó los archivos MP3 reales (`background.mp3`, variantes en `Tap_sound/`, `times_up.mp3`, `no_movements_left.mp3`, etc.) y validó la asignación por carpeta en pruebas manuales.
 
 **Lecciones aprendidas o limitaciones identificadas.**
 
 - Un mismo `MoveResultType.blocked` en dominio puede representar causas distintas (muro vs. flecha); la capa de presentación debe filtrar antes de elegir el efecto sonoro.
 - Separar métodos en `IAudioService` por **intención de UX** evita acoplar sonidos genéricos al tablero.
-- Los nombres de archivo con espacios o apóstrofes (`Time's_Up.mp3`) son frágiles en bundles Web; se normalizó a `times_up.mp3`.
+- Los nombres de archivo con espacios, apóstrofes o prefijos numéricos (`Time's_Up.mp3`, `0_movements.mp3`) son frágiles en bundles Web; conviene normalizarlos (`times_up.mp3`, `no_movements_left.mp3`).
 - El temporizador en UI requiere `Timer.periodic` en el controlador además de la comprobación en dominio al mover, para derrotar al jugador aunque no toque el tablero.
-- En Web, cualquier efecto que dependa de `AudioContext` debe asumirse bloqueado hasta el primer gesto del usuario.
+- Pausar solo el `Timer` no basta: `elapsedSeconds` debe descontar `totalPausedDuration` en dominio, o el tiempo seguiría corriendo al volver de Leaderboard/Ajustes.
+- En Web, `ensureAudioUnlocked()` tras el primer clic desbloquea el `AudioContext` sin obligar al usuario a togglear mute; el flag `isMuted` por defecto es `false`, el síntoma era autoplay bloqueado, no mute persistente.

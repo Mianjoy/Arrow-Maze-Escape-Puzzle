@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/domain.dart';
 import '../../l10n/app_strings.dart';
+import '../navigation/app_route_observer.dart';
 import '../result/result_screen_args.dart';
 import 'game_controller.dart';
 import '../widgets/app_nav_actions.dart';
@@ -23,7 +24,7 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> {
+class _GameScreenState extends State<GameScreen> with RouteAware {
   bool _resultNavigated = false;
 
   @override
@@ -33,9 +34,29 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute<void>) {
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
   void dispose() {
+    appRouteObserver.unsubscribe(this);
     widget.controller.disposeController();
     super.dispose();
+  }
+
+  @override
+  void didPushNext() {
+    widget.controller.pauseGame();
+  }
+
+  @override
+  void didPopNext() {
+    widget.controller.resumeGame();
   }
 
   @override
