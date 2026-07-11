@@ -1469,3 +1469,62 @@ if (outcome.game.isWon) {
 - El temporizador en UI requiere `Timer.periodic` en el controlador además de la comprobación en dominio al mover, para derrotar al jugador aunque no toque el tablero.
 - Pausar solo el `Timer` no basta: `elapsedSeconds` debe descontar `totalPausedDuration` en dominio, o el tiempo seguiría corriendo al volver de Leaderboard/Ajustes.
 - En Web, `ensureAudioUnlocked()` tras el primer clic desbloquea el `AudioContext` sin obligar al usuario a togglear mute; el flag `isMuted` por defecto es `false`, el síntoma era autoplay bloqueado, no mute persistente.
+
+---
+
+## Consulta #31 — Migración de assets de audio de MP3 a WAV
+
+**Tarea o problema abordado.**
+
+El equipo convirtió la biblioteca completa de sonidos del juego de **MP3** a **WAV** (PCM sin compresión con pérdida). Se requería alinear el código, la documentación de assets y el registro de IA con el nuevo formato, manteniendo intacta la asignación contextual de cada sonido definida en la Consulta #30 (misma carpeta → mismo evento de UX; solo cambia la extensión y el códec del archivo).
+
+**Herramienta de IA utilizada.**
+
+- Cursor Agent (Composer), con acceso a lectura/escritura del repositorio y exploración del árbol `assets/audio/`.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Se reemplazaron todos los assets de audio del proyecto de MP3 a WAV. Actualizar el sistema para que cargue y reproduzca los archivos `.wav` en lugar de `.mp3`: rutas en `AppAudioService`, tabla de `assets/audio/README.md`, y cualquier referencia en documentación. Mantener la misma estructura de carpetas y la misma lógica de asignación por contexto (Tap_sound, General_Tap, Level_Cleared, Movement_Not_Allowe, times_up, no_movements_left, background). Registrar el cambio en `AI_USAGE.md` con redacción técnica profesional.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+| Asset WAV | Método en `IAudioService` | Contexto (sin cambios respecto a #30) |
+|-----------|---------------------------|---------------------------------------|
+| `background.wav` | `startBackgroundMusic()` / `stopBackgroundMusic()` | Música de fondo en bucle |
+| `Tap_sound/tap_sound_1…5.wav` | `playArrowExtracted()` | Extracción exitosa de flecha (aleatorio) |
+| `General_Tap/general_click_sound.wav` | `playButtonClick()` | Botones generales de la UI |
+| `Level_Cleared/level_cleared.wav` | `playLevelCleared()` | Nivel completado |
+| `Movement_Not_Allowe/not_allowed_movement.wav` | `playMovementNotAllowed()` | Colisión flecha–flecha |
+| `times_up.wav` | `playTimeUp()` | Tiempo agotado |
+| `no_movements_left.wav` | `playNoMovementsLeft()` | Movimientos agotados |
+
+**Archivos modificados:**
+
+| Archivo | Cambio |
+|---------|--------|
+| `lib/infrastructure/audio/app_audio_service.dart` | Constantes `AssetSource` de `.mp3` → `.wav`; comentario de clase actualizado |
+| `assets/audio/README.md` | Tabla de assets en formato WAV; nota sobre `audioplayers` |
+| `assets/audio/**` | Sustitución de archivos `.mp3` por `.wav` equivalentes (mismos nombres base) |
+
+**Fragmento representativo:**
+
+```dart
+static const _backgroundMusic = 'audio/background.wav';
+static const _timeUp = 'audio/times_up.wav';
+static const _arrowExtractedSounds = [
+  'audio/Tap_sound/tap_sound_1.wav',
+  // ...
+];
+```
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Conversión masiva MP3 → WAV realizada por el equipo fuera del repositorio; los archivos `.wav` se colocaron en las mismas rutas relativas bajo `assets/audio/`.
+- `pubspec.yaml` no requirió cambios: el directorio `assets/audio/` ya incluye todos los formatos hijos.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- La API de `audioplayers` (`AssetSource`) es agnóstica al contenedor; basta actualizar la ruta del asset — no hace falta cambiar `IAudioService` ni los controladores.
+- WAV sin comprimir aumenta el tamaño del bundle respecto a MP3; conviene monitorizar el peso total de `assets/audio/` en builds Web y móvil.
+- Tras sustituir assets de audio hace falta **restart completo** de la app; hot reload no recarga el bundle de assets.
+- Centralizar rutas en constantes de `AppAudioService` evita regresiones al cambiar formato o nombre de archivo.

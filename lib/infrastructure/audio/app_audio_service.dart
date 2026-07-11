@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import '../../application/ports/i_app_settings.dart';
 import '../../application/ports/i_audio_service.dart';
 
-/// Reproduce efectos desde assets MP3 y música de fondo con [AudioPlayer].
+/// Reproduce efectos desde assets WAV y música de fondo con [AudioPlayer].
 ///
 /// Respeta [IAppSettings.isMuted] en cada llamada.
 class AppAudioService implements IAudioService {
@@ -19,19 +19,19 @@ class AppAudioService implements IAudioService {
   final Random _random = Random();
   bool _musicStarted = false;
 
-  static const _generalTap = 'audio/General_Tap/general_click_sound.mp3';
-  static const _blockedMove = 'audio/Movement_Not_Allowe/not_allowed_movement.mp3';
-  static const _levelCleared = 'audio/Level_Cleared/level_cleared.mp3';
-  static const _timeUp = 'audio/times_up.mp3';
-  static const _noMovementsLeft = 'audio/no_movements_left.mp3';
-  static const _backgroundMusic = 'audio/background.mp3';
+  static const _generalTap = 'audio/General_Tap/general_click_sound.wav';
+  static const _blockedMove = 'audio/Movement_Not_Allowe/not_allowed_movement.wav';
+  static const _levelCleared = 'audio/Level_Cleared/level_cleared.wav';
+  static const _timeUp = 'audio/times_up.wav';
+  static const _noMovementsLeft = 'audio/no_movements_left.wav';
+  static const _backgroundMusic = 'audio/background.wav';
 
   static const _arrowExtractedSounds = [
-    'audio/Tap_sound/tap_sound_1.mp3',
-    'audio/Tap_sound/tap_sound_2.mp3',
-    'audio/Tap_sound/tap_sound_3.mp3',
-    'audio/Tap_sound/tap_sound_4.mp3',
-    'audio/Tap_sound/tap_sound_5.mp3',
+    'audio/Tap_sound/tap_sound_1.wav',
+    'audio/Tap_sound/tap_sound_2.wav',
+    'audio/Tap_sound/tap_sound_3.wav',
+    'audio/Tap_sound/tap_sound_4.wav',
+    'audio/Tap_sound/tap_sound_5.wav',
   ];
 
   @override
