@@ -1,7 +1,3 @@
-import '../../domain/domain.dart';
-import '../../infrastructure/http/progress_api_client.dart';
-import '../models/auth_session.dart';
-
 /// Progreso remoto descargado del servidor (niveles + coleccionables).
 class RemotePlayerProgress {
   /// Crea el snapshot remoto.

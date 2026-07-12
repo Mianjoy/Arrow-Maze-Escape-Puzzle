@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
 import '../widgets/app_nav_actions.dart';
-import 'leaderboard_route_args.dart';
 import 'leaderboard_controller.dart';
 
 /// Pantalla que muestra el ranking de un nivel (`GET /leaderboard/:levelId`).

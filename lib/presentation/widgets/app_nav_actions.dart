@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
-import '../collectibles/collectible_image.dart';import '../leaderboard/leaderboard_route_args.dart';
+import '../collectibles/collectible_image.dart';
+import '../leaderboard/leaderboard_route_args.dart';
 import 'button_click.dart';
 
 /// Acciones globales de navegación: coleccionables, clasificación y ajustes.

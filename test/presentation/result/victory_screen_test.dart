@@ -1,5 +1,4 @@
 import 'package:arrow_maze_escape_puzzle/domain/domain.dart';
-import 'package:arrow_maze_escape_puzzle/domain/progress/value_objects/meta_collectible.dart';
 import 'package:arrow_maze_escape_puzzle/l10n/app_strings.dart';
 import 'package:arrow_maze_escape_puzzle/presentation/result/result_screen_args.dart';
 import 'package:arrow_maze_escape_puzzle/presentation/result/victory_screen.dart';

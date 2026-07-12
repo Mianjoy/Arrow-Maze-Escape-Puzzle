@@ -22,8 +22,13 @@ class ArrowBoardPainter extends CustomPainter {
   static const _headMarginFactor = 0.5;
   static const _cornerRadiusFactor = 1.4;
 
+  /// Tablero de juego a pintar.
   final Board board;
+
+  /// Ancho de cada celda en píxeles.
   final double cellWidth;
+
+  /// Alto de cada celda en píxeles.
   final double cellHeight;
 
   /// Si es `true`, dibuja las líneas de la cuadrícula sobre el fondo del tablero.
@@ -124,7 +129,7 @@ class ArrowBoardPainter extends CustomPainter {
     return switch (arrow.state) {
       ArrowState.blocked => AppColors.arrowBlocked,
       ArrowState.active => AppColors.arrow,
-      ArrowState.extracted => AppColors.arrow.withOpacity(0.3),
+      ArrowState.extracted => AppColors.arrow.withValues(alpha: 0.3),
     };
   }
 
