@@ -7,6 +7,7 @@ import 'package:arrow_maze_escape_puzzle/infrastructure/http/api_exception.dart'
 import 'package:arrow_maze_escape_puzzle/infrastructure/http/auth_api_client.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/http/leaderboard_api_client.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/http/level_api_client.dart';
+import 'package:arrow_maze_escape_puzzle/application/models/remote_player_progress.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/http/progress_api_client.dart';
 import 'package:arrow_maze_escape_puzzle/interface_adapters/level_dto_mapper.dart';
 import 'package:http/http.dart' as http;
@@ -102,12 +103,14 @@ void main() {
       final progress = await api.fetchProgress(session);
 
       final expectedLevels = fixture['levels'] as List<dynamic>;
-      expect(progress, hasLength(expectedLevels.length));
-      expect(progress.first.levelId, expectedLevels.first['levelId']);
-      expect(progress.first.highScore, expectedLevels.first['highScore']);
-      expect(progress.first.minMoves, expectedLevels.first['minMoves']);
-      expect(progress.first.minTimeInSeconds, expectedLevels.first['minTimeInSeconds']);
-      expect(progress.first.isCompleted, expectedLevels.first['isCompleted']);
+      expect(progress, isA<RemotePlayerProgress>());
+      expect(progress.levels, hasLength(expectedLevels.length));
+      expect(progress.levels.first.levelId, expectedLevels.first['levelId']);
+      expect(progress.levels.first.highScore, expectedLevels.first['highScore']);
+      expect(progress.levels.first.minMoves, expectedLevels.first['minMoves']);
+      expect(progress.levels.first.minTimeInSeconds, expectedLevels.first['minTimeInSeconds']);
+      expect(progress.levels.first.isCompleted, expectedLevels.first['isCompleted']);
+      expect(progress.collectibles, fixture['collectibles']);
     });
   });
 

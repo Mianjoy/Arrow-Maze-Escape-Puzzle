@@ -9,5 +9,6 @@
       "minTimeInSeconds": 42,
       "isCompleted": true
     }
-  ]
+  ],
+  "collectibles": ["collectible-milestone-2"]
 }

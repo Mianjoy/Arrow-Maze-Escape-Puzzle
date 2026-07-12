@@ -2273,3 +2273,45 @@ Se solicitó implementar un sistema de **coleccionables meta** desbloqueables al
 - Una hoja de sprites compartida simplifica la galería (49 slots visuales) frente a 49 assets sueltos, pero exige mapear explícitamente qué índices son desbloqueables (11 hitos) vs. slots solo visuales bloqueados (38 restantes).
 - Unificar el acceso en `AppNavActions` evita botones ad hoc por pantalla y mantiene coherencia con clasificación y ajustes.
 
+## Consulta #47 — Revisión de tests y sincronización de fixtures de contrato (CI)
+
+**Tarea o problema abordado.**
+
+Tras integrar el sistema de coleccionables con sincronización en backend, el pipeline de GitHub Actions del repositorio **BackEnd-ArrowMaze** falló en el job `build-test`, paso **"Verify contract fixtures match the frontend repo"**: el fixture `docs/contract/fixtures/progress-get-response.json` divergía entre backend y frontend (el backend ya incluía `collectibles`; el frontend remoto no). Se solicitó revisar todo el proyecto en materia de tests y corregir los fallos detectados (para este cambio por conflictos que se dieron por un detalle de Internet entre el Github).
+
+**Herramienta de IA utilizada.**
+
+- Cursor (Composer), sesión interactiva con acceso de lectura/escritura a los repositorios **Arrow-Maze-Escape-Puzzle** (Flutter) y **BackEnd-ArrowMaze** (Node/Express).
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> revisa todo el Proyecto en cuestion de test y resuelve estos problemas que estan sucediendo
+
+*(Contexto adjunto: captura del CI fallido en `Georopeza/BackEnd-ArrowMaze`, job `build-test`, fixture divergente `progress-get-response.json` entre backend y frontend.)*
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+**Correcciones aplicadas:**
+
+| Área | Archivo | Cambio |
+|------|---------|--------|
+| Contrato compartido | `docs/contract/fixtures/progress-get-response.json` | Añadido `"collectibles": ["collectible-milestone-2"]` para alinear con el backend |
+| Tests de contrato | `test/infrastructure/http/contract_fixtures_test.dart` | Actualizado para validar `RemotePlayerProgress` (`.levels` + `.collectibles`) en lugar de una lista plana de niveles |
+| UI / E2E | `lib/presentation/result/victory_screen.dart` | Contenido envuelto en `SingleChildScrollView` para evitar overflow al mostrar el banner de coleccionable (fallo en `should_win_level_12_with_single_shot`) |
+
+**Verificación local:**
+
+- **BackEnd-ArrowMaze:** 175/175 tests pasando (`npm test`).
+- **Arrow-Maze-Escape-Puzzle:** 122/122 tests pasando (`flutter test`).
+- Hash SHA-256 de `progress-get-response.json` coincidente entre ambos repos locales.
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Pendiente de commit y push en el frontend (`develop`) para que el CI remoto deje de comparar contra el fixture antiguo en GitHub.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Cuando el contrato REST evoluciona (p. ej. campo `collectibles` en `GET /progress`), hay que actualizar el fixture en **ambos** repos antes de merge; el script `check-contract-fixtures-sync.sh` compara hashes contra la rama remota del otro repo.
+- Los tests de contrato deben seguir el tipo de retorno real del cliente HTTP (`RemotePlayerProgress`), no el modelo anterior.
+- Añadir UI condicional en pantallas de resultado (banner de coleccionable) puede romper tests E2E por overflow; conviene diseñar layouts scrollables desde el inicio.
+
