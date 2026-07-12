@@ -2170,7 +2170,9 @@ Se solicitó añadir en la pantalla de partida un control discreto que permita a
 
 **Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
 
-> Implementar en la pantalla de juego un botón compacto que permita al usuario mostrar u ocultar la cuadrícula del tablero mientras juega un nivel. El cambio debe limitarse exclusivamente a la capa de presentación de la vista del board (renderizado visual); no debe afectar dominio, casos de uso, persistencia, backend ni otras pantallas del flujo.
+> ¿Es viable añadir en la pantalla de juego un botón compacto que permita mostrar u ocultar la cuadrícula (grid) sobre el tablero mientras se juega un nivel?
+>
+> Implementar ese botón de toggle de cuadrícula activable durante la partida. El cambio debe limitarse exclusivamente a la capa de presentación de la vista del board (renderizado visual); no debe interferir con dominio, casos de uso, persistencia, backend ni otras pantallas del flujo.
 
 **Resultado obtenido (fragmento de código, diseño, explicación).**
 
@@ -2178,9 +2180,42 @@ Se añadió un estado local `_showGrid` en `BoardView` (sin persistencia en `Sha
 
 **Modificaciones realizadas por el equipo al resultado de la IA.**
 
-- Pendiente de revisión manual del equipo.
+- La ubicación inicial del botón (overlay en la esquina superior derecha del tablero) se refinó en la Consulta #45, moviéndolo al HUD junto a la fila de puntuación.
 
 **Lecciones aprendidas o limitaciones identificadas.**
 
 - Preferencias puramente visuales y efímeras (solo durante la partida) pueden resolverse con estado local en el widget de presentación, evitando extender `IAppSettings` o el backend cuando no hay requisito de persistencia entre sesiones.
+
+## Consulta #45 — Reubicación del toggle de cuadrícula al HUD de puntuación
+
+**Tarea o problema abordado.**
+
+Tras implementar el toggle de cuadrícula (Consulta #44), el usuario reportó con captura de pantalla que el botón quedaba **dentro** del área del tablero (overlay sobre la cuadrícula) y solicitó moverlo **fuera** del board, cerca de la línea donde se muestran movimientos y puntuación.
+
+**Herramienta de IA utilizada.**
+
+- Cursor (Composer), sesión interactiva con acceso de lectura/escritura al repositorio del cliente Flutter.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Reubicar el botón de toggle de cuadrícula para que quede fuera del área del tablero y, en su lugar, junto a la fila del HUD donde se muestra la puntuación (movimientos y score).
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+Se movió el estado `_showGrid` de `BoardView` a `GameScreen` y se extrajo el widget reutilizable `BoardGridToggleButton`. El HUD de partida ahora usa un `Row`: texto de movimientos/puntuación a la izquierda y el botón de grid a la derecha; el tiempo permanece en la línea inferior. `BoardView` volvió a ser `StatelessWidget` y solo recibe `showGrid` como parámetro para `ArrowBoardPainter`.
+
+**Archivos modificados:**
+
+| Archivo | Cambio |
+|---------|--------|
+| `lib/presentation/game/game_screen.dart` | Estado `_showGrid` y `BoardGridToggleButton` en el HUD |
+| `lib/presentation/game/widgets/board_view.dart` | Eliminado overlay del botón; exportado `BoardGridToggleButton` |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Pendiente de revisión manual del equipo.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Controles de UI que afectan la vista del tablero pero no son parte del juego en sí encajan mejor en el HUD externo que como overlay sobre el área de juego: evitan tapar celdas y mejoran la legibilidad en tableros pequeños o densos.
 

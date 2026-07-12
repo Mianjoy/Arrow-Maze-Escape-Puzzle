@@ -26,6 +26,7 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> with RouteAware {
   bool _resultNavigated = false;
+  bool _showGrid = false;
 
   @override
   void initState() {
@@ -92,26 +93,43 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
           return Column(
             children: [
               Padding(
-                padding: const EdgeInsets.all(8.0),
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
                 child: Column(
                   children: [
-                    Text(
-                      '${strings.movesLabel}: ${game.moveCount}/${game.level.parMoves} · '
-                      '${strings.scoreLabel}: ${game.score}',
-                      style: Theme.of(context).textTheme.titleMedium,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${strings.movesLabel}: ${game.moveCount}/${game.level.parMoves} · '
+                            '${strings.scoreLabel}: ${game.score}',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                        BoardGridToggleButton(
+                          showGrid: _showGrid,
+                          tooltip: _showGrid
+                              ? strings.hideGridTooltip
+                              : strings.showGridTooltip,
+                          onPressed: () => setState(() => _showGrid = !_showGrid),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      strings.timeRemainingLabel(
-                        formatGameCountdown(game.remainingSeconds),
-                        formatGameCountdown(game.level.playableTimeLimitSeconds),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        strings.timeRemainingLabel(
+                          formatGameCountdown(game.remainingSeconds),
+                          formatGameCountdown(game.level.playableTimeLimitSeconds),
+                        ),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: game.isTimeRunningLow
+                                  ? Theme.of(context).colorScheme.error
+                                  : null,
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
                       ),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: game.isTimeRunningLow
-                                ? Theme.of(context).colorScheme.error
-                                : null,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
                     ),
                   ],
                 ),
@@ -119,6 +137,7 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
               Expanded(
                 child: BoardView(
                   board: game.board,
+                  showGrid: _showGrid,
                   onCellTapped: (position) {
                     _resultNavigated = false;
                     widget.controller.onCellTapped(position);

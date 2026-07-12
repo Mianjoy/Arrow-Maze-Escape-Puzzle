@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 
 import '../../../domain/domain.dart';
-import '../../../l10n/app_strings.dart';
 import '../../theme/app_colors.dart';
 import 'arrow_board_painter.dart';
 
 /// Renderiza el [Board] con fondo liso, muros y flechas de trazo continuo.
 ///
 /// Separa la capa visual ([ArrowBoardPainter]) de la capa de toques invisible
-/// para que flechas multi-celda se dibujen como un solo camino. Incluye un
-/// botón local para mostrar u ocultar la cuadrícula (solo afecta esta vista).
-class BoardView extends StatefulWidget {
+/// para que flechas multi-celda se dibujen como un solo camino.
+class BoardView extends StatelessWidget {
   /// Crea la vista para [board] y notificar toques con [onCellTapped].
-  const BoardView({super.key, required this.board, required this.onCellTapped});
+  const BoardView({
+    super.key,
+    required this.board,
+    required this.onCellTapped,
+    this.showGrid = false,
+  });
 
   /// Tablero a renderizar.
   final Board board;
@@ -20,19 +23,13 @@ class BoardView extends StatefulWidget {
   /// Callback con la [Position] de la celda tocada.
   final ValueChanged<Position> onCellTapped;
 
-  @override
-  State<BoardView> createState() => _BoardViewState();
-}
-
-class _BoardViewState extends State<BoardView> {
-  bool _showGrid = false;
+  /// Si es `true`, dibuja las líneas de la cuadrícula sobre el fondo del tablero.
+  final bool showGrid;
 
   @override
   Widget build(BuildContext context) {
-    final strings = AppStringsScope.of(context);
-
     return AspectRatio(
-      aspectRatio: widget.board.dimension.columns / widget.board.dimension.rows,
+      aspectRatio: board.dimension.columns / board.dimension.rows,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: DecoratedBox(
@@ -45,34 +42,25 @@ class _BoardViewState extends State<BoardView> {
             borderRadius: BorderRadius.circular(16),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final cellWidth = constraints.maxWidth / widget.board.dimension.columns;
-                final cellHeight = constraints.maxHeight / widget.board.dimension.rows;
+                final cellWidth = constraints.maxWidth / board.dimension.columns;
+                final cellHeight = constraints.maxHeight / board.dimension.rows;
 
                 return Stack(
                   fit: StackFit.expand,
                   children: [
                     CustomPaint(
                       painter: ArrowBoardPainter(
-                        board: widget.board,
+                        board: board,
                         cellWidth: cellWidth,
                         cellHeight: cellHeight,
-                        showGrid: _showGrid,
+                        showGrid: showGrid,
                       ),
                     ),
                     _BoardTouchGrid(
-                      board: widget.board,
+                      board: board,
                       cellWidth: cellWidth,
                       cellHeight: cellHeight,
-                      onCellTapped: widget.onCellTapped,
-                    ),
-                    Positioned(
-                      top: 6,
-                      right: 6,
-                      child: _GridToggleButton(
-                        showGrid: _showGrid,
-                        tooltip: _showGrid ? strings.hideGridTooltip : strings.showGridTooltip,
-                        onPressed: () => setState(() => _showGrid = !_showGrid),
-                      ),
+                      onCellTapped: onCellTapped,
                     ),
                   ],
                 );
@@ -86,15 +74,22 @@ class _BoardViewState extends State<BoardView> {
 }
 
 /// Botón compacto para activar o desactivar la cuadrícula del tablero.
-class _GridToggleButton extends StatelessWidget {
-  const _GridToggleButton({
+class BoardGridToggleButton extends StatelessWidget {
+  /// Crea el botón con [showGrid], [tooltip] y [onPressed].
+  const BoardGridToggleButton({
+    super.key,
     required this.showGrid,
     required this.tooltip,
     required this.onPressed,
   });
 
+  /// Indica si la cuadrícula está visible (icono `grid_off` vs `grid_on`).
   final bool showGrid;
+
+  /// Texto del tooltip al mantener pulsado.
   final String tooltip;
+
+  /// Se invoca al pulsar el botón.
   final VoidCallback onPressed;
 
   @override
