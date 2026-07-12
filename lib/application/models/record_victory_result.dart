@@ -7,6 +7,7 @@ class RecordVictoryResult {
     required this.progress,
     this.nextLevel,
     this.syncError,
+    this.newlyUnlockedCollectible,
   });
 
   /// Progreso local tras completar el nivel.
@@ -21,4 +22,7 @@ class RecordVictoryResult {
   /// aunque este campo no sea `null` — la sincronización remota es best-effort
   /// y no debe bloquear el avance del jugador cuando no hay red.
   final Object? syncError;
+
+  /// Coleccionable meta recién desbloqueado en esta victoria, si aplica.
+  final MetaCollectible? newlyUnlockedCollectible;
 }

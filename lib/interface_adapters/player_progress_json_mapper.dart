@@ -17,6 +17,8 @@ class PlayerProgressJsonMapper {
       'levels': progress.levels.map(
         (id, lp) => MapEntry(id.value, _levelProgressToJson(lp)),
       ),
+      if (progress.unlockedCollectibles.isNotEmpty)
+        'unlockedCollectibles': progress.unlockedCollectibles.toList()..sort(),
     };
   }
 
@@ -33,7 +35,16 @@ class PlayerProgressJsonMapper {
       );
     }
 
-    return PlayerProgress(playerId: playerId, levels: levels);
+    final collectiblesRaw = json['unlockedCollectibles'];
+    final unlockedCollectibles = collectiblesRaw is List
+        ? collectiblesRaw.map((item) => _normalizeCollectibleId(item as String)).toSet()
+        : <String>{};
+
+    return PlayerProgress(
+      playerId: playerId,
+      levels: levels,
+      unlockedCollectibles: unlockedCollectibles,
+    );
   }
 
   /// Codifica el progreso como cadena JSON.
@@ -41,6 +52,11 @@ class PlayerProgressJsonMapper {
 
   /// Decodifica una cadena JSON a [PlayerProgress].
   PlayerProgress decode(String raw) => fromJson(jsonDecode(raw) as Map<String, dynamic>);
+
+  static String _normalizeCollectibleId(String id) {
+    if (id == 'collectible-milestone-22') return 'collectible-final';
+    return id;
+  }
 
   /// Convierte [LevelProgress] a mapa JSON.
   Map<String, dynamic> _levelProgressToJson(LevelProgress lp) {

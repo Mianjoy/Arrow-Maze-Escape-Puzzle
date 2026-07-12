@@ -194,6 +194,39 @@ abstract class AppStrings {
 
   /// Mensaje cuando falla la carga del hub de clasificación.
   String get leaderboardHubLoadFailed;
+
+  /// Título de la pantalla de coleccionables.
+  String get collectiblesTitle;
+
+  /// Subtítulo explicativo de la pantalla de coleccionables.
+  String get collectiblesSubtitle;
+
+  /// Resumen de progreso de coleccionables desbloqueados.
+  String collectiblesProgress(int unlocked, int total);
+
+  /// Nombre visible de un coleccionable desbloqueado en el hito [milestoneLevel].
+  String collectibleName(int milestoneLevel);
+
+  /// Requisito para desbloquear el coleccionable del hito [milestoneLevel].
+  String collectibleRequirement(int milestoneLevel);
+
+  /// Mensaje en victoria cuando se desbloquea un coleccionable.
+  String collectibleUnlockedMessage(int milestoneLevel);
+
+  /// Etiqueta de un coleccionable aún bloqueado.
+  String get collectibleLockedLabel;
+
+  /// Etiqueta de un slot reservado para futuros coleccionables.
+  String get collectibleComingSoonLabel;
+
+  /// Texto explicativo de un slot "próximamente".
+  String get collectibleComingSoonHint;
+
+  /// Requisito para desbloquear el coleccionable exclusivo del último nivel.
+  String collectibleFinalRequirement(int finalLevel);
+
+  /// Indicación para abrir la galería desde el anuncio de victoria.
+  String get collectibleTapToOpenGallery;
 }
 
 /// Cadenas en inglés (idioma por defecto).
@@ -388,6 +421,56 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get leaderboardHubLoadFailed => 'Could not load levels for the leaderboard.';
+
+  @override
+  String get collectiblesTitle => 'Collectibles';
+
+  @override
+  String get collectiblesSubtitle =>
+      'Unlock a collectible every 2 levels with 3 stars and full score. The final level has an exclusive reward.';
+
+  @override
+  String collectiblesProgress(int unlocked, int total) => '$unlocked / $total unlocked';
+
+  @override
+  String collectibleName(int milestoneLevel) => switch (milestoneLevel) {
+        2 => 'Mega Man',
+        4 => 'Kirby',
+        6 => 'Bomberman',
+        8 => 'Contra',
+        10 => 'Bill Rizer',
+        12 => 'Raccoon Mario',
+        14 => 'Aku Aku',
+        16 => 'Sonic',
+        18 => 'Uka Uka',
+        20 => 'Pac-Man',
+        22 => 'Marco (Metal Slug)',
+        _ => 'Milestone #$milestoneLevel',
+      };
+
+  @override
+  String collectibleRequirement(int milestoneLevel) =>
+      'Clear level $milestoneLevel with 3 stars and full score';
+
+  @override
+  String collectibleFinalRequirement(int finalLevel) =>
+      'Exclusive reward: clear the final level ($finalLevel) with 3 stars and full score';
+
+  @override
+  String collectibleUnlockedMessage(int milestoneLevel) =>
+      'New collectible unlocked: ${collectibleName(milestoneLevel)}!';
+
+  @override
+  String get collectibleLockedLabel => 'Locked';
+
+  @override
+  String get collectibleComingSoonLabel => 'Coming Soon';
+
+  @override
+  String get collectibleComingSoonHint => 'This collectible will be available in a future update.';
+
+  @override
+  String get collectibleTapToOpenGallery => 'Tap to open collectibles';
 }
 
 /// Cadenas en español.
@@ -583,6 +666,56 @@ class AppStringsEs extends AppStrings {
 
   @override
   String get leaderboardHubLoadFailed => 'No se pudieron cargar los niveles para la clasificación.';
+
+  @override
+  String get collectiblesTitle => 'Coleccionables';
+
+  @override
+  String get collectiblesSubtitle =>
+      'Desbloquea un coleccionable cada 2 niveles con 3 estrellas y puntuación completa. El último nivel tiene una recompensa exclusiva.';
+
+  @override
+  String collectiblesProgress(int unlocked, int total) => '$unlocked / $total desbloqueados';
+
+  @override
+  String collectibleName(int milestoneLevel) => switch (milestoneLevel) {
+        2 => 'Mega Man',
+        4 => 'Kirby',
+        6 => 'Bomberman',
+        8 => 'Contra',
+        10 => 'Bill Rizer',
+        12 => 'Mario mapache',
+        14 => 'Aku Aku',
+        16 => 'Sonic',
+        18 => 'Uka Uka',
+        20 => 'Pac-Man',
+        22 => 'Marco (Metal Slug)',
+        _ => 'Hito #$milestoneLevel',
+      };
+
+  @override
+  String collectibleRequirement(int milestoneLevel) =>
+      'Supera el nivel $milestoneLevel con 3 estrellas y puntuación completa';
+
+  @override
+  String collectibleFinalRequirement(int finalLevel) =>
+      'Recompensa exclusiva: supera el último nivel ($finalLevel) con 3 estrellas y puntuación completa';
+
+  @override
+  String collectibleUnlockedMessage(int milestoneLevel) =>
+      '¡Nuevo coleccionable desbloqueado: ${collectibleName(milestoneLevel)}!';
+
+  @override
+  String get collectibleLockedLabel => 'Bloqueado';
+
+  @override
+  String get collectibleComingSoonLabel => 'Próximamente';
+
+  @override
+  String get collectibleComingSoonHint => 'Este coleccionable estará disponible en una actualización futura.';
+
+  @override
+  String get collectibleTapToOpenGallery => 'Toca para abrir coleccionables';
 }
 
 /// Provee [AppStrings] a descendientes del árbol de widgets vía `of(context)`.

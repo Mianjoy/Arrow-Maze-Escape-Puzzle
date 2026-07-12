@@ -56,6 +56,7 @@ import 'presentation/leaderboard/leaderboard_controller.dart';
 import 'presentation/leaderboard/leaderboard_route_args.dart';
 import 'presentation/leaderboard/leaderboard_hub_screen.dart';
 import 'presentation/leaderboard/leaderboard_screen.dart';
+import 'presentation/collectibles/collectibles_screen.dart';
 import 'presentation/level_select/level_select_controller.dart';
 import 'presentation/level_select/level_select_screen.dart';
 import 'presentation/result/defeat_screen.dart';
@@ -482,6 +483,15 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
           builder: (_) => DefeatScreen(
             args: navArgs.screenArgs,
             gameController: navArgs.gameController,
+          ),
+        );
+      case '/collectibles':
+        final playerId = container.authSessionController.session?.playerId ?? const Identifier('local-player');
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => CollectiblesScreen(
+            getPlayerProgressUseCase: container.getPlayerProgressUseCase,
+            playerId: playerId,
           ),
         );
       default:

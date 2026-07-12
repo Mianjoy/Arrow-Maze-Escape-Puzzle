@@ -23,6 +23,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/images/collectibles/
     - assets/audio/background.mp3
     - assets/audio/times_up.mp3
     - assets/audio/no_movements_left.mp3
