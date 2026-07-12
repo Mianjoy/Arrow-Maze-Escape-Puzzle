@@ -44,6 +44,7 @@ void main() {
                 builder: (_) => GameScreen(
                   controller: container.buildGameController(),
                   level: level,
+                  settingsController: container.appSettingsController,
                 ),
               );
             case '/victory':

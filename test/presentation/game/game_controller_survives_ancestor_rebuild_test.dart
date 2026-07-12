@@ -2,9 +2,11 @@ import 'package:arrow_maze_escape_puzzle/application/use_cases/fire_arrow_use_ca
 import 'package:arrow_maze_escape_puzzle/application/use_cases/start_game_use_case.dart';
 import 'package:arrow_maze_escape_puzzle/domain/domain.dart';
 import 'package:arrow_maze_escape_puzzle/infrastructure/audio/no_op_audio_service.dart';
+import 'package:arrow_maze_escape_puzzle/infrastructure/settings/in_memory_app_settings.dart';
 import 'package:arrow_maze_escape_puzzle/l10n/app_strings.dart';
 import 'package:arrow_maze_escape_puzzle/presentation/game/game_controller.dart';
 import 'package:arrow_maze_escape_puzzle/presentation/game/game_screen.dart';
+import 'package:arrow_maze_escape_puzzle/presentation/settings/app_settings_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -101,7 +103,11 @@ void main() {
             final gameController = buildGameController();
             return MaterialPageRoute(
               settings: routeSettings,
-              builder: (_) => GameScreen(controller: gameController, level: level),
+              builder: (_) => GameScreen(
+                controller: gameController,
+                level: level,
+                settingsController: AppSettingsController(settings: InMemoryAppSettings()),
+              ),
             );
           case '/settings':
             return MaterialPageRoute(

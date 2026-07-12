@@ -413,7 +413,10 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
       case '/settings':
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => SettingsScreen(settingsController: container.appSettingsController),
+          builder: (_) => SettingsScreen(
+            settingsController: container.appSettingsController,
+            levelRepository: container.levelRepository,
+          ),
         );
       case '/login':
         final loginController = container.buildLoginController();
@@ -471,6 +474,7 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
           builder: (_) => GameScreen(
             controller: gameController,
             level: level,
+            settingsController: container.appSettingsController,
           ),
         );
       case '/victory':

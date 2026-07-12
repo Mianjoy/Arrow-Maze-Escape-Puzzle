@@ -89,6 +89,30 @@ abstract class AppStrings {
   /// Etiqueta del botón "Reintentar".
   String get retry;
 
+  /// Etiqueta del botón "Cancelar".
+  String get cancel;
+
+  /// Tooltip del botón para reiniciar el nivel actual durante la partida.
+  String get restartLevelTooltip;
+
+  /// Título del diálogo de confirmación para reiniciar el nivel.
+  String get restartLevelConfirmTitle;
+
+  /// Mensaje del diálogo de confirmación para reiniciar el nivel.
+  String get restartLevelConfirmMessage;
+
+  /// Pista del tutorial: qué flecha tocar primero.
+  String get tutorialTapArrowHint;
+
+  /// Pista del tutorial: objetivo del nivel (sacar todas las flechas).
+  String get tutorialGoalHint;
+
+  /// Etiqueta del botón para omitir el tutorial interactivo.
+  String get tutorialSkip;
+
+  /// Etiqueta del botón en Ajustes para volver a ver el tutorial.
+  String get replayTutorial;
+
   /// Etiqueta del botón "Volver a niveles".
   String get backToLevels;
 
@@ -310,6 +334,31 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get retry => 'Retry';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get restartLevelTooltip => 'Restart level';
+
+  @override
+  String get restartLevelConfirmTitle => 'Restart level?';
+
+  @override
+  String get restartLevelConfirmMessage =>
+      'Your current progress in this level will be lost.';
+
+  @override
+  String get tutorialTapArrowHint => 'Tap this arrow to shoot it out';
+
+  @override
+  String get tutorialGoalHint => 'Clear every arrow to win the level';
+
+  @override
+  String get tutorialSkip => 'Skip tutorial';
+
+  @override
+  String get replayTutorial => 'Show tutorial again';
 
   @override
   String get backToLevels => 'Back to levels';
@@ -554,6 +603,31 @@ class AppStringsEs extends AppStrings {
 
   @override
   String get retry => 'Reintentar';
+
+  @override
+  String get cancel => 'Cancelar';
+
+  @override
+  String get restartLevelTooltip => 'Reiniciar nivel';
+
+  @override
+  String get restartLevelConfirmTitle => '¿Reiniciar nivel?';
+
+  @override
+  String get restartLevelConfirmMessage =>
+      'Perderás el progreso actual en este nivel.';
+
+  @override
+  String get tutorialTapArrowHint => 'Toca esta flecha para dispararla';
+
+  @override
+  String get tutorialGoalHint => 'Saca todas las flechas para ganar el nivel';
+
+  @override
+  String get tutorialSkip => 'Omitir tutorial';
+
+  @override
+  String get replayTutorial => 'Ver tutorial de nuevo';
 
   @override
   String get backToLevels => 'Volver a niveles';

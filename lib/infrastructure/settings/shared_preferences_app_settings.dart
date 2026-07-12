@@ -13,10 +13,12 @@ class SharedPreferencesAppSettings implements IAppSettings {
   static const _mutedKey = 'settings_muted';
   static const _effectsMutedKey = 'settings_effects_muted';
   static const _localeKey = 'settings_locale';
+  static const _seenTutorialKey = 'settings_seen_tutorial';
 
   bool _muted = false;
   bool _effectsMuted = false;
   Locale _locale = const Locale('en');
+  bool _hasSeenTutorial = false;
 
   /// Crea la instancia tras inicializar preferencias.
   static Future<SharedPreferencesAppSettings> create() async {
@@ -38,13 +40,18 @@ class SharedPreferencesAppSettings implements IAppSettings {
   @override
   Locale get locale => _locale;
 
+  /// Indica si ya se mostró (u omitió) el tutorial interactivo del nivel 1.
   @override
-  /// Lee mute e idioma desde almacenamiento local.
+  bool get hasSeenTutorial => _hasSeenTutorial;
+
+  @override
+  /// Lee mute, idioma y estado del tutorial desde almacenamiento local.
   Future<void> load() async {
     _muted = _prefs.getBool(_mutedKey) ?? false;
     _effectsMuted = _prefs.getBool(_effectsMutedKey) ?? false;
     final code = _prefs.getString(_localeKey) ?? 'en';
     _locale = Locale(code);
+    _hasSeenTutorial = _prefs.getBool(_seenTutorialKey) ?? false;
   }
 
   @override
@@ -66,5 +73,12 @@ class SharedPreferencesAppSettings implements IAppSettings {
   Future<void> setLocale(Locale locale) async {
     _locale = locale;
     await _prefs.setString(_localeKey, locale.languageCode);
+  }
+
+  @override
+  /// Persiste si el tutorial del nivel 1 ya se vio (u omitió).
+  Future<void> setHasSeenTutorial(bool seen) async {
+    _hasSeenTutorial = seen;
+    await _prefs.setBool(_seenTutorialKey, seen);
   }
 }
