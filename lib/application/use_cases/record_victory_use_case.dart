@@ -42,6 +42,21 @@ class RecordVictoryUseCase {
       starsEarned: stars,
     );
 
+    MetaCollectible? newlyUnlockedCollectible;
+    final levelNumber = game.level.levelNumber;
+    if (MetaCollectibleUnlockPolicy.shouldUnlock(
+      levelNumber: levelNumber,
+      starsEarned: stars,
+      score: game.score,
+      level: game.level,
+    )) {
+      final collectible = MetaCollectibleUnlockPolicy.collectibleForLevel(levelNumber);
+      if (collectible != null && !progress.hasCollectible(collectible.id)) {
+        progress = progress.unlockCollectible(collectible.id);
+        newlyUnlockedCollectible = collectible;
+      }
+    }
+
     final nextLevel = await _findNextLevel(game.level);
     if (nextLevel != null) {
       progress = progress.unlockLevel(nextLevel.id);
@@ -61,6 +76,12 @@ class RecordVictoryUseCase {
         timeInSeconds: game.elapsedSeconds,
         completed: true,
       );
+      if (newlyUnlockedCollectible != null) {
+        await _progressApiClient.syncCollectibles(
+          session: session,
+          collectibleIds: progress.unlockedCollectibles.toList(),
+        );
+      }
     } catch (error) {
       syncError = error;
       await _pendingSyncRepository.add(
@@ -74,7 +95,12 @@ class RecordVictoryUseCase {
       );
     }
 
-    return RecordVictoryResult(progress: progress, nextLevel: nextLevel, syncError: syncError);
+    return RecordVictoryResult(
+      progress: progress,
+      nextLevel: nextLevel,
+      syncError: syncError,
+      newlyUnlockedCollectible: newlyUnlockedCollectible,
+    );
   }
 
   /// Obtiene el nivel inmediatamente posterior a [completedLevel] en el catálogo.

@@ -28,6 +28,10 @@ abstract class AppStrings {
   /// Etiqueta del interruptor de silenciar audio.
   String get settingsMute;
 
+  /// Etiqueta del interruptor de silenciar todos los efectos de sonido
+  /// (todo excepto la música de fondo).
+  String get settingsMuteEffects;
+
   /// Etiqueta de la sección de idioma en ajustes.
   String get settingsLanguage;
 
@@ -52,6 +56,15 @@ abstract class AppStrings {
   /// Etiqueta del puntaje.
   String get scoreLabel;
 
+  /// Tooltip del botón para mostrar la cuadrícula del tablero.
+  String get showGridTooltip;
+
+  /// Tooltip del botón para ocultar la cuadrícula del tablero.
+  String get hideGridTooltip;
+
+  /// Etiqueta del temporizador con [remaining] y [total] en formato `mm:ss`.
+  String timeRemainingLabel(String remaining, String total);
+
   /// Título de la pantalla de victoria.
   String get victoryTitle;
 
@@ -66,6 +79,12 @@ abstract class AppStrings {
 
   /// Mensaje de la pantalla de derrota.
   String get defeatMessage;
+
+  /// Mensaje de derrota cuando se agotaron los movimientos permitidos.
+  String get defeatMovesExceededMessage;
+
+  /// Mensaje de derrota cuando se agotó el tiempo límite del nivel.
+  String get defeatTimeExceededMessage;
 
   /// Etiqueta del botón "Reintentar".
   String get retry;
@@ -100,6 +119,36 @@ abstract class AppStrings {
   /// Etiqueta del botón "Cerrar sesión".
   String get signOut;
 
+  /// Título de la pantalla de inicio de sesión.
+  String get loginTitle;
+
+  /// Título de la pantalla de registro.
+  String get registerTitle;
+
+  /// Etiqueta del campo de nombre de usuario.
+  String get usernameLabel;
+
+  /// Etiqueta del campo de contraseña (login).
+  String get passwordLabel;
+
+  /// Etiqueta del campo de contraseña con el mínimo de caracteres (registro).
+  String get passwordMinLengthLabel;
+
+  /// Error de validación: campo requerido.
+  String get requiredFieldError;
+
+  /// Error de validación: nombre de usuario con menos de 3 caracteres.
+  String get minUsernameLengthError;
+
+  /// Error de validación: contraseña con menos de 8 caracteres.
+  String get minPasswordLengthError;
+
+  /// Etiqueta del botón para crear una cuenta.
+  String get createAccount;
+
+  /// Enlace en la pantalla de registro para volver al login.
+  String get alreadyHaveAccountSignIn;
+
   /// Etiqueta de dificultad, con [name] interpolado.
   String difficultyLabel(String name);
 
@@ -120,6 +169,64 @@ abstract class AppStrings {
 
   /// Notificación cuando falla la actualización del catálogo.
   String get levelsRefreshFailed;
+
+  /// Mensaje cuando falla la carga inicial del catálogo de niveles.
+  String get levelSelectLoadFailed;
+
+  /// Mensaje cuando el catálogo de niveles está vacío.
+  String get levelSelectNoLevels;
+
+  /// Mensaje cuando un nivel no tiene entradas en la clasificación.
+  String get leaderboardNoScores;
+
+  /// Mensaje cuando falla la carga del ranking de un nivel.
+  String get leaderboardLoadFailed;
+
+  /// Subtítulo de una entrada del ranking: puntaje, movimientos y tiempo.
+  String leaderboardEntrySubtitle({
+    required int score,
+    required int moves,
+    required int timeInSeconds,
+  });
+
+  /// Mensaje cuando el hub de clasificación no tiene niveles disponibles.
+  String get leaderboardHubNoLevels;
+
+  /// Mensaje cuando falla la carga del hub de clasificación.
+  String get leaderboardHubLoadFailed;
+
+  /// Título de la pantalla de coleccionables.
+  String get collectiblesTitle;
+
+  /// Subtítulo explicativo de la pantalla de coleccionables.
+  String get collectiblesSubtitle;
+
+  /// Resumen de progreso de coleccionables desbloqueados.
+  String collectiblesProgress(int unlocked, int total);
+
+  /// Nombre visible de un coleccionable desbloqueado en el hito [milestoneLevel].
+  String collectibleName(int milestoneLevel);
+
+  /// Requisito para desbloquear el coleccionable del hito [milestoneLevel].
+  String collectibleRequirement(int milestoneLevel);
+
+  /// Mensaje en victoria cuando se desbloquea un coleccionable.
+  String collectibleUnlockedMessage(int milestoneLevel);
+
+  /// Etiqueta de un coleccionable aún bloqueado.
+  String get collectibleLockedLabel;
+
+  /// Etiqueta de un slot reservado para futuros coleccionables.
+  String get collectibleComingSoonLabel;
+
+  /// Texto explicativo de un slot "próximamente".
+  String get collectibleComingSoonHint;
+
+  /// Requisito para desbloquear el coleccionable exclusivo del último nivel.
+  String collectibleFinalRequirement(int finalLevel);
+
+  /// Indicación para abrir la galería desde el anuncio de victoria.
+  String get collectibleTapToOpenGallery;
 }
 
 /// Cadenas en inglés (idioma por defecto).
@@ -140,7 +247,10 @@ class AppStringsEn extends AppStrings {
   String get settingsTitle => 'Settings';
 
   @override
-  String get settingsMute => 'Mute audio';
+  String get settingsMute => 'Mute background music';
+
+  @override
+  String get settingsMuteEffects => 'Mute all sound effects';
 
   @override
   String get settingsLanguage => 'Language';
@@ -167,6 +277,15 @@ class AppStringsEn extends AppStrings {
   String get scoreLabel => 'Score';
 
   @override
+  String get showGridTooltip => 'Show grid';
+
+  @override
+  String get hideGridTooltip => 'Hide grid';
+
+  @override
+  String timeRemainingLabel(String remaining, String total) => 'Time: $remaining / $total';
+
+  @override
   String get victoryTitle => 'Level cleared!';
 
   @override
@@ -180,6 +299,14 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get defeatMessage => 'You ran out of moves or time. Try again!';
+
+  @override
+  String get defeatMovesExceededMessage =>
+      'You have exceeded the maximum number of moves allowed. You lost!';
+
+  @override
+  String get defeatTimeExceededMessage =>
+      'The level time limit ran out. You lost!';
 
   @override
   String get retry => 'Retry';
@@ -217,6 +344,36 @@ class AppStringsEn extends AppStrings {
   String get signOut => 'Sign out';
 
   @override
+  String get loginTitle => 'Arrow Maze — Login';
+
+  @override
+  String get registerTitle => 'Arrow Maze — Register';
+
+  @override
+  String get usernameLabel => 'Username';
+
+  @override
+  String get passwordLabel => 'Password';
+
+  @override
+  String get passwordMinLengthLabel => 'Password (min 8)';
+
+  @override
+  String get requiredFieldError => 'Required';
+
+  @override
+  String get minUsernameLengthError => 'Min 3 characters';
+
+  @override
+  String get minPasswordLengthError => 'Min 8 characters';
+
+  @override
+  String get createAccount => 'Create account';
+
+  @override
+  String get alreadyHaveAccountSignIn => 'Already have an account? Sign in';
+
+  @override
   String difficultyLabel(String name) => 'Difficulty: $name';
 
   @override
@@ -238,6 +395,82 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get levelsRefreshFailed => 'Could not refresh the level catalog.';
+
+  @override
+  String get levelSelectLoadFailed => 'Could not load the level catalog. Try again later.';
+
+  @override
+  String get levelSelectNoLevels => 'No levels available.';
+
+  @override
+  String get leaderboardNoScores => 'No scores recorded for this level yet.';
+
+  @override
+  String get leaderboardLoadFailed => 'Could not load the leaderboard. Try again later.';
+
+  @override
+  String leaderboardEntrySubtitle({
+    required int score,
+    required int moves,
+    required int timeInSeconds,
+  }) =>
+      'Score: $score · Moves: $moves · Time: ${timeInSeconds}s';
+
+  @override
+  String get leaderboardHubNoLevels => 'No levels available to show rankings.';
+
+  @override
+  String get leaderboardHubLoadFailed => 'Could not load levels for the leaderboard.';
+
+  @override
+  String get collectiblesTitle => 'Collectibles';
+
+  @override
+  String get collectiblesSubtitle =>
+      'Unlock a collectible every 2 levels with 3 stars and full score. The final level has an exclusive reward.';
+
+  @override
+  String collectiblesProgress(int unlocked, int total) => '$unlocked / $total unlocked';
+
+  @override
+  String collectibleName(int milestoneLevel) => switch (milestoneLevel) {
+        2 => 'Mega Man',
+        4 => 'Kirby',
+        6 => 'Bomberman',
+        8 => 'Contra',
+        10 => 'Bill Rizer',
+        12 => 'Raccoon Mario',
+        14 => 'Aku Aku',
+        16 => 'Sonic',
+        18 => 'Uka Uka',
+        20 => 'Pac-Man',
+        22 => 'Marco (Metal Slug)',
+        _ => 'Milestone #$milestoneLevel',
+      };
+
+  @override
+  String collectibleRequirement(int milestoneLevel) =>
+      'Clear level $milestoneLevel with 3 stars and full score';
+
+  @override
+  String collectibleFinalRequirement(int finalLevel) =>
+      'Exclusive reward: clear the final level ($finalLevel) with 3 stars and full score';
+
+  @override
+  String collectibleUnlockedMessage(int milestoneLevel) =>
+      'New collectible unlocked: ${collectibleName(milestoneLevel)}!';
+
+  @override
+  String get collectibleLockedLabel => 'Locked';
+
+  @override
+  String get collectibleComingSoonLabel => 'Coming Soon';
+
+  @override
+  String get collectibleComingSoonHint => 'This collectible will be available in a future update.';
+
+  @override
+  String get collectibleTapToOpenGallery => 'Tap to open collectibles';
 }
 
 /// Cadenas en español.
@@ -258,7 +491,10 @@ class AppStringsEs extends AppStrings {
   String get settingsTitle => 'Ajustes';
 
   @override
-  String get settingsMute => 'Silenciar audio';
+  String get settingsMute => 'Silenciar música de fondo';
+
+  @override
+  String get settingsMuteEffects => 'Silenciar todos los efectos de sonido';
 
   @override
   String get settingsLanguage => 'Idioma';
@@ -285,6 +521,15 @@ class AppStringsEs extends AppStrings {
   String get scoreLabel => 'Puntuación';
 
   @override
+  String get showGridTooltip => 'Mostrar cuadrícula';
+
+  @override
+  String get hideGridTooltip => 'Ocultar cuadrícula';
+
+  @override
+  String timeRemainingLabel(String remaining, String total) => 'Tiempo: $remaining / $total';
+
+  @override
   String get victoryTitle => '¡Nivel superado!';
 
   @override
@@ -298,6 +543,14 @@ class AppStringsEs extends AppStrings {
 
   @override
   String get defeatMessage => 'Agotaste movimientos o tiempo. ¡Inténtalo de nuevo!';
+
+  @override
+  String get defeatMovesExceededMessage =>
+      'Has superado el número máximo de movimientos permitidos. ¡Has perdido!';
+
+  @override
+  String get defeatTimeExceededMessage =>
+      'Se agotó el tiempo límite del nivel. ¡Has perdido!';
 
   @override
   String get retry => 'Reintentar';
@@ -336,6 +589,36 @@ class AppStringsEs extends AppStrings {
   String get signOut => 'Cerrar sesión';
 
   @override
+  String get loginTitle => 'Arrow Maze — Iniciar sesión';
+
+  @override
+  String get registerTitle => 'Arrow Maze — Registro';
+
+  @override
+  String get usernameLabel => 'Usuario';
+
+  @override
+  String get passwordLabel => 'Contraseña';
+
+  @override
+  String get passwordMinLengthLabel => 'Contraseña (mín. 8)';
+
+  @override
+  String get requiredFieldError => 'Requerido';
+
+  @override
+  String get minUsernameLengthError => 'Mínimo 3 caracteres';
+
+  @override
+  String get minPasswordLengthError => 'Mínimo 8 caracteres';
+
+  @override
+  String get createAccount => 'Crear cuenta';
+
+  @override
+  String get alreadyHaveAccountSignIn => '¿Ya tienes una cuenta? Inicia sesión';
+
+  @override
   String difficultyLabel(String name) => 'Dificultad: $name';
 
   @override
@@ -357,6 +640,82 @@ class AppStringsEs extends AppStrings {
 
   @override
   String get levelsRefreshFailed => 'No se pudo actualizar el catálogo de niveles.';
+
+  @override
+  String get levelSelectLoadFailed => 'No se pudo cargar el catálogo de niveles. Intenta más tarde.';
+
+  @override
+  String get levelSelectNoLevels => 'No hay niveles disponibles.';
+
+  @override
+  String get leaderboardNoScores => 'Aún no hay registros en este nivel.';
+
+  @override
+  String get leaderboardLoadFailed => 'No se pudo cargar la clasificación. Intenta más tarde.';
+
+  @override
+  String leaderboardEntrySubtitle({
+    required int score,
+    required int moves,
+    required int timeInSeconds,
+  }) =>
+      'Puntaje: $score · Movimientos: $moves · Tiempo: ${timeInSeconds}s';
+
+  @override
+  String get leaderboardHubNoLevels => 'No hay niveles disponibles para mostrar clasificaciones.';
+
+  @override
+  String get leaderboardHubLoadFailed => 'No se pudieron cargar los niveles para la clasificación.';
+
+  @override
+  String get collectiblesTitle => 'Coleccionables';
+
+  @override
+  String get collectiblesSubtitle =>
+      'Desbloquea un coleccionable cada 2 niveles con 3 estrellas y puntuación completa. El último nivel tiene una recompensa exclusiva.';
+
+  @override
+  String collectiblesProgress(int unlocked, int total) => '$unlocked / $total desbloqueados';
+
+  @override
+  String collectibleName(int milestoneLevel) => switch (milestoneLevel) {
+        2 => 'Mega Man',
+        4 => 'Kirby',
+        6 => 'Bomberman',
+        8 => 'Contra',
+        10 => 'Bill Rizer',
+        12 => 'Mario mapache',
+        14 => 'Aku Aku',
+        16 => 'Sonic',
+        18 => 'Uka Uka',
+        20 => 'Pac-Man',
+        22 => 'Marco (Metal Slug)',
+        _ => 'Hito #$milestoneLevel',
+      };
+
+  @override
+  String collectibleRequirement(int milestoneLevel) =>
+      'Supera el nivel $milestoneLevel con 3 estrellas y puntuación completa';
+
+  @override
+  String collectibleFinalRequirement(int finalLevel) =>
+      'Recompensa exclusiva: supera el último nivel ($finalLevel) con 3 estrellas y puntuación completa';
+
+  @override
+  String collectibleUnlockedMessage(int milestoneLevel) =>
+      '¡Nuevo coleccionable desbloqueado: ${collectibleName(milestoneLevel)}!';
+
+  @override
+  String get collectibleLockedLabel => 'Bloqueado';
+
+  @override
+  String get collectibleComingSoonLabel => 'Próximamente';
+
+  @override
+  String get collectibleComingSoonHint => 'Este coleccionable estará disponible en una actualización futura.';
+
+  @override
+  String get collectibleTapToOpenGallery => 'Toca para abrir coleccionables';
 }
 
 /// Provee [AppStrings] a descendientes del árbol de widgets vía `of(context)`.

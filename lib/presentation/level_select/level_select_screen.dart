@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_strings.dart';
 import '../auth/auth_session_controller.dart';
 import '../theme/app_colors.dart';
+import '../navigation/app_route_observer.dart';
+import '../widgets/app_nav_actions.dart';
+import '../widgets/button_click.dart';
 import 'level_select_controller.dart';
 
 /// Pantalla de selección de nivel con indicadores de bloqueo, estrellas y progreso.
@@ -24,11 +27,31 @@ class LevelSelectScreen extends StatefulWidget {
   State<LevelSelectScreen> createState() => _LevelSelectScreenState();
 }
 
-class _LevelSelectScreenState extends State<LevelSelectScreen> {
+class _LevelSelectScreenState extends State<LevelSelectScreen> with RouteAware {
   @override
   void initState() {
     super.initState();
     widget.controller.load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute<void>) {
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    appRouteObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    widget.controller.refreshProgress();
   }
 
   /// Cierra sesión y vuelve al inicio.
@@ -69,7 +92,10 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
         title: Text(strings.levelSelectTitle),
         leading: IconButton(
           icon: const Icon(Icons.home),
-          onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false),
+          onPressed: withButtonClick(
+            context,
+            () => Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false),
+          ),
         ),
         actions: [
           IconButton(
@@ -77,7 +103,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
             tooltip: strings.refreshLevelsTooltip,
             onPressed: widget.controller.isRefreshing
                 ? null
-                : () => _refreshLevels(strings),
+                : withButtonClickAsync(context, () => _refreshLevels(strings)),
             icon: widget.controller.isRefreshing
                 ? const SizedBox(
                     width: 20,
@@ -93,10 +119,11 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                 child: Text(username, style: Theme.of(context).textTheme.bodyMedium),
               ),
             ),
+          const AppNavActions(),
           IconButton(
             key: const ValueKey('logout-button'),
             tooltip: strings.signOut,
-            onPressed: _logout,
+            onPressed: withButtonClickAsync(context, _logout),
             icon: const Icon(Icons.logout),
           ),
         ],
@@ -109,12 +136,12 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
           }
 
           if (widget.controller.error != null) {
-            return Center(child: Text('${widget.controller.error}'));
+            return Center(child: Text(strings.levelSelectLoadFailed));
           }
 
           final levels = widget.controller.levels;
           if (levels.isEmpty) {
-            return const Center(child: Text('No levels available.'));
+            return Center(child: Text(strings.levelSelectNoLevels));
           }
 
           final levelList = ListView.builder(
@@ -133,7 +160,7 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                       ? (completed ? AppColors.success : AppColors.arrow)
                       : AppColors.gridLine,
                 ),
-                title: Text(level.id.value),
+                title: Text(level.displayLabel),
                 subtitle: Text(
                   '${strings.difficultyLabel(level.difficulty.name)} · '
                   '${strings.parMovesLabel(level.parMoves)}'
@@ -143,7 +170,10 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                 trailing: unlocked ? const Icon(Icons.play_arrow) : null,
                 enabled: unlocked,
                 onTap: unlocked
-                    ? () => Navigator.of(context).pushNamed('/game', arguments: level)
+                    ? withButtonClick(
+                        context,
+                        () => Navigator.of(context).pushNamed('/game', arguments: level),
+                      )
                     : null,
               );
             },

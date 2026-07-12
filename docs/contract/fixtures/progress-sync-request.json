@@ -1,0 +1,8 @@
+{
+  "userId": "user-1",
+  "levelId": "level-1",
+  "score": 300,
+  "moves": 5,
+  "timeInSeconds": 42,
+  "completed": true
+}

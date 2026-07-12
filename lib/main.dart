@@ -53,7 +53,10 @@ import 'presentation/game/game_controller.dart';
 import 'presentation/game/game_screen.dart';
 import 'presentation/home/home_screen.dart';
 import 'presentation/leaderboard/leaderboard_controller.dart';
+import 'presentation/leaderboard/leaderboard_route_args.dart';
+import 'presentation/leaderboard/leaderboard_hub_screen.dart';
 import 'presentation/leaderboard/leaderboard_screen.dart';
+import 'presentation/collectibles/collectibles_screen.dart';
 import 'presentation/level_select/level_select_controller.dart';
 import 'presentation/level_select/level_select_screen.dart';
 import 'presentation/result/defeat_screen.dart';
@@ -61,7 +64,10 @@ import 'presentation/result/result_screen_args.dart';
 import 'presentation/result/victory_screen.dart';
 import 'presentation/settings/app_settings_controller.dart';
 import 'presentation/settings/settings_screen.dart';
+import 'presentation/navigation/app_route_observer.dart';
 import 'presentation/theme/app_theme.dart';
+import 'presentation/widgets/audio_scope.dart';
+import 'presentation/widgets/phone_frame.dart';
 
 /// Punto de entrada: inicializa preferencias, progreso local y composition root.
 Future<void> main() async {
@@ -346,7 +352,7 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
     super.dispose();
   }
 
-  /// Reconstruye el árbol cuando cambian idioma o mute.
+  /// Reconstruye el árbol cuando cambian idioma o mute de música de fondo.
   void _onSettingsChanged() {
     setState(() {});
     final muted = widget.container.appSettingsController.isMuted;
@@ -362,19 +368,39 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
     final locale = widget.container.appSettingsController.locale;
     final strings = AppStrings.forLocale(locale);
 
-    return AppStringsScope(
-      strings: strings,
-      child: MaterialApp(
-        title: strings.appTitle,
-        locale: locale,
-        theme: AppTheme.build(),
-        initialRoute: '/home',
-        onGenerateRoute: (settings) => _onGenerateRoute(settings),
+    return PhoneFrame(
+      child: AppStringsScope(
+        strings: strings,
+        child: AudioScope(
+          audioService: widget.container.audioService,
+          child: MaterialApp(
+          title: strings.appTitle,
+          locale: locale,
+          theme: AppTheme.build(),
+          initialRoute: '/home',
+          navigatorObservers: [appRouteObserver],
+          builder: (context, child) {
+            return child ?? const SizedBox.shrink();
+          },
+          onGenerateRoute: (settings) => _onGenerateRoute(settings),
+          ),
+        ),
       ),
     );
   }
 
   /// Resuelve rutas de inicio, ajustes, auth, niveles, juego y resultados.
+  ///
+  /// Importante: `MaterialPageRoute.builder` se reinvoca en cada rebuild de
+  /// cualquier ancestro (p. ej. `ArrowMazeApp` al cambiar ajustes) — NO se
+  /// llama una sola vez por navegación como podría asumirse. Por eso todo
+  /// controlador construido vía `container.buildXController()` debe crearse
+  /// AQUÍ, fuera del `builder:`, y capturarse por closure: así el `builder`
+  /// devuelve siempre la MISMA instancia entre rebuilds. Construirlo dentro
+  /// del `builder:` genera una instancia nueva y nunca inicializada en cada
+  /// rebuild, sustituyendo la que ya arrancó — como pasaba con `GameScreen`:
+  /// el tablero desaparecía (spinner infinito) al volver de Ajustes si se
+  /// había togglear el mute mientras la partida seguía activa detrás.
   Route<dynamic> _onGenerateRoute(RouteSettings settings) {
     final container = widget.container;
 
@@ -390,44 +416,60 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
           builder: (_) => SettingsScreen(settingsController: container.appSettingsController),
         );
       case '/login':
+        final loginController = container.buildLoginController();
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => LoginScreen(controller: container.buildLoginController()),
+          builder: (_) => LoginScreen(controller: loginController),
         );
       case '/register':
+        final registerController = container.buildRegisterController();
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => RegisterScreen(controller: container.buildRegisterController()),
+          builder: (_) => RegisterScreen(controller: registerController),
         );
       case '/levels':
         if (!container.authSessionController.isAuthenticated) {
+          final loginController = container.buildLoginController();
           return MaterialPageRoute(
             settings: settings,
-            builder: (_) => LoginScreen(controller: container.buildLoginController()),
+            builder: (_) => LoginScreen(controller: loginController),
           );
         }
+        final levelSelectController = container.buildLevelSelectController();
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => LevelSelectScreen(
-            controller: container.buildLevelSelectController(),
+            controller: levelSelectController,
             authSessionController: container.authSessionController,
           ),
         );
       case '/leaderboard':
-        final levelId = settings.arguments as String;
+        final args = settings.arguments;
+        if (args is LeaderboardRouteArgs || args is String) {
+          final levelId = args is LeaderboardRouteArgs ? args.levelId : args as String;
+          final levelTitle = args is LeaderboardRouteArgs ? args.levelTitle : null;
+          final leaderboardController = container.buildLeaderboardController();
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => LeaderboardScreen(
+              controller: leaderboardController,
+              levelId: levelId,
+              levelTitle: levelTitle,
+            ),
+          );
+        }
+        final loadLevelsUseCase = LoadLevelsUseCase(levelRepository: container.levelRepository);
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => LeaderboardScreen(
-            controller: container.buildLeaderboardController(),
-            levelId: levelId,
-          ),
+          builder: (_) => LeaderboardHubScreen(loadLevelsUseCase: loadLevelsUseCase),
         );
       case '/game':
         final level = settings.arguments as Level;
+        final gameController = container.buildGameController();
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => GameScreen(
-            controller: container.buildGameController(),
+            controller: gameController,
             level: level,
           ),
         );
@@ -441,6 +483,15 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
           builder: (_) => DefeatScreen(
             args: navArgs.screenArgs,
             gameController: navArgs.gameController,
+          ),
+        );
+      case '/collectibles':
+        final playerId = container.authSessionController.session?.playerId ?? const Identifier('local-player');
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => CollectiblesScreen(
+            getPlayerProgressUseCase: container.getPlayerProgressUseCase,
+            playerId: playerId,
           ),
         );
       default:

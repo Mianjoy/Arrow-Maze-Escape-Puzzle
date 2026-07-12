@@ -1,0 +1,5 @@
+{
+  "error": {
+    "message": "A user with username \"player_one\" already exists"
+  }
+}

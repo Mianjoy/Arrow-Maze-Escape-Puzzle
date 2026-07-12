@@ -1,18 +1,30 @@
 /// Puerto de reproducción de efectos de sonido y música de fondo.
 ///
-/// La implementación concreta respeta [IAppSettings.isMuted] sin que la UI
-/// tenga que comprobar el flag en cada interacción.
+/// La implementación concreta usa dos flags independientes: `isMuted` (solo
+/// música de fondo) y `isEffectsMuted` (todos los demás sonidos del juego).
 abstract interface class IAudioService {
-  /// Reproduce un efecto corto al tocar una celda del tablero.
-  Future<void> playTap();
+  /// Desbloquea audio tras el primer gesto del usuario (p. ej. autoplay Web).
+  Future<void> ensureAudioUnlocked();
 
-  /// Reproduce el sonido de victoria al completar un nivel.
-  Future<void> playVictory();
+  /// Reproduce el clic de botones generales de la interfaz (navegación, formularios).
+  Future<void> playButtonClick();
 
-  /// Reproduce el sonido de derrota al agotar movimientos o tiempo.
-  Future<void> playDefeat();
+  /// Reproduce un sonido aleatorio cuando una flecha sale del tablero.
+  Future<void> playArrowExtracted();
 
-  /// Inicia la música de fondo en bucle (si no está silenciado).
+  /// Reproduce el sonido cuando una flecha choca con otra flecha.
+  Future<void> playMovementNotAllowed();
+
+  /// Reproduce el sonido de nivel completado (todas las flechas extraídas).
+  Future<void> playLevelCleared();
+
+  /// Reproduce el sonido al agotar los movimientos del nivel.
+  Future<void> playNoMovementsLeft();
+
+  /// Reproduce el sonido al agotar el tiempo del nivel.
+  Future<void> playTimeUp();
+
+  /// Inicia la música de fondo en bucle (respeta el toggle de mute).
   Future<void> startBackgroundMusic();
 
   /// Detiene la música de fondo.

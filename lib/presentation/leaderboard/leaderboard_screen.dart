@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_strings.dart';
+import '../widgets/app_nav_actions.dart';
+import 'leaderboard_route_args.dart';
 import 'leaderboard_controller.dart';
 
 /// Pantalla que muestra el ranking de un nivel (`GET /leaderboard/:levelId`).
@@ -9,6 +12,7 @@ class LeaderboardScreen extends StatefulWidget {
     super.key,
     required this.controller,
     required this.levelId,
+    this.levelTitle,
   });
 
   /// Controlador que carga las entradas del ranking.
@@ -16,6 +20,9 @@ class LeaderboardScreen extends StatefulWidget {
 
   /// Identificador del nivel cuyo top se muestra.
   final String levelId;
+
+  /// Nombre legible del nivel para el título; si es null, se usa [levelId].
+  final String? levelTitle;
 
   @override
   State<LeaderboardScreen> createState() => _LeaderboardScreenState();
@@ -30,8 +37,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStringsScope.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: Text('Leaderboard — ${widget.levelId}')),
+      appBar: AppBar(
+        title: Text('${strings.leaderboard} — ${widget.levelTitle ?? widget.levelId}'),
+        actions: const [
+          AppNavActions(showLeaderboard: false),
+        ],
+      ),
       body: ListenableBuilder(
         listenable: widget.controller,
         builder: (context, _) {
@@ -40,14 +54,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           }
 
           if (widget.controller.error != null) {
-            return Center(
-              child: Text('Could not load leaderboard: ${widget.controller.error}'),
-            );
+            return Center(child: Text(strings.leaderboardLoadFailed));
           }
 
           final entries = widget.controller.entries;
           if (entries.isEmpty) {
-            return const Center(child: Text('No scores yet for this level.'));
+            return Center(child: Text(strings.leaderboardNoScores));
           }
 
           return ListView.builder(
@@ -58,7 +70,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 leading: CircleAvatar(child: Text('${index + 1}')),
                 title: Text(entry.username),
                 subtitle: Text(
-                  'Score: ${entry.highScore} · Moves: ${entry.minMoves} · Time: ${entry.minTimeInSeconds}s',
+                  strings.leaderboardEntrySubtitle(
+                    score: entry.highScore,
+                    moves: entry.minMoves,
+                    timeInSeconds: entry.minTimeInSeconds,
+                  ),
                 ),
               );
             },

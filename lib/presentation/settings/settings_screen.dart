@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
+import '../widgets/app_nav_actions.dart';
 import 'app_settings_controller.dart';
 
-/// Pantalla de ajustes: silenciar audio y elegir idioma (es/en).
+/// Pantalla de ajustes: silenciar música de fondo, silenciar todos los
+/// efectos de sonido y elegir idioma (es/en).
 class SettingsScreen extends StatelessWidget {
   /// Crea la pantalla con el [settingsController] observable.
   const SettingsScreen({super.key, required this.settingsController});
@@ -16,7 +18,12 @@ class SettingsScreen extends StatelessWidget {
     final strings = AppStringsScope.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(strings.settingsTitle)),
+      appBar: AppBar(
+        title: Text(strings.settingsTitle),
+        actions: const [
+          AppNavActions(showSettings: false, showLeaderboard: false),
+        ],
+      ),
       body: ListenableBuilder(
         listenable: settingsController,
         builder: (context, _) {
@@ -27,6 +34,12 @@ class SettingsScreen extends StatelessWidget {
                 title: Text(strings.settingsMute),
                 value: settingsController.isMuted,
                 onChanged: settingsController.setMuted,
+              ),
+              SwitchListTile(
+                key: const ValueKey('settings-mute-effects'),
+                title: Text(strings.settingsMuteEffects),
+                value: settingsController.isEffectsMuted,
+                onChanged: settingsController.setEffectsMuted,
               ),
               ListTile(
                 title: Text(strings.settingsLanguage),

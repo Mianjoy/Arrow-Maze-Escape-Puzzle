@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_strings.dart';
 import '../auth/auth_session_controller.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_nav_actions.dart';
+import '../widgets/button_click.dart';
 
-/// Pantalla de inicio: título del juego, botón Jugar y acceso a Ajustes.
+/// Pantalla de inicio: título del juego, botón Jugar y acceso global.
 class HomeScreen extends StatelessWidget {
   /// Crea la pantalla con el controlador de sesión para el flujo de Jugar.
   const HomeScreen({super.key, required this.authSessionController});
@@ -26,7 +28,14 @@ class HomeScreen extends StatelessWidget {
     final strings = AppStringsScope.of(context);
     final theme = Theme.of(context);
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          title: Text(strings.appTitle),
+          actions: const [AppNavActions()],
+        ),
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -44,21 +53,15 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 48),
                 FilledButton.icon(
                   key: const ValueKey('home-play'),
-                  onPressed: () => _onPlay(context),
+                  onPressed: withButtonClick(context, () => _onPlay(context)),
                   icon: const Icon(Icons.play_arrow),
                   label: Text(strings.homePlay),
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  key: const ValueKey('home-settings'),
-                  onPressed: () => Navigator.of(context).pushNamed('/settings'),
-                  icon: const Icon(Icons.settings),
-                  label: Text(strings.homeSettings),
                 ),
               ],
             ),
           ),
         ),
+      ),
       ),
     );
   }

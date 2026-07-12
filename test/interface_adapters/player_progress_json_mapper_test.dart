@@ -20,6 +20,7 @@ void main() {
           completionCount: 1,
         ),
       },
+      unlockedCollectibles: {'collectible-milestone-2'},
     );
 
     final decoded = mapper.decode(mapper.encode(original));
@@ -27,5 +28,6 @@ void main() {
     expect(decoded.playerId, playerId);
     expect(decoded.progressFor(levelId)?.status, LevelProgressStatus.completed);
     expect(decoded.progressFor(levelId)?.bestStars?.value, 3);
+    expect(decoded.unlockedCollectibles, {'collectible-milestone-2'});
   });
 }

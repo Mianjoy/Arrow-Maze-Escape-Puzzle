@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
+import '../widgets/app_nav_actions.dart';
+import '../widgets/button_click.dart';
 import 'auth_error_message.dart';
 import 'register_controller.dart';
 
@@ -45,8 +47,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStringsScope.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Arrow Maze — Register')),
+      appBar: AppBar(
+        title: Text(strings.registerTitle),
+        actions: const [AppNavActions()],
+      ),
       body: ListenableBuilder(
         listenable: widget.controller,
         builder: (context, _) {
@@ -60,41 +67,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   TextFormField(
                     key: const ValueKey('register-username'),
                     controller: _usernameController,
-                    decoration: const InputDecoration(labelText: 'Username'),
-                    validator: (value) =>
-                        (value == null || value.trim().length < 3) ? 'Min 3 characters' : null,
+                    decoration: InputDecoration(labelText: strings.usernameLabel),
+                    validator: (value) => (value == null || value.trim().length < 3)
+                        ? strings.minUsernameLengthError
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     key: const ValueKey('register-password'),
                     controller: _passwordController,
-                    decoration: const InputDecoration(labelText: 'Password (min 8)'),
+                    decoration: InputDecoration(labelText: strings.passwordMinLengthLabel),
                     obscureText: true,
-                    validator: (value) =>
-                        (value == null || value.length < 8) ? 'Min 8 characters' : null,
+                    validator: (value) => (value == null || value.length < 8)
+                        ? strings.minPasswordLengthError
+                        : null,
                   ),
                   if (widget.controller.error != null) ...[
                     const SizedBox(height: 16),
                     Text(
-                      authErrorMessage(AppStringsScope.of(context), widget.controller.error),
+                      authErrorMessage(strings, widget.controller.error),
                       style: TextStyle(color: Theme.of(context).colorScheme.error),
                     ),
                   ],
                   const SizedBox(height: 24),
                   FilledButton(
                     key: const ValueKey('register-submit'),
-                    onPressed: widget.controller.isLoading ? null : _onSubmit,
+                    onPressed: widget.controller.isLoading
+                        ? null
+                        : withButtonClickAsync(context, _onSubmit),
                     child: widget.controller.isLoading
                         ? const SizedBox(
                             height: 20,
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Create account'),
+                        : Text(strings.createAccount),
                   ),
                   TextButton(
-                    onPressed: () => Navigator.of(context).pushReplacementNamed('/login'),
-                    child: const Text('Already have an account? Sign in'),
+                    onPressed: withButtonClick(
+                      context,
+                      () => Navigator.of(context).pushReplacementNamed('/login'),
+                    ),
+                    child: Text(strings.alreadyHaveAccountSignIn),
                   ),
                 ],
               ),

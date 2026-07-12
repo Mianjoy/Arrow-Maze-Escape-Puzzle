@@ -8,6 +8,7 @@ import '../value_objects/level_board_definition.dart';
 import '../value_objects/level_difficulty.dart';
 import '../value_objects/player_start.dart';
 import '../services/shortest_path_calculator.dart';
+import '../services/level_time_limit_calculator.dart';
 
 /// Agregado raíz que define un nivel jugable cargado desde JSON.
 ///
@@ -26,6 +27,7 @@ class Level {
     required this.optimalMoves,
     this.levelNumber,
     this.timeLimit,
+    this.displayName = '',
   })  : assert(parMoves > 0, 'parMoves must be positive'),
         assert(optimalMoves > 0, 'optimalMoves must be positive'),
         assert(
@@ -35,6 +37,15 @@ class Level {
 
   /// Identificador único del nivel (string del JSON).
   final Identifier id;
+
+  /// Nombre visible del nivel en catálogos y UI (wire format `name`).
+  final String displayName;
+
+  /// Etiqueta legible: [displayName] si existe; si no, [id].
+  String get displayLabel {
+    final trimmed = displayName.trim();
+    return trimmed.isNotEmpty ? trimmed : id.value;
+  }
 
   /// Número ordinal en la progresión (wire format `levelNumber`).
   final int? levelNumber;
@@ -56,6 +67,9 @@ class Level {
 
   /// Límite de tiempo opcional en segundos (`timeLimit` en JSON).
   final int? timeLimit;
+
+  /// Segundos disponibles para completar el nivel (`timeLimit` o cálculo).
+  int get playableTimeLimitSeconds => const LevelTimeLimitCalculator().resolve(this);
 
   /// Construye el [Board] inicial listo para iniciar una partida.
   ///

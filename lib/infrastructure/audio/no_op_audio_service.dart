@@ -2,23 +2,30 @@ import '../../application/ports/i_audio_service.dart';
 
 /// Implementación nula de audio para tests donde no se requiere sonido.
 class NoOpAudioService implements IAudioService {
-  /// No reproduce ningún sonido al tocar una celda.
   @override
-  Future<void> playTap() async {}
+  Future<void> ensureAudioUnlocked() async {}
 
-  /// No reproduce sonido de victoria.
   @override
-  Future<void> playVictory() async {}
+  Future<void> playButtonClick() async {}
 
-  /// No reproduce sonido de derrota.
   @override
-  Future<void> playDefeat() async {}
+  Future<void> playArrowExtracted() async {}
 
-  /// No inicia música de fondo.
+  @override
+  Future<void> playMovementNotAllowed() async {}
+
+  @override
+  Future<void> playLevelCleared() async {}
+
+  @override
+  Future<void> playNoMovementsLeft() async {}
+
+  @override
+  Future<void> playTimeUp() async {}
+
   @override
   Future<void> startBackgroundMusic() async {}
 
-  /// No detiene música (no hay reproductor activo).
   @override
   Future<void> stopBackgroundMusic() async {}
 }

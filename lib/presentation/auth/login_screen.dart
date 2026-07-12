@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
+import '../widgets/app_nav_actions.dart';
+import '../widgets/button_click.dart';
 import 'auth_error_message.dart';
 import 'login_controller.dart';
 
@@ -45,8 +47,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStringsScope.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Arrow Maze — Login')),
+      appBar: AppBar(
+        title: Text(strings.loginTitle),
+        actions: const [AppNavActions()],
+      ),
       body: ListenableBuilder(
         listenable: widget.controller,
         builder: (context, _) {
@@ -60,41 +67,47 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextFormField(
                     key: const ValueKey('login-username'),
                     controller: _usernameController,
-                    decoration: const InputDecoration(labelText: 'Username'),
-                    validator: (value) =>
-                        (value == null || value.trim().length < 3) ? 'Min 3 characters' : null,
+                    decoration: InputDecoration(labelText: strings.usernameLabel),
+                    validator: (value) => (value == null || value.trim().length < 3)
+                        ? strings.minUsernameLengthError
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     key: const ValueKey('login-password'),
                     controller: _passwordController,
-                    decoration: const InputDecoration(labelText: 'Password'),
+                    decoration: InputDecoration(labelText: strings.passwordLabel),
                     obscureText: true,
                     validator: (value) =>
-                        (value == null || value.isEmpty) ? 'Required' : null,
+                        (value == null || value.isEmpty) ? strings.requiredFieldError : null,
                   ),
                   if (widget.controller.error != null) ...[
                     const SizedBox(height: 16),
                     Text(
-                      authErrorMessage(AppStringsScope.of(context), widget.controller.error),
+                      authErrorMessage(strings, widget.controller.error),
                       style: TextStyle(color: Theme.of(context).colorScheme.error),
                     ),
                   ],
                   const SizedBox(height: 24),
                   FilledButton(
                     key: const ValueKey('login-submit'),
-                    onPressed: widget.controller.isLoading ? null : _onSubmit,
+                    onPressed: widget.controller.isLoading
+                        ? null
+                        : withButtonClickAsync(context, _onSubmit),
                     child: widget.controller.isLoading
                         ? const SizedBox(
                             height: 20,
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Sign in'),
+                        : Text(strings.signIn),
                   ),
                   TextButton(
-                    onPressed: () => Navigator.of(context).pushReplacementNamed('/register'),
-                    child: const Text('Create account'),
+                    onPressed: withButtonClick(
+                      context,
+                      () => Navigator.of(context).pushReplacementNamed('/register'),
+                    ),
+                    child: Text(strings.createAccount),
                   ),
                 ],
               ),

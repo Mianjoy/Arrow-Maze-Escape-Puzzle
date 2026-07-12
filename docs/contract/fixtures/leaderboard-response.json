@@ -1,0 +1,8 @@
+[
+  {
+    "username": "player_one",
+    "highScore": 300,
+    "minMoves": 5,
+    "minTimeInSeconds": 42
+  }
+]

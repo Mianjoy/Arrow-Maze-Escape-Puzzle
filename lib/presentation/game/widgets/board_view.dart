@@ -10,13 +10,21 @@ import 'arrow_board_painter.dart';
 /// para que flechas multi-celda se dibujen como un solo camino.
 class BoardView extends StatelessWidget {
   /// Crea la vista para [board] y notificar toques con [onCellTapped].
-  const BoardView({super.key, required this.board, required this.onCellTapped});
+  const BoardView({
+    super.key,
+    required this.board,
+    required this.onCellTapped,
+    this.showGrid = false,
+  });
 
   /// Tablero a renderizar.
   final Board board;
 
   /// Callback con la [Position] de la celda tocada.
   final ValueChanged<Position> onCellTapped;
+
+  /// Si es `true`, dibuja las líneas de la cuadrícula sobre el fondo del tablero.
+  final bool showGrid;
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +53,7 @@ class BoardView extends StatelessWidget {
                         board: board,
                         cellWidth: cellWidth,
                         cellHeight: cellHeight,
+                        showGrid: showGrid,
                       ),
                     ),
                     _BoardTouchGrid(
@@ -59,6 +68,47 @@ class BoardView extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Botón compacto para activar o desactivar la cuadrícula del tablero.
+class BoardGridToggleButton extends StatelessWidget {
+  /// Crea el botón con [showGrid], [tooltip] y [onPressed].
+  const BoardGridToggleButton({
+    super.key,
+    required this.showGrid,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  /// Indica si la cuadrícula está visible (icono `grid_off` vs `grid_on`).
+  final bool showGrid;
+
+  /// Texto del tooltip al mantener pulsado.
+  final String tooltip;
+
+  /// Se invoca al pulsar el botón.
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.background.withValues(alpha: 0.85),
+      borderRadius: BorderRadius.circular(8),
+      child: IconButton(
+        key: const ValueKey('board-grid-toggle'),
+        visualDensity: VisualDensity.compact,
+        padding: const EdgeInsets.all(4),
+        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        tooltip: tooltip,
+        icon: Icon(
+          showGrid ? Icons.grid_off : Icons.grid_on,
+          size: 18,
+          color: showGrid ? AppColors.arrowActive : AppColors.textPrimary,
+        ),
+        onPressed: onPressed,
       ),
     );
   }

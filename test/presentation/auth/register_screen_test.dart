@@ -59,4 +59,32 @@ void main() {
     // Assert
     expect(find.text(const AppStringsEs().usernameAlreadyExistsError), findsOneWidget);
   });
+
+  testWidgets('should_show_spanish_labels_when_locale_is_spanish', (tester) async {
+    final storage = InMemoryTokenStorage();
+    const config = ApiConfig(baseUrl: 'http://widget-test');
+    final authClient = AuthApiClient(config: config, httpClient: MockHttpClient((_) async {
+      throw StateError('unused in this test');
+    }));
+
+    final authSessionController = AuthSessionController(
+      loginUserUseCase: LoginUserUseCase(authApiClient: authClient, tokenStorage: storage),
+      registerUserUseCase: RegisterUserUseCase(authApiClient: authClient, tokenStorage: storage),
+      logoutUserUseCase: LogoutUserUseCase(tokenStorage: storage),
+      restoreAuthSessionUseCase: RestoreAuthSessionUseCase(tokenStorage: storage),
+    );
+
+    final controller = RegisterController(authSessionController: authSessionController);
+
+    await tester.pumpWidget(
+      AppStringsScope(
+        strings: const AppStringsEs(),
+        child: MaterialApp(home: RegisterScreen(controller: controller)),
+      ),
+    );
+
+    expect(find.text(const AppStringsEs().registerTitle), findsOneWidget);
+    expect(find.text(const AppStringsEs().createAccount), findsOneWidget);
+    expect(find.text(const AppStringsEs().alreadyHaveAccountSignIn), findsOneWidget);
+  });
 }
