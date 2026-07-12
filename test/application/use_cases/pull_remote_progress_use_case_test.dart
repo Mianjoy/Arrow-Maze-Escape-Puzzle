@@ -50,6 +50,7 @@ void main() {
               'isCompleted': true,
             },
           ],
+          'collectibles': ['collectible-milestone-2'],
         }),
         200,
       );
@@ -73,6 +74,7 @@ void main() {
     // Assert: level-01 completado y level-02 desbloqueado (cadena de progresión).
     expect(merged.progressFor(const Identifier('level-01'))?.status, LevelProgressStatus.completed);
     expect(merged.progressFor(const Identifier('level-02'))?.status, LevelProgressStatus.unlocked);
+    expect(merged.hasCollectible('collectible-milestone-2'), isTrue);
     // Persistido.
     final saved = await progressRepo.findByPlayerId(session.playerId);
     expect(saved?.progressFor(const Identifier('level-01'))?.status, LevelProgressStatus.completed);

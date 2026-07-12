@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/domain.dart';
 import '../../l10n/app_strings.dart';
+import '../collectibles/collectible_image.dart';
 import '../leaderboard/leaderboard_route_args.dart';
 import '../widgets/app_nav_actions.dart';
 import '../widgets/button_click.dart';
@@ -14,11 +16,16 @@ class VictoryScreen extends StatelessWidget {
   /// Datos de la victoria (partida, siguiente nivel, error de sync).
   final VictoryScreenArgs args;
 
+  void _openCollectibleAnnouncement(BuildContext context) {
+    openCollectiblesScreen(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = AppStringsScope.of(context);
     final game = args.game;
     final stars = game.starsEarned?.value ?? 0;
+    final collectible = args.newlyUnlockedCollectible;
 
     return Scaffold(
       appBar: AppBar(
@@ -51,6 +58,47 @@ class VictoryScreen extends StatelessWidget {
               strings.starsLabel(stars),
               textAlign: TextAlign.center,
             ),
+            if (collectible != null) ...[
+              const SizedBox(height: 12),
+              Card(
+                child: InkWell(
+                  key: const ValueKey('victory-collectible-announcement'),
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: withButtonClick(context, () => _openCollectibleAnnouncement(context)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        CollectibleImage(
+                          collectible: collectible,
+                          size: 72,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                strings.collectibleUnlockedMessage(
+                                  collectible.milestoneLevelNumber ?? MetaCollectibleCatalog.finalMilestoneLevelNumber,
+                                ),
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                strings.collectibleTapToOpenGallery,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
             Text(
               _syncMessage(strings),
@@ -87,9 +135,6 @@ class VictoryScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             TextButton(
-              // `pushNamedAndRemoveUntil` (no `popUntil`) fuerza una ruta
-              // `/levels` nueva con un `LevelSelectController` recién creado,
-              // así el progreso recién ganado se refleja sin volver al home.
               onPressed: withButtonClick(
                 context,
                 () => Navigator.of(context).pushNamedAndRemoveUntil(
@@ -106,10 +151,6 @@ class VictoryScreen extends StatelessWidget {
   }
 
   /// Construye el mensaje de progreso local/remoto según [args.syncError].
-  ///
-  /// Ante un fallo de sincronización se muestra el aviso amable de "modo sin
-  /// conexión" (el progreso ya quedó guardado localmente y se reintentará),
-  /// no el error técnico de red.
   String _syncMessage(AppStrings strings) {
     if (args.syncError != null) {
       return strings.offlinePlayNotice;

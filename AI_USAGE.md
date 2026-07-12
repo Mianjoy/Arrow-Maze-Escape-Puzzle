@@ -2219,3 +2219,57 @@ Se movió el estado `_showGrid` de `BoardView` a `GameScreen` y se extrajo el wi
 
 - Controles de UI que afectan la vista del tablero pero no son parte del juego en sí encajan mejor en el HUD externo que como overlay sobre el área de juego: evitan tapar celdas y mejoran la legibilidad en tableros pequeños o densos.
 
+## Consulta #46 — Sistema de coleccionables meta con galería de emojis
+
+**Tarea o problema abordado.**
+
+Se solicitó implementar un sistema de **coleccionables meta** desbloqueables al avanzar en la secuencia de niveles, y posteriormente enriquecer su presentación visual con una hoja de sprites de emojis, integración en la navegación global y flujos de interacción en victoria y galería.
+
+**Herramienta de IA utilizada.**
+
+- Cursor (Composer), sesión interactiva con acceso de lectura/escritura al repositorio del cliente Flutter.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Implementar un sistema de coleccionables meta que se desbloqueen al completar cada nivel par de la secuencia (2, 4, 6, …) con desempeño perfecto: 3 estrellas y puntuación completa del nivel. Persistir el progreso de desbloqueo localmente junto al resto de [PlayerProgress].
+>
+> Extender la experiencia visual e interactiva de los coleccionables: añadir un botón de acceso con el mismo patrón de [AppNavActions] que el de clasificación; mostrar en la pantalla de galería los emojis de la hoja de sprites provista (cuadrícula 7×7, excluyendo la última columna de botones UI); mostrar el emoji desbloqueado en la pantalla de victoria cuando se cumplan los criterios; al pulsar el anuncio de victoria, navegar a la galería de coleccionables; y al pulsar un emoji en la galería, abrir una vista ampliada del coleccionable.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+**Fase 1 — Lógica de dominio y desbloqueo**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| `MetaCollectible` | `lib/domain/progress/value_objects/meta_collectible.dart` | Identificador, hito de nivel y `spriteIndex` |
+| `MetaCollectibleCatalog` | `lib/domain/progress/services/meta_collectible_catalog.dart` | 11 hitos (niveles pares 2–22) |
+| `MetaCollectibleUnlockPolicy` | `lib/domain/progress/services/meta_collectible_unlock_policy.dart` | Valida nivel par + 3 estrellas + score máximo |
+| `PlayerProgress.unlockedCollectibles` | `lib/domain/progress/aggregates/player_progress.dart` | Set persistido de IDs desbloqueados |
+| `RecordVictoryUseCase` | `lib/application/use_cases/record_victory_use_case.dart` | Otorga coleccionable y expone `newlyUnlockedCollectible` |
+
+**Fase 2 — Presentación con sprites e interacción**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Sprite sheet | `assets/images/collectibles_sheet.png` | Hoja 8×7; galería usa columnas 1–7 (49 emojis) |
+| `CollectibleSpriteImage` | `lib/presentation/collectibles/collectible_sprite_image.dart` | Recorte de celda + diálogo ampliado |
+| `CollectiblesScreen` | `lib/presentation/collectibles/collectibles_screen.dart` | Grid 7×7; toque abre vista ampliada |
+| `AppNavActions` | `lib/presentation/widgets/app_nav_actions.dart` | Botón de coleccionables (mismo patrón que leaderboard) |
+| `VictoryScreen` | `lib/presentation/result/victory_screen.dart` | Anuncio con emoji; toque navega a `/collectibles` |
+| `AppStrings` | `lib/l10n/app_strings.dart` | Nombres, requisitos y mensajes en/es |
+
+**Regla de desbloqueo aplicada:**
+
+- Nivel par (`levelNumber % 2 == 0`) + `StarRating.three` + `score >= maxScoreForLevel`.
+- Los coleccionables se persisten solo en cliente (como las estrellas); no se sincronizan con el backend.
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Pendiente de revisión manual del equipo.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Los metadatos de desempeño fino (estrellas) y las recompensas cosméticas (coleccionables) pueden vivir en `PlayerProgress` local sin extender el contrato REST mientras no haya requisito de sincronización multi-dispositivo — el mismo patrón ya usado para `bestStars`.
+- Una hoja de sprites compartida simplifica la galería (49 slots visuales) frente a 49 assets sueltos, pero exige mapear explícitamente qué índices son desbloqueables (11 hitos) vs. slots solo visuales bloqueados (38 restantes).
+- Unificar el acceso en `AppNavActions` evita botones ad hoc por pantalla y mantiene coherencia con clasificación y ajustes.
+

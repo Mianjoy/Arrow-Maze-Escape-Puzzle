@@ -161,6 +161,7 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
           game: game,
           nextLevel: result?.nextLevel,
           syncError: widget.controller.syncError,
+          newlyUnlockedCollectible: result?.newlyUnlockedCollectible,
         ),
       );
       return;

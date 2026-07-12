@@ -8,6 +8,7 @@ class VictoryScreenArgs {
     required this.game,
     this.nextLevel,
     this.syncError,
+    this.newlyUnlockedCollectible,
   });
 
   /// Partida finalizada en estado ganado.
@@ -18,6 +19,9 @@ class VictoryScreenArgs {
 
   /// Error de sincronización remota, si ocurrió.
   final Object? syncError;
+
+  /// Coleccionable meta desbloqueado en esta victoria, si aplica.
+  final MetaCollectible? newlyUnlockedCollectible;
 }
 
 /// Argumentos de la pantalla de derrota (solo datos de dominio).

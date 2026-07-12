@@ -27,23 +27,23 @@ class PullRemoteProgressUseCase {
   ///
   /// Lanza si la red falla (el llamador decide si tratarlo como offline).
   Future<PlayerProgress> execute(AuthSession session) async {
-    final remoteLevels = await _progressApiClient.fetchProgress(session);
+    final remote = await _progressApiClient.fetchProgress(session);
 
     var progress = await _progressRepository.findByPlayerId(session.playerId) ??
         PlayerProgress(playerId: session.playerId);
 
-    for (final remote in remoteLevels) {
-      final levelId = Identifier(remote.levelId);
+    for (final remoteLevel in remote.levels) {
+      final levelId = Identifier(remoteLevel.levelId);
       progress = progress.mergeRemoteLevel(
         levelId: levelId,
-        remoteBestMoveCount: remote.minMoves,
-        remoteBestTimeSeconds: remote.minTimeInSeconds,
-        remoteCompleted: remote.isCompleted,
+        remoteBestMoveCount: remoteLevel.minMoves,
+        remoteBestTimeSeconds: remoteLevel.minTimeInSeconds,
+        remoteCompleted: remoteLevel.isCompleted,
       );
 
       // Mantener la cadena de progresión: si un nivel quedó completado, su
       // sucesor en el catálogo debe estar desbloqueado.
-      if (remote.isCompleted) {
+      if (remoteLevel.isCompleted) {
         final next = await _findNextLevel(levelId);
         if (next != null) {
           progress = progress.unlockLevel(next.id);
@@ -51,6 +51,7 @@ class PullRemoteProgressUseCase {
       }
     }
 
+    progress = progress.mergeRemoteCollectibles(remote.collectibles.toSet());
     await _progressRepository.save(progress);
     return progress;
   }

@@ -61,6 +61,9 @@ export 'game/events/game_won_event.dart';
 export 'progress/aggregates/player_progress.dart';
 export 'progress/value_objects/level_progress.dart';
 export 'progress/value_objects/level_progress_status.dart';
+export 'progress/value_objects/meta_collectible.dart';
+export 'progress/services/meta_collectible_catalog.dart';
+export 'progress/services/meta_collectible_unlock_policy.dart';
 
 // Repositories
 export 'repositories/i_game_repository.dart';

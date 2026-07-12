@@ -120,4 +120,40 @@ void main() {
     expect(pending.single.levelId, level.id);
     expect(pending.single.playerId, session.playerId);
   });
+
+  test('should_unlock_collectible_when_even_level_is_cleared_with_three_stars', () async {
+    final client = MockHttpClient((request) async => http.Response('{}', 200));
+
+    final levelRepo = FakeLevelRepository([
+      buildWinnableLevel(id: 'level-02', levelNumber: 2),
+      buildWinnableLevel(id: 'level-03', levelNumber: 3),
+    ]);
+
+    final useCase = RecordVictoryUseCase(
+      progressRepository: InMemoryPlayerProgressRepository(),
+      levelRepository: levelRepo,
+      progressApiClient: ProgressApiClient(config: config, httpClient: client),
+      pendingSyncRepository: InMemoryPendingSyncRepository(),
+    );
+
+    final level = buildWinnableLevel(id: 'level-02', levelNumber: 2);
+    final started = Game.fromLevel(
+      gameId: const Identifier('g-collectible'),
+      playerId: session.playerId,
+      level: level,
+    ).start();
+
+    final won = started.performMove(
+      arrowId: started.board.arrows.first.id,
+      movementEngine: const ArrowMovementEngine(collisionValidator: CollisionValidator()),
+    ).game;
+
+    expect(won.isWon, isTrue);
+    expect(won.starsEarned, StarRating.three);
+
+    final result = await useCase.execute(game: won, session: session);
+
+    expect(result.newlyUnlockedCollectible?.milestoneLevelNumber, 2);
+    expect(result.progress.hasCollectible('collectible-milestone-2'), isTrue);
+  });
 }

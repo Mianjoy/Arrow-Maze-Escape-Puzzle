@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../application/models/auth_session.dart';
-import '../../application/models/remote_level_progress.dart';
+import '../../application/models/remote_player_progress.dart';
 import 'api_config.dart';
 import 'api_exception.dart';
 
@@ -56,11 +56,35 @@ class ProgressApiClient {
     throw _mapError(response, fallback: 'Progress sync failed');
   }
 
+  /// Sincroniza los coleccionables desbloqueados del jugador.
+  Future<void> syncCollectibles({
+    required AuthSession session,
+    required List<String> collectibleIds,
+  }) async {
+    final uri = _config.resolve('/progress/collectibles/sync');
+    final response = await _postJson(
+      uri,
+      headers: {
+        'content-type': 'application/json',
+        ...session.authorizationHeader,
+      },
+      body: {
+        'collectibleIds': collectibleIds,
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return;
+    }
+
+    throw _mapError(response, fallback: 'Collectibles sync failed');
+  }
+
   /// Descarga todo el progreso del jugador autenticado (`GET /progress`).
   ///
   /// El backend identifica al usuario por el JWT; devuelve la lista de niveles
   /// con registro para que el cliente la fusione con su progreso local.
-  Future<List<RemoteLevelProgress>> fetchProgress(AuthSession session) async {
+  Future<RemotePlayerProgress> fetchProgress(AuthSession session) async {
     final uri = _config.resolve('/progress');
     final http.Response response;
     try {
@@ -80,10 +104,18 @@ class ProgressApiClient {
       throw const ApiException('GET /progress: expected { levels: [...] }');
     }
 
-    return (decoded['levels'] as List)
-        .cast<Map<String, dynamic>>()
-        .map(RemoteLevelProgress.fromJson)
-        .toList();
+    final collectiblesRaw = decoded['collectibles'];
+    final collectibles = collectiblesRaw is List
+        ? collectiblesRaw.map((item) => item as String).toList()
+        : <String>[];
+
+    return RemotePlayerProgress(
+      levels: (decoded['levels'] as List)
+          .cast<Map<String, dynamic>>()
+          .map(RemoteLevelProgress.fromJson)
+          .toList(),
+      collectibles: collectibles,
+    );
   }
 
   /// Ejecuta POST con cuerpo JSON y cabeceras personalizadas.

@@ -1,4 +1,5 @@
 import 'package:arrow_maze_escape_puzzle/domain/domain.dart';
+import 'package:arrow_maze_escape_puzzle/domain/progress/value_objects/meta_collectible.dart';
 import 'package:arrow_maze_escape_puzzle/l10n/app_strings.dart';
 import 'package:arrow_maze_escape_puzzle/presentation/result/result_screen_args.dart';
 import 'package:arrow_maze_escape_puzzle/presentation/result/victory_screen.dart';
@@ -96,5 +97,31 @@ void main() {
 
     // Assert
     expect(find.byKey(const ValueKey('victory-next-level')), findsNothing);
+  });
+
+  testWidgets('should_show_collectible_banner_when_a_collectible_is_unlocked', (tester) async {
+    final game = _buildWonGame();
+    final args = VictoryScreenArgs(
+      game: game,
+      newlyUnlockedCollectible: const MetaCollectible(
+        id: 'collectible-milestone-2',
+        kind: MetaCollectibleKind.unlockable,
+        milestoneLevelNumber: 2,
+        assetPath: 'assets/images/collectibles/collectible-02.png',
+      ),
+    );
+
+    await tester.pumpWidget(
+      AppStringsScope(
+        strings: const AppStringsEs(),
+        child: MaterialApp(home: VictoryScreen(args: args)),
+      ),
+    );
+
+    expect(
+      find.text(const AppStringsEs().collectibleUnlockedMessage(2)),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('victory-collectible-announcement')), findsOneWidget);
   });
 }

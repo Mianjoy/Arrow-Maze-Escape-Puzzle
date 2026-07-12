@@ -8,19 +8,28 @@ import '../value_objects/level_progress_status.dart';
 /// Agregado raíz del progreso de un jugador a través de los niveles.
 @immutable
 class PlayerProgress {
-  /// Crea el progreso con [playerId] y mapa de [levels].
+  /// Crea el progreso con [playerId], mapa de [levels] y [unlockedCollectibles].
   PlayerProgress({
     required this.playerId,
     Map<Identifier, LevelProgress>? levels,
-  }) : _levels = Map.unmodifiable(levels ?? {});
+    Set<String>? unlockedCollectibles,
+  })  : _levels = Map.unmodifiable(levels ?? {}),
+        _unlockedCollectibles = Set.unmodifiable(unlockedCollectibles ?? {});
 
   /// Identificador del jugador propietario del progreso.
   final Identifier playerId;
 
   final Map<Identifier, LevelProgress> _levels;
+  final Set<String> _unlockedCollectibles;
 
   /// Vista de solo lectura del progreso por nivel.
   Map<Identifier, LevelProgress> get levels => _levels;
+
+  /// Identificadores de coleccionables meta ya desbloqueados.
+  Set<String> get unlockedCollectibles => _unlockedCollectibles;
+
+  /// Indica si el coleccionable [collectibleId] ya fue desbloqueado.
+  bool hasCollectible(String collectibleId) => _unlockedCollectibles.contains(collectibleId);
 
   /// Obtiene el progreso de un nivel o `null` si no existe registro.
   LevelProgress? progressFor(Identifier levelId) => _levels[levelId];
@@ -34,6 +43,18 @@ class PlayerProgress {
     return PlayerProgress(
       playerId: playerId,
       levels: {..._levels, levelId: updated},
+      unlockedCollectibles: _unlockedCollectibles,
+    );
+  }
+
+  /// Registra el desbloqueo de un coleccionable meta por [collectibleId].
+  PlayerProgress unlockCollectible(String collectibleId) {
+    if (_unlockedCollectibles.contains(collectibleId)) return this;
+
+    return PlayerProgress(
+      playerId: playerId,
+      levels: _levels,
+      unlockedCollectibles: {..._unlockedCollectibles, collectibleId},
     );
   }
 
@@ -77,6 +98,7 @@ class PlayerProgress {
           completionCount: current?.completionCount ?? 0,
         ),
       },
+      unlockedCollectibles: _unlockedCollectibles,
     );
   }
 
@@ -85,6 +107,17 @@ class PlayerProgress {
     if (a == null) return b;
     if (b == null) return a;
     return a < b ? a : b;
+  }
+
+  /// Fusiona coleccionables desbloqueados descargados del servidor (unión).
+  PlayerProgress mergeRemoteCollectibles(Set<String> remoteCollectibleIds) {
+    if (remoteCollectibleIds.isEmpty) return this;
+
+    return PlayerProgress(
+      playerId: playerId,
+      levels: _levels,
+      unlockedCollectibles: {..._unlockedCollectibles, ...remoteCollectibleIds},
+    );
   }
 
   /// Registra la completitud de un nivel con métricas de desempeño y estrellas.
@@ -106,6 +139,7 @@ class PlayerProgress {
     return PlayerProgress(
       playerId: playerId,
       levels: {..._levels, levelId: updated},
+      unlockedCollectibles: _unlockedCollectibles,
     );
   }
 }
