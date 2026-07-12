@@ -2085,3 +2085,42 @@ Diagnóstico del segundo problema (nombre genérico en el catálogo): se auditó
 
 - Un mensaje de error "traducido" que en realidad es una constante de texto fijo en la capa de dominio es un bug de localización parcial fácil de pasar por alto, porque el resto de la pantalla (título, botones) sí se ve correctamente traducido — hay que revisar explícitamente el origen de cada string mostrado al usuario, no solo la pantalla como un todo.
 - Antes de asumir que un síntoma reportado por el usuario es un bug de código, vale la pena confirmar dónde vive realmente el dato: en este caso el código de presentación ya estaba bien diseñado (prioriza nombre propio, cae a un identificador solo como último recurso) y el síntoma real era un vacío de datos en el catálogo del backend, no un defecto del frontend.
+
+## Consulta #42 — Mismo bug de localización en la pantalla de clasificación (leaderboard)
+
+**Tarea o problema abordado.**
+
+El usuario reportó, con una captura de pantalla, que la pantalla de clasificación mostraba el título correctamente en español ("Clasificación — Primer C...") pero el subtítulo de cada entrada del ranking ("Score: 300 · Moves: 3 · Time: 3s") seguía en inglés — el mismo patrón de bug corregido en la Consulta #41 para la pantalla de derrota, pero en un lugar distinto del código.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5, sesión interactiva de terminal con acceso de lectura/escritura al repositorio, ejecución de `flutter analyze`/`flutter test`, y un intento de verificación visual en el navegador embebido (no concluyente por limitaciones de interacción con el canvas de Flutter Web sin árbol de accesibilidad; se optó por una prueba de widget automatizada como evidencia en su lugar).
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> El leaderboard muestra todo en inglés aun cuando el idioma elegido es español.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+`grep` localizó el origen exacto: `lib/presentation/leaderboard/leaderboard_screen.dart:73` interpolaba el subtítulo directamente en inglés (`'Score: ${entry.highScore} · Moves: ${entry.minMoves} · Time: ${entry.minTimeInSeconds}s'`) sin pasar por `AppStrings`. Se agregó el método localizado `leaderboardEntrySubtitle({score, moves, timeInSeconds})` a `AppStrings`/`AppStringsEn`/`AppStringsEs`, y se reemplazó la interpolación directa por la llamada al método:
+
+```dart
+subtitle: Text(
+  strings.leaderboardEntrySubtitle(
+    score: entry.highScore,
+    moves: entry.minMoves,
+    timeInSeconds: entry.minTimeInSeconds,
+  ),
+),
+```
+
+Se agregó cobertura de test explícita para ambos locales en `test/presentation/leaderboard/leaderboard_screen_test.dart` (uno ya existente reforzado con la aserción en inglés, y uno nuevo `should_show_entry_subtitle_in_spanish_when_locale_is_spanish`), siguiendo el mismo patrón que ya usaba `defeat_screen_test.dart` para el mensaje de derrota.
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna; se verificó con `flutter analyze` (sin nuevas advertencias) y `flutter test` (108/108 tests, incluyendo los 2 casos nuevos/reforzados de `leaderboard_screen_test.dart`).
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Un mismo defecto de localización (texto final hardcodeado en vez de resuelto vía `AppStrings`) puede repetirse en más de una pantalla de forma independiente; conviene, tras corregir el primer caso, buscar el mismo patrón (`grep` por literales en inglés/español fuera de `app_strings.dart`) en el resto de la presentación en vez de asumir que era un caso aislado.
+- Verificar un fix de localización interactuando con la UI en el navegador embebido no siempre es viable: Flutter Web sin árbol de semántica no expone los widgets al DOM, así que los clics por coordenada pueden no alcanzar el widget esperado. Una prueba de widget que monta la pantalla con `AppStringsEs`/`AppStringsEn` explícitos y verifica el texto exacto es una verificación más confiable — y queda como regresión permanente — que una captura de pantalla puntual.

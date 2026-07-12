@@ -47,6 +47,36 @@ void main() {
     expect(find.text('top_player'), findsOneWidget);
     expect(find.text('second_player'), findsOneWidget);
     expect(find.byKey(const ValueKey('app-nav-leaderboard')), findsNothing);
+    expect(find.text('Score: 900 · Moves: 2 · Time: 5s'), findsOneWidget);
+  });
+
+  testWidgets('should_show_entry_subtitle_in_spanish_when_locale_is_spanish', (tester) async {
+    final client = MockHttpClient((request) async {
+      return http.Response(
+        jsonEncode([
+          {'username': 'top_player', 'highScore': 900, 'minMoves': 2, 'minTimeInSeconds': 5},
+        ]),
+        200,
+      );
+    });
+
+    final controller = LeaderboardController(
+      getLeaderboardUseCase: GetLeaderboardUseCase(
+        leaderboardApiClient: LeaderboardApiClient(config: config, httpClient: client),
+      ),
+    );
+
+    await tester.pumpWidget(
+      AppStringsScope(
+        strings: const AppStringsEs(),
+        child: MaterialApp(
+          home: LeaderboardScreen(controller: controller, levelId: 'level-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Puntaje: 900 · Movimientos: 2 · Tiempo: 5s'), findsOneWidget);
   });
 
   testWidgets('should_show_empty_state_when_level_has_no_scores', (tester) async {

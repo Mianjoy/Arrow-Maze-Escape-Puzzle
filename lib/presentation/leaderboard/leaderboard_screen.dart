@@ -70,7 +70,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 leading: CircleAvatar(child: Text('${index + 1}')),
                 title: Text(entry.username),
                 subtitle: Text(
-                  'Score: ${entry.highScore} · Moves: ${entry.minMoves} · Time: ${entry.minTimeInSeconds}s',
+                  strings.leaderboardEntrySubtitle(
+                    score: entry.highScore,
+                    moves: entry.minMoves,
+                    timeInSeconds: entry.minTimeInSeconds,
+                  ),
                 ),
               );
             },

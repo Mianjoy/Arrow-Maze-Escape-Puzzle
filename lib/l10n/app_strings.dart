@@ -140,6 +140,13 @@ abstract class AppStrings {
   /// Mensaje cuando falla la carga del ranking de un nivel.
   String get leaderboardLoadFailed;
 
+  /// Subtítulo de una entrada del ranking: puntaje, movimientos y tiempo.
+  String leaderboardEntrySubtitle({
+    required int score,
+    required int moves,
+    required int timeInSeconds,
+  });
+
   /// Mensaje cuando el hub de clasificación no tiene niveles disponibles.
   String get leaderboardHubNoLevels;
 
@@ -285,6 +292,14 @@ class AppStringsEn extends AppStrings {
   String get leaderboardLoadFailed => 'Could not load the leaderboard. Try again later.';
 
   @override
+  String leaderboardEntrySubtitle({
+    required int score,
+    required int moves,
+    required int timeInSeconds,
+  }) =>
+      'Score: $score · Moves: $moves · Time: ${timeInSeconds}s';
+
+  @override
   String get leaderboardHubNoLevels => 'No levels available to show rankings.';
 
   @override
@@ -428,6 +443,14 @@ class AppStringsEs extends AppStrings {
 
   @override
   String get leaderboardLoadFailed => 'No se pudo cargar la clasificación. Intenta más tarde.';
+
+  @override
+  String leaderboardEntrySubtitle({
+    required int score,
+    required int moves,
+    required int timeInSeconds,
+  }) =>
+      'Puntaje: $score · Movimientos: $moves · Tiempo: ${timeInSeconds}s';
 
   @override
   String get leaderboardHubNoLevels => 'No hay niveles disponibles para mostrar clasificaciones.';
