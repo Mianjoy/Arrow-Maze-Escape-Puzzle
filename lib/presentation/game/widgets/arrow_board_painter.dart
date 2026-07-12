@@ -16,6 +16,10 @@ class ArrowBoardPainter extends CustomPainter {
     this.showGrid = false,
   });
 
+  // Proportions relative to stroke width (itself relative to cell size), not
+  // absolute pixels, so the arrow shape stays visually consistent across
+  // the wide range of board sizes in the level catalog (currently 5x5 up
+  // to much larger boards).
   static const _strokeFactor = 0.12;
   static const _headLengthFactor = 2.8;
   static const _headWidthFactor = 1.0;
@@ -45,6 +49,10 @@ class ArrowBoardPainter extends CustomPainter {
     }
   }
 
+  /// Draws faint grid lines over the board background. Opt-in via [showGrid]
+  /// (used by the tutorial overlay to make cell boundaries legible) rather
+  /// than always-on, since the grid adds visual noise during normal play
+  /// once the player already knows the cell layout.
   void _paintGrid(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = AppColors.gridLine.withValues(alpha: 0.35)
@@ -60,6 +68,9 @@ class ArrowBoardPainter extends CustomPainter {
     }
   }
 
+  /// Draws each wall cell as a small inset rounded square instead of filling
+  /// the full cell, so adjacent walls read as separate blocks rather than a
+  /// single solid mass.
   void _paintWalls(Canvas canvas) {
     final paint = Paint()..color = AppColors.wall;
     const radius = 6.0;
@@ -76,6 +87,11 @@ class ArrowBoardPainter extends CustomPainter {
     }
   }
 
+  /// Paints one arrow as a stroked body path plus a filled triangular head.
+  ///
+  /// A single-segment arrow (no body) has nothing to stroke a path through,
+  /// so it short-circuits to just the head triangle instead of calling
+  /// [ArrowPathGeometry.buildBodyPath] with a degenerate one-point path.
   void _paintArrow(Canvas canvas, Arrow arrow) {
     final positions = ArrowPathGeometry.tailToHead(arrow);
     if (positions.isEmpty) return;
@@ -125,6 +141,10 @@ class ArrowBoardPainter extends CustomPainter {
     _paintArrowHead(canvas, tip: tip, base: base, color: color, headHalfWidth: headHalfWidth);
   }
 
+  /// Maps arrow gameplay state to its display color: blocked arrows are
+  /// tinted as a warning, extracted ones fade out instead of disappearing
+  /// instantly so the last frame before removal still reads as "this arrow
+  /// left the board" rather than a pop.
   Color _colorForArrow(Arrow arrow) {
     return switch (arrow.state) {
       ArrowState.blocked => AppColors.arrowBlocked,
@@ -133,6 +153,13 @@ class ArrowBoardPainter extends CustomPainter {
     };
   }
 
+  /// Draws the arrowhead as a triangle: [tip] is the point, and [base] is
+  /// offset perpendicular to the tip→base axis by `headHalfWidth` on each
+  /// side to form the two back corners — this keeps the head correctly
+  /// oriented for any of the four cardinal directions without a separate
+  /// per-direction code path. Skips drawing if tip and base coincide (a
+  /// zero-length axis has no defined perpendicular), which can only happen
+  /// for a degenerate/zero-size cell.
   void _paintArrowHead(
     Canvas canvas, {
     required Offset tip,

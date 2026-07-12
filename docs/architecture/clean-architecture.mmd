@@ -5,17 +5,20 @@ flowchart TB
     subgraph L4["Capa 4 - Presentation"]
         direction TB
         UI["Pantallas y controladores (ChangeNotifier): home, seleccion de nivel,
-        juego, victoria, derrota, auth, leaderboard, ajustes"]
+        juego, victoria, derrota, auth, leaderboard, ajustes, galeria de coleccionables"]
+        AudioScope["AudioScope (provee IAudioService al arbol de widgets)"]
     end
     subgraph L3["Capa 3 - Infrastructure e Interface Adapters"]
         direction TB
         Adapters["lib/interface_adapters: LevelDtoMapper, PlayerProgressJsonMapper"]
-        Infra["lib/infrastructure: clientes HTTP, repositorios SharedPreferences, audio"]
+        Infra["lib/infrastructure: clientes HTTP, repositorios SharedPreferences,
+        AppAudioService/NoOpAudioService (SFX contextual, musica de fondo, countdown por nivel)"]
     end
     subgraph L2["Capa 2 - Application"]
         direction TB
-        UseCases["LoadLevels, StartGame, FireArrow, RecordVictory,
-        SyncPendingProgress, PullRemoteProgress, Login/Register/Logout"]
+        UseCases["LoadLevels, StartGame, FireArrow, RecordVictory (tambien evalua
+        desbloqueo de coleccionables y los sincroniza), SyncPendingProgress, PullRemoteProgress, Login/Register/Logout"]
+        AudioPort["IAudioService (puerto)"]
     end
     subgraph L1["Capa 1 - Domain"]
         direction TB
@@ -31,6 +34,6 @@ flowchart TB
     classDef adapters fill:#fdf3e2,stroke:#ef6c00
     classDef presentation fill:#f8e8ee,stroke:#ad1457
     class Entities domain
-    class UseCases app
+    class UseCases,AudioPort app
     class Adapters,Infra adapters
-    class UI presentation
+    class UI,AudioScope presentation

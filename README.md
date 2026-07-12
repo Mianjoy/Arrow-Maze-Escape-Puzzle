@@ -14,12 +14,16 @@ with other arrows. Built with **Flutter** following **Clean Architecture** and
 **SOLID** principles.
 
 The app is fully playable end to end: home, level select (with lock/completion/star
-indicators), the game board, victory/defeat screens, local audio with mute, and two
-languages (English/Spanish). It authenticates against the
+indicators), the game board, victory/defeat screens, a collectibles gallery unlocked by
+milestone-level performance, contextual sound effects (button clicks, arrow extraction,
+blocked moves, level cleared, time/moves exhausted) plus background music and a
+per-level countdown timer, all behind a mutable `IAudioService` port, and two languages
+(English/Spanish). It authenticates against the
 [BackEnd-ArrowMaze](https://github.com/Georopeza/BackEnd-ArrowMaze) API, downloads and
-caches the 15-level catalog for offline play, and keeps player progress in sync with
-the server in both directions — push on victory (with a retry queue for offline wins)
-and pull-and-merge on login, so progress follows the player across devices.
+caches the 15-level catalog for offline play, and keeps player progress — including
+unlocked collectibles — in sync with the server in both directions: push on victory
+(with a retry queue for offline wins) and pull-and-merge on login, so progress follows
+the player across devices.
 
 ## Demo / Screenshots
 
@@ -35,17 +39,20 @@ flowchart TB
     subgraph L4["Presentation"]
         direction TB
         UI["Screens + Controllers (ChangeNotifier): home, level select,
-        game, victory, defeat, auth, leaderboard, settings"]
+        game, victory, defeat, auth, leaderboard, settings, collectibles gallery"]
+        AudioScope["AudioScope (provides IAudioService to the widget tree)"]
     end
     subgraph L3["Infrastructure & Interface Adapters"]
         direction TB
         Adapters["lib/interface_adapters: LevelDtoMapper, PlayerProgressJsonMapper"]
-        Infra["lib/infrastructure: HTTP clients, SharedPreferences repositories, audio"]
+        Infra["lib/infrastructure: HTTP clients, SharedPreferences repositories,
+        AppAudioService/NoOpAudioService (contextual SFX, background music, per-level countdown)"]
     end
     subgraph L2["Application"]
         direction TB
-        UseCases["Use cases: LoadLevels, StartGame, FireArrow, RecordVictory,
-        SyncPendingProgress, PullRemoteProgress, Login/Register/Logout"]
+        UseCases["Use cases: LoadLevels, StartGame, FireArrow, RecordVictory (also evaluates
+        collectible unlocks and syncs them), SyncPendingProgress, PullRemoteProgress, Login/Register/Logout"]
+        AudioPort["IAudioService (port)"]
     end
     subgraph L1["Domain"]
         direction TB
@@ -73,7 +80,7 @@ lib/domain/
 ├── board/            # Board, Cell, Arrow (state entities), domain events
 ├── level/             # Level (aggregate), JSON loading, star rating, generation presets
 ├── game/              # Game (active session aggregate): moves, pause/resume, score
-├── progress/          # Player progress per level, remote merge logic
+├── progress/          # Player progress per level, remote merge logic, meta-collectible catalog and unlock policy
 └── repositories/      # Persistence contracts (interfaces)
 ```
 
@@ -107,6 +114,19 @@ rejecting unsolvable levels before they ever reach the UI.
 - `PullRemoteProgressUseCase` downloads the player's server-side progress on every
   level-list load and merges it into local progress (`PlayerProgress.mergeRemoteLevel`,
   best score/moves/time per level, never downgrading completion status).
+
+### Collectibles
+
+`MetaCollectibleCatalog` (`lib/domain/progress/services/`) is a static catalog of
+gallery items, one per even-numbered milestone level plus an exclusive item for the
+final level. `MetaCollectibleUnlockPolicy.shouldUnlock` decides whether completing a
+level grants its collectible — it requires a perfect run (3 stars and the maximum
+possible score for that board, computed from arrow count). `RecordVictoryUseCase` calls
+the policy on every win, records the unlock on `PlayerProgress` (`unlockCollectible`),
+and immediately syncs it to the backend's `POST /progress/collectibles/sync`
+(`ProgressApiClient.syncCollectibles`); `PullRemoteProgressUseCase` merges server-side
+unlocks back in (`PlayerProgress.mergeRemoteCollectibles`), so the gallery
+(`CollectiblesScreen`) stays consistent across devices the same way level progress does.
 
 ### Class Diagram
 
@@ -233,12 +253,40 @@ classDiagram
     class PlayerProgress {
         +Identifier playerId
         +Map~Identifier,LevelProgress~ levels
+        +Set~string~ unlockedCollectibles
         +completeLevel(levelId, ...) PlayerProgress
         +unlockLevel(levelId) PlayerProgress
         +mergeRemoteLevel(levelId, remoteMoves, remoteTime, remoteCompleted) PlayerProgress
+        +unlockCollectible(collectibleId) PlayerProgress
+        +mergeRemoteCollectibles(remoteCollectibleIds) PlayerProgress
     }
     PlayerProgress "1" *-- "many" LevelProgress
     LevelProgress --> LevelProgressStatus
+
+    class MetaCollectibleKind {
+        <<enumeration>>
+        unlockable
+        finalLevel
+        comingSoon
+    }
+    class MetaCollectible {
+        +string id
+        +MetaCollectibleKind kind
+        +int milestoneLevelNumber
+        +string assetPath
+    }
+    class MetaCollectibleCatalog {
+        <<static>>
+        +forCompletedLevel(levelNumber) MetaCollectible
+    }
+    class MetaCollectibleUnlockPolicy {
+        <<static>>
+        +shouldUnlock(levelNumber, starsEarned, score, level) bool
+        +collectibleForLevel(levelNumber) MetaCollectible
+    }
+    MetaCollectible --> MetaCollectibleKind
+    MetaCollectibleCatalog ..> MetaCollectible : creates
+    MetaCollectibleUnlockPolicy ..> MetaCollectibleCatalog
 
     class ILevelRepository {
         <<interface>>
@@ -261,11 +309,25 @@ classDiagram
         +loadAll() PendingSyncEntry[]
         +saveAll(entries) void
     }
+    class IAudioService {
+        <<interface>>
+        +ensureAudioUnlocked() void
+        +playButtonClick() void
+        +playArrowExtracted() void
+        +playMovementNotAllowed() void
+        +playLevelCleared() void
+        +playNoMovementsLeft() void
+        +playTimeUp() void
+        +startBackgroundMusic() void
+        +stopBackgroundMusic() void
+    }
 
     class LoadLevelsUseCase { +execute() Level[] }
     class StartGameUseCase { +execute(gameId, playerId, level) Game }
     class FireArrowUseCase { +execute(game, position) MoveOutcome }
     class RecordVictoryUseCase { +execute(game, session) RecordVictoryResult }
+    RecordVictoryUseCase ..> MetaCollectibleUnlockPolicy
+    RecordVictoryUseCase ..> MetaCollectible
     class SyncPendingProgressUseCase { +execute(session) void }
     class PullRemoteProgressUseCase { +execute(session) PlayerProgress }
     class LoginUserUseCase
@@ -295,12 +357,19 @@ classDiagram
     class CachedLevelRepository { +findAll() Level[] }
     class SharedPreferencesPlayerProgressRepository
     class SharedPreferencesPendingSyncRepository
+    class AppAudioService {
+        +ensureAudioUnlocked() void
+        +startBackgroundMusic() void
+    }
+    class NoOpAudioService
     ILevelRepository <|.. RemoteLevelRepository
     ILevelRepository <|.. CachedLevelRepository
     CachedLevelRepository ..> RemoteLevelRepository : wraps (Decorator)
     CachedLevelRepository ..> LevelDtoMapper
     IPlayerProgressRepository <|.. SharedPreferencesPlayerProgressRepository
     IPendingSyncRepository <|.. SharedPreferencesPendingSyncRepository
+    IAudioService <|.. AppAudioService
+    IAudioService <|.. NoOpAudioService : (test double)
 
     class GameController {
         +startGame(level) void
@@ -314,9 +383,15 @@ classDiagram
         +login(username, password) bool
         +register(username, password) bool
     }
+    class CollectiblesScreen
+    class AudioScope { +of(context) IAudioService }
+    AudioScope ..> IAudioService : provides (InheritedWidget)
+    CollectiblesScreen ..> PlayerProgress
+    CollectiblesScreen ..> MetaCollectibleCatalog
     GameController ..> StartGameUseCase
     GameController ..> FireArrowUseCase
     GameController ..> RecordVictoryUseCase
+    GameController ..> IAudioService : contextual SFX + countdown
     LevelSelectController ..> LoadLevelsUseCase
     LevelSelectController ..> SyncPendingProgressUseCase
     LevelSelectController ..> PullRemoteProgressUseCase
@@ -327,6 +402,7 @@ classDiagram
     AppContainer ..> CachedLevelRepository
     AppContainer ..> SharedPreferencesPlayerProgressRepository
     AppContainer ..> SharedPreferencesPendingSyncRepository
+    AppContainer ..> AppAudioService
     AppContainer ..> GameController
     AppContainer ..> LevelSelectController
     AppContainer ..> AuthSessionController
@@ -336,11 +412,11 @@ classDiagram
     classDef adapters fill:#fdf3e2,stroke:#ef6c00,color:#5c3600
     classDef infrastructure fill:#f8e8ee,stroke:#ad1457,color:#4d0d24
     classDef presentation fill:#efe6fa,stroke:#6a1b9a,color:#33064d
-    cssClass "Cell,Board,Arrow,ArrowMovementEngine,ICollisionValidator,CollisionValidator,CellFactory,BoardFactory,LevelDifficulty,Level,LevelFactory,ShortestPathCalculator,StarRatingCalculator,GameStatus,Game,PlayerProfile,PlayerStatistics,LevelProgressStatus,LevelProgress,PlayerProgress,ILevelRepository,IGameRepository,IPlayerProgressRepository,IPendingSyncRepository" domain
-    cssClass "LoadLevelsUseCase,StartGameUseCase,FireArrowUseCase,RecordVictoryUseCase,SyncPendingProgressUseCase,PullRemoteProgressUseCase,LoginUserUseCase,RegisterUserUseCase,EnsureInitialProgressUseCase" application
+    cssClass "Cell,Board,Arrow,ArrowMovementEngine,ICollisionValidator,CollisionValidator,CellFactory,BoardFactory,LevelDifficulty,Level,LevelFactory,ShortestPathCalculator,StarRatingCalculator,GameStatus,Game,PlayerProfile,PlayerStatistics,LevelProgressStatus,LevelProgress,PlayerProgress,MetaCollectibleKind,MetaCollectible,MetaCollectibleCatalog,MetaCollectibleUnlockPolicy,ILevelRepository,IGameRepository,IPlayerProgressRepository,IPendingSyncRepository" domain
+    cssClass "LoadLevelsUseCase,StartGameUseCase,FireArrowUseCase,RecordVictoryUseCase,SyncPendingProgressUseCase,PullRemoteProgressUseCase,LoginUserUseCase,RegisterUserUseCase,EnsureInitialProgressUseCase,IAudioService" application
     cssClass "LevelDtoMapper" adapters
-    cssClass "RemoteLevelRepository,CachedLevelRepository,SharedPreferencesPlayerProgressRepository,SharedPreferencesPendingSyncRepository,AppContainer" infrastructure
-    cssClass "GameController,LevelSelectController,AuthSessionController" presentation
+    cssClass "RemoteLevelRepository,CachedLevelRepository,SharedPreferencesPlayerProgressRepository,SharedPreferencesPendingSyncRepository,AppAudioService,NoOpAudioService,AppContainer" infrastructure
+    cssClass "GameController,LevelSelectController,AuthSessionController,CollectiblesScreen,AudioScope" presentation
 ```
 
 ## Design Patterns

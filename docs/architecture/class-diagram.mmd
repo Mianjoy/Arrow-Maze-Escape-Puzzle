@@ -150,12 +150,41 @@ classDiagram
     class PlayerProgress {
         +Identifier playerId
         +Map~Identifier,LevelProgress~ levels
+        +Set~string~ unlockedCollectibles
         +completeLevel(levelId, ...) PlayerProgress
         +unlockLevel(levelId) PlayerProgress
         +mergeRemoteLevel(levelId, remoteMoves, remoteTime, remoteCompleted) PlayerProgress
+        +unlockCollectible(collectibleId) PlayerProgress
+        +mergeRemoteCollectibles(remoteCollectibleIds) PlayerProgress
     }
     PlayerProgress "1" *-- "many" LevelProgress
     LevelProgress --> LevelProgressStatus
+
+    %% ----- Domain: meta-collectibles -----
+    class MetaCollectibleKind {
+        <<enumeration>>
+        unlockable
+        finalLevel
+        comingSoon
+    }
+    class MetaCollectible {
+        +string id
+        +MetaCollectibleKind kind
+        +int milestoneLevelNumber
+        +string assetPath
+    }
+    class MetaCollectibleCatalog {
+        <<static>>
+        +forCompletedLevel(levelNumber) MetaCollectible
+    }
+    class MetaCollectibleUnlockPolicy {
+        <<static>>
+        +shouldUnlock(levelNumber, starsEarned, score, level) bool
+        +collectibleForLevel(levelNumber) MetaCollectible
+    }
+    MetaCollectible --> MetaCollectibleKind
+    MetaCollectibleCatalog ..> MetaCollectible : creates
+    MetaCollectibleUnlockPolicy ..> MetaCollectibleCatalog
 
     %% ----- Domain: repository ports (DIP) -----
     class ILevelRepository {
@@ -180,6 +209,20 @@ classDiagram
         +saveAll(entries) void
     }
 
+    %% ----- Application: audio port -----
+    class IAudioService {
+        <<interface>>
+        +ensureAudioUnlocked() void
+        +playButtonClick() void
+        +playArrowExtracted() void
+        +playMovementNotAllowed() void
+        +playLevelCleared() void
+        +playNoMovementsLeft() void
+        +playTimeUp() void
+        +startBackgroundMusic() void
+        +stopBackgroundMusic() void
+    }
+
     %% ----- Application: use cases -----
     class LoadLevelsUseCase {
         +execute() Level[]
@@ -193,6 +236,8 @@ classDiagram
     class RecordVictoryUseCase {
         +execute(game, session) RecordVictoryResult
     }
+    RecordVictoryUseCase ..> MetaCollectibleUnlockPolicy
+    RecordVictoryUseCase ..> MetaCollectible
     class SyncPendingProgressUseCase {
         +execute(session) void
     }
@@ -230,6 +275,11 @@ classDiagram
     }
     class SharedPreferencesPlayerProgressRepository
     class SharedPreferencesPendingSyncRepository
+    class AppAudioService {
+        +ensureAudioUnlocked() void
+        +startBackgroundMusic() void
+    }
+    class NoOpAudioService
 
     ILevelRepository <|.. RemoteLevelRepository
     ILevelRepository <|.. CachedLevelRepository
@@ -237,8 +287,10 @@ classDiagram
     CachedLevelRepository ..> LevelDtoMapper
     IPlayerProgressRepository <|.. SharedPreferencesPlayerProgressRepository
     IPendingSyncRepository <|.. SharedPreferencesPendingSyncRepository
+    IAudioService <|.. AppAudioService
+    IAudioService <|.. NoOpAudioService : (test double)
 
-    %% ----- Presentation: controllers (presenters) -----
+    %% ----- Presentation: controllers (presenters) & audio provider -----
     class GameController {
         +startGame(level) void
         +onCellTapped(position) void
@@ -251,10 +303,18 @@ classDiagram
         +login(username, password) bool
         +register(username, password) bool
     }
+    class CollectiblesScreen
+    class AudioScope {
+        +of(context) IAudioService
+    }
+    AudioScope ..> IAudioService : provides (InheritedWidget)
+    CollectiblesScreen ..> PlayerProgress
+    CollectiblesScreen ..> MetaCollectibleCatalog
 
     GameController ..> StartGameUseCase
     GameController ..> FireArrowUseCase
     GameController ..> RecordVictoryUseCase
+    GameController ..> IAudioService : contextual SFX + countdown
     LevelSelectController ..> LoadLevelsUseCase
     LevelSelectController ..> SyncPendingProgressUseCase
     LevelSelectController ..> PullRemoteProgressUseCase
@@ -268,6 +328,7 @@ classDiagram
     AppContainer ..> CachedLevelRepository
     AppContainer ..> SharedPreferencesPlayerProgressRepository
     AppContainer ..> SharedPreferencesPendingSyncRepository
+    AppContainer ..> AppAudioService
     AppContainer ..> GameController
     AppContainer ..> LevelSelectController
     AppContainer ..> AuthSessionController
@@ -281,8 +342,8 @@ classDiagram
     classDef infrastructure fill:#f8e8ee,stroke:#ad1457,color:#4d0d24
     classDef presentation fill:#efe6fa,stroke:#6a1b9a,color:#33064d
 
-    cssClass "Cell,CellState,Board,Arrow,ArrowMovementEngine,ICollisionValidator,CollisionValidator,CellFactory,BoardFactory,LevelDifficulty,Level,LevelFactory,ShortestPathCalculator,StarRatingCalculator,GameStatus,Game,PlayerProfile,PlayerStatistics,LevelProgressStatus,LevelProgress,PlayerProgress,ILevelRepository,IGameRepository,IPlayerProgressRepository,IPendingSyncRepository" domain
-    cssClass "LoadLevelsUseCase,StartGameUseCase,FireArrowUseCase,RecordVictoryUseCase,SyncPendingProgressUseCase,PullRemoteProgressUseCase,LoginUserUseCase,RegisterUserUseCase,EnsureInitialProgressUseCase" application
+    cssClass "Cell,CellState,Board,Arrow,ArrowMovementEngine,ICollisionValidator,CollisionValidator,CellFactory,BoardFactory,LevelDifficulty,Level,LevelFactory,ShortestPathCalculator,StarRatingCalculator,GameStatus,Game,PlayerProfile,PlayerStatistics,LevelProgressStatus,LevelProgress,PlayerProgress,MetaCollectibleKind,MetaCollectible,MetaCollectibleCatalog,MetaCollectibleUnlockPolicy,ILevelRepository,IGameRepository,IPlayerProgressRepository,IPendingSyncRepository" domain
+    cssClass "LoadLevelsUseCase,StartGameUseCase,FireArrowUseCase,RecordVictoryUseCase,SyncPendingProgressUseCase,PullRemoteProgressUseCase,LoginUserUseCase,RegisterUserUseCase,EnsureInitialProgressUseCase,IAudioService" application
     cssClass "LevelDtoMapper" adapters
-    cssClass "RemoteLevelRepository,CachedLevelRepository,SharedPreferencesPlayerProgressRepository,SharedPreferencesPendingSyncRepository,AppContainer" infrastructure
-    cssClass "GameController,LevelSelectController,AuthSessionController" presentation
+    cssClass "RemoteLevelRepository,CachedLevelRepository,SharedPreferencesPlayerProgressRepository,SharedPreferencesPendingSyncRepository,AppAudioService,NoOpAudioService,AppContainer" infrastructure
+    cssClass "GameController,LevelSelectController,AuthSessionController,CollectiblesScreen,AudioScope" presentation
