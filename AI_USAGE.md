@@ -2,6 +2,15 @@
 
 Este documento registra cada consulta realizada a herramientas de IA durante el desarrollo del proyecto **Arrow Maze Escape Puzzle**.
 
+## Herramientas utilizadas
+
+| Herramienta | Versión / modelo | Rol en el flujo de trabajo |
+|---|---|---|
+| Cursor AI / Cursor Agent (Composer) | Integrado en el IDE (modelo Claude) | Implementación asistida en las primeras consultas del proyecto, con acceso de lectura/escritura al repositorio y, en varias sesiones, también al repositorio backend en paralelo. |
+| Claude Code | Claude Sonnet 5 (mayoría de sesiones); Claude Opus 4.8 en tramos específicos de sesiones largas | Agente principal desde media sesión en adelante: sesiones interactivas de terminal con acceso de lectura/escritura al repositorio (y frecuentemente también al repositorio backend), ejecución real de `flutter analyze`/`flutter test`, inspección de artefactos generados (APK, almacenamiento local del simulador), y modo de planificación explícita con aprobación previa para cambios de mayor alcance. |
+
+## Registro de uso por tarea
+
 ---
 
 ## Consulta #1 — Creación de la capa de dominio
@@ -2563,4 +2572,27 @@ La causa: la app nunca escuchaba los cambios de ciclo de vida (`AppLifecycleStat
 **Lecciones aprendidas o limitaciones identificadas.**
 
 - Cualquier reproducción de audio en bucle debe atarse explícitamente al ciclo de vida de la aplicación; sin un `WidgetsBindingObserver`, el estado de "en primer plano" nunca se propaga a servicios que gestionan recursos del sistema como el audio.
+
+---
+
+## Evaluación crítica
+
+**Porcentaje aproximado del código que contó con asistencia de IA.**
+
+- La gran mayoría del proyecto: prácticamente el 100% de la capa de dominio, casos de uso, adaptadores de interfaz, infraestructura (HTTP, `SharedPreferences`, audio) y presentación (pantallas y controladores) se generó con asistencia de IA a partir de prompts detallados, validado en cada consulta con `flutter analyze`/`flutter test` y, en los cambios de UI, con verificación visual o pruebas de widget.
+- Estimado global: 90-95% del código final tiene asistencia de IA en su primera versión; el resto corresponde a ajustes manuales puntuales y a las decisiones de alcance/diseño que el equipo tomó explícitamente antes de cada implementación (frecuentes en las consultas que usan modo de planificación con aprobación previa).
+
+**Casos donde la IA produjo resultados incorrectos o subóptimos y cómo se detectaron y corrigieron.**
+
+- Bugs de plataforma detectados solo con verificación en dispositivo real, no con tests: el APK de Android que no conectaba con el backend (Consulta #50) se diagnosticó inspeccionando el `.apk` generado con `aapt2`; el mapeo incorrecto de niveles se reprodujo con datos capturados directamente del almacenamiento local del Simulador de iOS, no con una suposición sobre el comportamiento esperado.
+- Errores de ciclo de vida de Flutter (música de fondo que no se pausaba en background, tanto en la versión inicial como en una regresión posterior) — ambos casos solo se manifestaban en el comportamiento real de la app, no en un test unitario aislado, y requirieron pruebas de widget que simulan transiciones de `AppLifecycleState` para confirmarlos y luego verificar el fix.
+- Se descartó explícitamente el uso de Pact para pruebas de contrato tras investigar que no tiene un SDK de consumidor oficial ni bien mantenido para Dart/Flutter, evitando adoptar una herramienta recomendada por el enunciado que en la práctica no encajaba con el stack — se optó por un mecanismo de sincronización de fixtures compartido con el backend en su lugar.
+- Ningún caso detectado de error conceptual de arquitectura o de patrón de diseño mal aplicado a nivel de diseño; los errores encontrados fueron de comportamiento en tiempo de ejecución (ciclo de vida, plataforma, red) que solo la verificación end-to-end pudo exponer.
+
+**Reflexión del equipo sobre el impacto de la IA en la productividad y calidad del código.**
+
+- El impacto fue muy positivo en velocidad de iteración: features completas (sincronización offline-first, coleccionables, sistema de audio contextual, tutorial interactivo) se implementaron con pruebas de principio a fin en sesiones individuales, muchas veces coordinando cambios simétricos en ambos repositorios (frontend y backend) dentro de la misma sesión.
+- La lección más repetida a lo largo del proyecto es que los bugs más difíciles de encontrar con solo "leer el código" fueron los de comportamiento real en el dispositivo (ciclo de vida de la app, artefactos de compilación, almacenamiento local) — en esos casos, reproducir el problema en vivo antes de proponer un fix, y volver a verificar en vivo después, fue más confiable que confiar en el razonamiento de la IA sobre el código estático.
+- Delegar exploraciones de solo lectura a subagentes especializados (por ejemplo, auditar `lib/` en busca de literales de UI fuera de `app_strings.dart`) permitió mantener las sesiones principales enfocadas en implementación sin perder cobertura de la exploración.
+- La disciplina de pedir aprobación explícita antes de comitear o pushear a ramas compartidas, adoptada de forma creciente en las consultas más recientes, evitó que cambios exploratorios llegaran a `main`/`develop` sin revisión.
 
