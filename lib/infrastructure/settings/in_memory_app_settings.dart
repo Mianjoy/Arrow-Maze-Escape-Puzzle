@@ -7,6 +7,7 @@ class InMemoryAppSettings implements IAppSettings {
   bool _muted = false;
   bool _effectsMuted = false;
   Locale _locale = const Locale('en');
+  bool _hasSeenTutorial = false;
 
   /// Indica si el audio está silenciado.
   @override
@@ -19,6 +20,10 @@ class InMemoryAppSettings implements IAppSettings {
   /// Idioma activo de la interfaz.
   @override
   Locale get locale => _locale;
+
+  /// Indica si ya se mostró (u omitió) el tutorial interactivo del nivel 1.
+  @override
+  bool get hasSeenTutorial => _hasSeenTutorial;
 
   /// No realiza carga desde disco (valores por defecto en memoria).
   @override
@@ -40,5 +45,11 @@ class InMemoryAppSettings implements IAppSettings {
   @override
   Future<void> setLocale(Locale locale) async {
     _locale = locale;
+  }
+
+  /// Actualiza el estado del tutorial en memoria.
+  @override
+  Future<void> setHasSeenTutorial(bool seen) async {
+    _hasSeenTutorial = seen;
   }
 }

@@ -139,6 +139,29 @@ void main() {
       expect(callCount, 2);
     });
 
+    test(
+        'should_skip_a_level_the_mapper_rejects_instead_of_failing_the_whole_catalog',
+        () async {
+      // Regresión: un valor de `difficulty` que esta versión de la app no
+      // reconoce (p. ej. uno agregado en el backend que aún no se traduce
+      // aquí) no debe tumbar TODO el catálogo -- el resto de los niveles
+      // válidos debe seguir cargando.
+      final brokenLevel = Map<String, dynamic>.from(simple1Json)
+        ..['id'] = 'broken-level'
+        ..['difficulty'] = 'LEGENDARY';
+
+      final prefs = await SharedPreferences.getInstance();
+      final repository = buildRepository(
+        (request) async => http.Response(jsonEncode([simple1Json, brokenLevel]), 200),
+        prefs: prefs,
+      );
+
+      final levels = await repository.findAll();
+
+      expect(levels, hasLength(1));
+      expect(levels.first.id.value, 'simple-1');
+    });
+
     test('should_find_by_id_within_catalog_resolved_by_findAll', () async {
       // Arrange
       final prefs = await SharedPreferences.getInstance();

@@ -20,6 +20,9 @@ class AppSettingsController extends ChangeNotifier {
   /// Locale activo de la interfaz.
   Locale get locale => _settings.locale;
 
+  /// Indica si ya se mostró (u omitió) el tutorial interactivo del nivel 1.
+  bool get hasSeenTutorial => _settings.hasSeenTutorial;
+
   /// Carga preferencias desde almacenamiento y notifica oyentes.
   Future<void> load() async {
     await _settings.load();
@@ -41,6 +44,12 @@ class AppSettingsController extends ChangeNotifier {
   /// Cambia el idioma y persiste.
   Future<void> setLocale(Locale locale) async {
     await _settings.setLocale(locale);
+    notifyListeners();
+  }
+
+  /// Marca el tutorial del nivel 1 como visto/omitido, o lo reactiva con `false`.
+  Future<void> setHasSeenTutorial(bool seen) async {
+    await _settings.setHasSeenTutorial(seen);
     notifyListeners();
   }
 }

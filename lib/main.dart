@@ -339,17 +339,38 @@ class ArrowMazeApp extends StatefulWidget {
   State<ArrowMazeApp> createState() => _ArrowMazeAppState();
 }
 
-class _ArrowMazeAppState extends State<ArrowMazeApp> {
+class _ArrowMazeAppState extends State<ArrowMazeApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     widget.container.appSettingsController.addListener(_onSettingsChanged);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     widget.container.appSettingsController.removeListener(_onSettingsChanged);
     super.dispose();
+  }
+
+  /// Pausa la música de fondo al salir de la app (segundo plano) y la
+  /// retoma al volver, respetando el mute. Sin esto, `AudioPlayer` sigue
+  /// sonando en Android aunque la app deje de estar en primer plano.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        widget.container.audioService.stopBackgroundMusic();
+      case AppLifecycleState.resumed:
+        if (!widget.container.appSettingsController.isMuted) {
+          widget.container.audioService.startBackgroundMusic();
+        }
+      case AppLifecycleState.inactive:
+        break;
+    }
   }
 
   /// Reconstruye el árbol cuando cambian idioma o mute de música de fondo.
@@ -413,7 +434,10 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
       case '/settings':
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => SettingsScreen(settingsController: container.appSettingsController),
+          builder: (_) => SettingsScreen(
+            settingsController: container.appSettingsController,
+            levelRepository: container.levelRepository,
+          ),
         );
       case '/login':
         final loginController = container.buildLoginController();
@@ -471,6 +495,7 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> {
           builder: (_) => GameScreen(
             controller: gameController,
             level: level,
+            settingsController: container.appSettingsController,
           ),
         );
       case '/victory':

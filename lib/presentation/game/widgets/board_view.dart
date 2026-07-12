@@ -15,6 +15,7 @@ class BoardView extends StatelessWidget {
     required this.board,
     required this.onCellTapped,
     this.showGrid = false,
+    this.overlayBuilder,
   });
 
   /// Tablero a renderizar.
@@ -25,6 +26,11 @@ class BoardView extends StatelessWidget {
 
   /// Si es `true`, dibuja las líneas de la cuadrícula sobre el fondo del tablero.
   final bool showGrid;
+
+  /// Construye una capa opcional sobre el tablero (p. ej. el tutorial
+  /// interactivo) usando el mismo `cellWidth`/`cellHeight` ya calculados,
+  /// para que cualquier resaltado quede alineado con las celdas reales.
+  final Widget Function(double cellWidth, double cellHeight)? overlayBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +68,7 @@ class BoardView extends StatelessWidget {
                       cellHeight: cellHeight,
                       onCellTapped: onCellTapped,
                     ),
+                    if (overlayBuilder != null) overlayBuilder!(cellWidth, cellHeight),
                   ],
                 );
               },
@@ -107,6 +114,43 @@ class BoardGridToggleButton extends StatelessWidget {
           showGrid ? Icons.grid_off : Icons.grid_on,
           size: 18,
           color: showGrid ? AppColors.arrowActive : AppColors.textPrimary,
+        ),
+        onPressed: onPressed,
+      ),
+    );
+  }
+}
+
+/// Botón compacto para reiniciar el nivel actual desde la pantalla de juego.
+class BoardRestartButton extends StatelessWidget {
+  /// Crea el botón con [tooltip] y [onPressed].
+  const BoardRestartButton({
+    super.key,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  /// Texto del tooltip al mantener pulsado.
+  final String tooltip;
+
+  /// Se invoca al pulsar el botón.
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.background.withValues(alpha: 0.85),
+      borderRadius: BorderRadius.circular(8),
+      child: IconButton(
+        key: const ValueKey('board-restart'),
+        visualDensity: VisualDensity.compact,
+        padding: const EdgeInsets.all(4),
+        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        tooltip: tooltip,
+        icon: const Icon(
+          Icons.replay,
+          size: 18,
+          color: AppColors.arrowBlocked,
         ),
         onPressed: onPressed,
       ),

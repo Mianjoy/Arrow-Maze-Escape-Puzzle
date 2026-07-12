@@ -4,21 +4,33 @@ import '../../domain/domain.dart';
 import '../../l10n/app_strings.dart';
 import '../navigation/app_route_observer.dart';
 import '../result/result_screen_args.dart';
+import '../settings/app_settings_controller.dart';
 import 'game_controller.dart';
 import '../widgets/app_nav_actions.dart';
+import '../widgets/button_click.dart';
 import 'widgets/board_view.dart';
+import 'widgets/game_tutorial_overlay.dart';
 import 'game_time_formatter.dart';
 
 /// Pantalla de juego: tablero interactivo y navegación a victoria/derrota dedicadas.
 class GameScreen extends StatefulWidget {
-  /// Crea la pantalla con su [controller] y el [level] a jugar.
-  const GameScreen({super.key, required this.controller, required this.level});
+  /// Crea la pantalla con su [controller], el [level] a jugar y
+  /// [settingsController] (para el tutorial interactivo del nivel 1).
+  const GameScreen({
+    super.key,
+    required this.controller,
+    required this.level,
+    required this.settingsController,
+  });
 
   /// Controlador que orquesta la partida.
   final GameController controller;
 
   /// Nivel que se está jugando.
   final Level level;
+
+  /// Controlador de preferencias (consulta y persiste si ya se vio el tutorial).
+  final AppSettingsController settingsController;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -27,11 +39,21 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> with RouteAware {
   bool _resultNavigated = false;
   bool _showGrid = false;
+  late bool _showTutorial;
 
   @override
   void initState() {
     super.initState();
     widget.controller.startGame(widget.level);
+    _showTutorial =
+        widget.level.levelNumber == 1 && !widget.settingsController.hasSeenTutorial;
+  }
+
+  /// Cierra el tutorial (por omisión o al completar el paso 2) y lo persiste.
+  void _dismissTutorial() {
+    if (!_showTutorial) return;
+    setState(() => _showTutorial = false);
+    widget.settingsController.setHasSeenTutorial(true);
   }
 
   @override
@@ -106,6 +128,14 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                         ),
+                        BoardRestartButton(
+                          tooltip: strings.restartLevelTooltip,
+                          onPressed: withButtonClick(
+                            context,
+                            () => _confirmRestart(context, strings),
+                          )!,
+                        ),
+                        const SizedBox(width: 4),
                         BoardGridToggleButton(
                           showGrid: _showGrid,
                           tooltip: _showGrid
@@ -142,6 +172,16 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
                     _resultNavigated = false;
                     widget.controller.onCellTapped(position);
                   },
+                  overlayBuilder: !_showTutorial
+                      ? null
+                      : (cellWidth, cellHeight) => GameTutorialOverlay(
+                            board: game.board,
+                            cellWidth: cellWidth,
+                            cellHeight: cellHeight,
+                            moveCount: game.moveCount,
+                            strings: strings,
+                            onDismiss: _dismissTutorial,
+                          ),
                 ),
               ),
             ],
@@ -149,6 +189,32 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
         },
       ),
     );
+  }
+
+  /// Pide confirmación y, si se acepta, reinicia el nivel actual.
+  Future<void> _confirmRestart(BuildContext context, AppStrings strings) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(strings.restartLevelConfirmTitle),
+        content: Text(strings.restartLevelConfirmMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(strings.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(strings.retry),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      _resultNavigated = false;
+      await widget.controller.retry();
+    }
   }
 
   /// Navega a la pantalla de victoria o derrota según el estado de [game].

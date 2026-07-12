@@ -2315,3 +2315,252 @@ Tras integrar el sistema de coleccionables con sincronización en backend, el pi
 - Los tests de contrato deben seguir el tipo de retorno real del cliente HTTP (`RemotePlayerProgress`), no el modelo anterior.
 - Añadir UI condicional en pantallas de resultado (banner de coleccionable) puede romper tests E2E por overflow; conviene diseñar layouts scrollables desde el inicio.
 
+## Consulta #48 — Generación de ejecutables de Android e iOS para la entrega académica
+
+**Tarea o problema abordado.**
+
+El enunciado del proyecto exige entregar un ejecutable de la app para Android y/o iOS. Se solicitó generar ambos, evaluando previamente el estado real del entorno de desarrollo antes de proponer una ruta de trabajo.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5, sesión interactiva de terminal con acceso de lectura/escritura al repositorio y ejecución de comandos de sistema (instalación de herramientas, compilación, gestión del Simulador de iOS).
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Uno de los requisitos es generar un ejecutable para Android o iOS. Si quisiera hacer ambos, ¿qué debería hacer y cómo?
+>
+> [Turnos posteriores, resumidos] ¿Podrías hacer tú lo necesario para correr en iOS? / Sí, prepara ambos (Android e iOS) para que el profesor pueda probarlos.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+Un diagnóstico inicial (`flutter doctor -v`) reveló que ni el SDK de Android ni Xcode completo estaban instalados en la máquina. Se resolvió de punta a punta:
+
+- **Android:** instalación de Java 17 y Android SDK (cmdline-tools) vía Homebrew; generación de un keystore de release propio (`keytool`); configuración de firma real en `android/app/build.gradle.kts` (carga `android/key.properties`, con *fallback* a las llaves de debug si el archivo no existe, para no romper CI ni otras máquinas); compilación de `flutter build apk --release`.
+- **iOS:** activación de Xcode (`xcode-select`) vía diálogo nativo de administrador de macOS (sin exponer la contraseña del usuario); cuenta Apple ID personal gratuita agregada en Xcode; firma automática (`CODE_SIGN_STYLE = Automatic`, `DEVELOPMENT_TEAM`) configurada en `ios/Runner.xcodeproj/project.pbxproj`; instalación y ejecución verificada tanto en el Simulador de iOS como en un iPhone físico del usuario (confiando manualmente el certificado de desarrollador en Ajustes del dispositivo, paso que solo el usuario puede completar).
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna; se verificó instalando y ejecutando ambos artefactos (APK en Android, build en Simulador e iPhone físico).
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Sin cuenta de Apple Developer Program de pago, la firma personal gratuita permite correr la app en un dispositivo propio (validez ~7 días, renovable reconectando y recompilando), pero no genera un `.ipa` distribuible a terceros sin herramientas adicionales (AltStore/Sideloadly) o sin que cada persona lo firme con su propia cuenta.
+- Antes de planificar un cambio de build/despliegue conviene diagnosticar el entorno real (`flutter doctor -v`) en vez de asumir que las herramientas ya están instaladas: eso determina qué parte del pedido se resuelve con cambios de archivo y cuál requiere instalación interactiva que solo el usuario puede autorizar (contraseñas de administrador, inicio de sesión con Apple ID).
+
+## Consulta #49 — Backend en la nube (Render) para pruebas independientes del presentador
+
+**Tarea o problema abordado.**
+
+Los ejecutables generados apuntaban por defecto a `localhost`/la red local del presentador, lo cual solo funciona durante una demostración en vivo. Se solicitó que el profesor pudiera probar la app tanto en la defensa como después, desde su casa, sin depender de la red ni de la presencia del estudiante.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5, sesión interactiva de terminal.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> ¿Cómo podría hacer para que el profesor pueda probar esta app, tanto en la presentación final como luego que hayamos defendido, cuando esté corrigiendo el proyecto en su casa?
+>
+> [Tras aclarar que Supabase no encaja con el backend Express/SQLite existente] Puedes hostearlo en la web, en Render.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+Se explicó por qué Supabase no era compatible sin reescribir el backend (es Postgres + Auth + Edge Functions, no un host genérico de Node/Express), y se desplegó el backend existente sin cambios de arquitectura en Render.com (plan gratuito). Los ejecutables de Android e iOS se recompilaron con `--dart-define=API_BASE_URL=https://backend-arrowmaze.onrender.com`, quedando autocontenidos: no requieren que el estudiante esté presente ni en la misma red.
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- El usuario creó la cuenta y el servicio en Render (paso que requiere credenciales propias, fuera del alcance de lo que la IA puede hacer) y proveyó la URL pública resultante.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- El plan gratuito de Render no incluye disco persistente por defecto: los datos (usuarios, progreso) se reinician con cada redeploy/reinicio del servicio, mientras que el catálogo de niveles se resiembra solo desde los archivos del repositorio. Esto es deseable para dejar el entorno "limpio" antes de una defensa.
+- El plan gratuito también "duerme" el servicio tras inactividad, por lo que el primer inicio de sesión tras un rato sin uso puede tardar unos segundos adicionales (cold start) — se documentó esta expectativa en las instrucciones para el usuario final.
+
+## Consulta #50 — Bug: el APK de Android no lograba conectarse al backend
+
+**Tarea o problema abordado.**
+
+Tras instalar el primer APK de release en un teléfono Android físico, el registro/login fallaba con "Couldn't reach the server" pese a que el backend en Render respondía correctamente desde otras herramientas.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5, sesión interactiva de terminal, incluyendo inspección del `.apk` generado con `aapt2`.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> El APK en Android no se conecta, parece haber problemas con el servidor, valida eso por favor.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+Se confirmó primero que el backend respondía sin problemas (`curl` exitoso contra `/health` y `/levels`), descartando un problema de servidor. La causa real: `android/app/src/main/AndroidManifest.xml` no declaraba `<uses-permission android:name="android.permission.INTERNET"/>` — sin ese permiso, ninguna app Android puede hacer peticiones de red, sin importar el servidor de destino. Se agregó el permiso y se verificó con `aapt2 dump permissions` que quedó presente en el APK reconstruido.
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna; se verificó reconstruyendo el APK y confirmando el permiso en el paquete final.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Un bloqueo de conectividad no siempre está del lado del servidor: verificar el backend de forma independiente (`curl`) antes de investigar el cliente evita perder tiempo revisando el lado equivocado.
+- El permiso `INTERNET` es fácil de dar por sentado porque muchos templates de Flutter lo incluyen por defecto; conviene confirmarlo explícitamente en cualquier proyecto que no se haya probado antes en un dispositivo Android real.
+
+## Consulta #51 — Bug: la música de fondo se detenía al tocar cualquier botón
+
+**Tarea o problema abordado.**
+
+Al probar el APK en Android, se reportó que la música de fondo sonaba al abrir la app pero se detenía apenas se tocaba el botón "Play" (o cualquier otro).
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5, sesión interactiva de terminal con lectura del código fuente del paquete `audioplayers`.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Tengo la siguiente situación probando en Android: la música está sonando al correr la app, pero cuando le doy play, deja de sonar.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+Causa: el paquete `audioplayers` solicita foco de audio **exclusivo** (`AndroidAudioFocus.gain`) por defecto en cada instancia de `AudioPlayer` en Android. Como el clic de botón usa un reproductor distinto al de la música, Android le retiraba el foco (y por tanto la reproducción) al reproductor de música apenas sonaba cualquier efecto. Se configuró `AndroidAudioFocus.none` en todos los reproductores (música y pool de efectos) en `lib/infrastructure/audio/app_audio_service.dart`, para que convivan sin interrumpirse entre sí.
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna; se verificó con `flutter analyze`/`flutter test` y reinstalando el APK reconstruido.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- El comportamiento por defecto de foco de audio en Android puede interrumpir sonidos de la propia app entre sí, no solo frente a otras apps; conviene revisar explícitamente esta configuración en cualquier librería de audio usada en un juego con música + efectos simultáneos.
+
+## Consulta #52 — Botón de reinicio de nivel en la pantalla de juego
+
+**Tarea o problema abordado.**
+
+Se solicitó agregar un botón en la pantalla de juego que permita reiniciar el nivel actual, respetando la paleta de colores existente y con una presentación visualmente atractiva.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5, sesión interactiva de terminal con acceso de lectura/escritura al repositorio.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Quisiera le agregaras un nuevo botón a la ventana donde se ve el tablero de juego, el cual permita reiniciar el nivel, que respete la paleta de colores usada y sea atractivo.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+Se agregó `BoardRestartButton` (`lib/presentation/game/widgets/board_view.dart`), con el mismo estilo que el botón existente de cuadrícula (fondo semitransparente redondeado) pero con ícono `replay` en el acento rosa de la paleta (`AppColors.arrowBlocked`), junto al contador de movimientos. Al tocarlo, se muestra un diálogo de confirmación (para evitar perder progreso por accidente) antes de invocar `GameController.retry()`, ya existente.
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna; se verificó con `flutter test` (prueba nueva que confirma que cancelar no altera el progreso y confirmar sí lo reinicia).
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Una acción que reinicia progreso de partida se beneficia de una confirmación explícita, incluso sin que el usuario la pidiera expresamente: previene una pérdida de progreso accidental por un toque desprevenido.
+
+## Consulta #53 — Tutorial interactivo del nivel 1 para adultos mayores y niños
+
+**Tarea o problema abordado.**
+
+Se consultó cómo agregar un tutorial de cómo jugar, pensado explícitamente para adultos mayores y personas muy jóvenes — audiencias donde el texto instructivo estático suele ignorarse o no retenerse.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5, en modo de planificación (exploración del código existente y una pregunta de alcance al usuario) seguido de implementación.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Si quisiéramos agregar un tutorial de cómo se juega, para personas mayores o muy pequeñas, ¿cómo podríamos hacerlo? Se me ocurren imágenes con texto, pero ¿qué opinas?
+>
+> [Tras presentar tres alcances posibles] Guía interactiva en el primer nivel real.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+En vez de diapositivas estáticas, se implementó `GameTutorialOverlay` (`lib/presentation/game/widgets/game_tutorial_overlay.dart`): la primera vez que alguien entra al nivel 1, se resalta la primera flecha con un anillo pulsante y un mensaje breve ("Toca esta flecha para dispararla") hasta que la persona la toca — aprendizaje por acción, no por lectura. Al tocar cualquier flecha, se muestra un segundo mensaje sobre el objetivo del nivel, que se desvanece solo. Siempre es posible omitirlo, y una vez visto (u omitido) no vuelve a aparecer — estado persistido vía un nuevo `IAppSettings.hasSeenTutorial`. Se agregó además una entrada "Ver tutorial de nuevo" en Ajustes.
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna; se verificó con `flutter test` (pruebas nuevas cubriendo aparición, avance al tocar, omisión y persistencia del estado).
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Para audiencias con dificultad de lectura, un tutorial que avanza según la acción real del usuario (no un botón "Siguiente") es más confiable que texto pasivo, porque no se puede saltar sin haber realizado al menos la acción principal.
+- `pumpAndSettle()` no es compatible con animaciones en bucle infinito (`AnimationController.repeat()`); las pruebas de widget para este tipo de UI deben usar `pump()` con duraciones fijas en su lugar.
+
+## Consulta #54 — Ajuste de "Ver tutorial de nuevo" para navegar directo al nivel 1
+
+**Tarea o problema abordado.**
+
+El botón "Ver tutorial de nuevo" (Consulta #53) solo reiniciaba una bandera interna; el usuario debía luego buscar el nivel 1 manualmente en el catálogo para verlo. Se solicitó que el tutorial pudiera verse tantas veces como el usuario quisiera, de forma más directa.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5, sesión interactiva de terminal.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Necesito activar el botón de ver tutorial, ya que solo se ve una vez y ya, debe poder verse tantas veces como el usuario quiera.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+Se modificó `SettingsScreen` para que, al tocar "Ver tutorial de nuevo", además de reactivar la bandera, resuelva el nivel 1 desde el repositorio de niveles y navegue directamente a la pantalla de juego (`Navigator.pushNamed('/game', ...)`), mostrando el tutorial de inmediato sin pasos intermedios.
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna; se verificó con una prueba de widget que confirma el reseteo de la bandera y la navegación al nivel correcto.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Ante una petición ambigua ("debe poder verse tantas veces como quiera"), preguntar explícitamente qué comportamiento exacto se espera (navegación directa vs. tutorial disponible desde cualquier nivel) evitó implementar la interpretación equivocada.
+
+## Consulta #55 — Bug crítico: un nivel con dato inesperado tumbaba todo el catálogo
+
+**Tarea o problema abordado.**
+
+Con el backend ya desplegado en Render, la app dejó de poder cargar el catálogo de niveles ("Could not load the level catalog") para un usuario específico, incluso después de refrescar.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5, sesión interactiva de terminal, incluyendo inspección directa del almacenamiento local del Simulador de iOS (`SharedPreferences` en disco) y un script Dart de un solo uso para reproducir el mapeo real de niveles contra datos capturados del dispositivo.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> El APK en Android no se conecta / El backend en Render responde bien, pero la app sigue sin poder cargar el catálogo — valida eso por favor.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+Se determinó que la rama `main` del backend (la que Render despliega) tiene 8 niveles que no existen en `develop`, agregados directamente por un integrante del equipo. Inspeccionando el caché local (`SharedPreferences`) del dispositivo se encontró que en algún momento el backend sirvió `level-30` con `difficulty: "LEGENDARY"` — un valor que el `enum` de dificultad del cliente no reconoce — y ese valor quedó cacheado localmente. El bug real: `CachedLevelRepository` (y `RemoteLevelRepository`) abortaban la carga de **todo** el catálogo si un solo nivel fallaba al traducirse, sin poder recuperarse aunque el servidor ya estuviera corregido. Se modificó `CachedLevelRepository._mapAndSort` para omitir (con un log) el nivel que falle, en vez de descartar los demás niveles válidos — mismo criterio que ya aplicaba el backend ("saltar niveles no resolubles en vez de tumbar el servidor").
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna; se verificó con una prueba nueva que reproduce exactamente el caso (un nivel con `difficulty: "LEGENDARY"` junto a uno válido) y confirma que el nivel válido sigue cargando.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Un solo registro remoto inesperado no debería poder inutilizar toda una funcionalidad para todos los usuarios; aplicar el mismo principio de resiliencia en cliente y servidor (omitir en vez de abortar) evita que un dato aislado bloquee a alguien de forma persistente, incluso después de corregido el origen del problema.
+- Inspeccionar directamente el almacenamiento local persistido en el dispositivo (en vez de solo asumir hipótesis sobre la causa) fue decisivo para encontrar la causa real en minutos en lugar de conjeturar indefinidamente.
+- Cuando dos ramas de un mismo repositorio divergen (`main` con niveles que `develop` no tiene), vale la pena señalarlo al equipo como una alerta de gobernanza, aunque no sea el objetivo directo de la tarea.
+
+## Consulta #56 — Bug: la música de fondo seguía sonando al salir de la app
+
+**Tarea o problema abordado.**
+
+Se reportó que, en Android, la música del juego se mantenía sonando incluso después de salir de la app (segundo plano).
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5, sesión interactiva de terminal.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> En los Androids, la música del juego se mantiene aun cuando sales de la app, ¿puedes corregirlo?
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+La causa: la app nunca escuchaba los cambios de ciclo de vida (`AppLifecycleState`) — no existía ningún `WidgetsBindingObserver`, así que nada pausaba el reproductor al pasar a segundo plano. Se agregó el observer en `_ArrowMazeAppState` (`lib/main.dart`), que pausa la música al pasar a `paused`/`hidden`/`detached` y la retoma al volver a `resumed`, respetando el silencio configurado.
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna; se verificó con dos pruebas nuevas que simulan transiciones de ciclo de vida reales sobre la app completa (`ArrowMazeApp`) con un servicio de audio espía, confirmando pausa/reanudación y que no se reactiva si está silenciada.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Cualquier reproducción de audio en bucle debe atarse explícitamente al ciclo de vida de la aplicación; sin un `WidgetsBindingObserver`, el estado de "en primer plano" nunca se propaga a servicios que gestionan recursos del sistema como el audio.
+

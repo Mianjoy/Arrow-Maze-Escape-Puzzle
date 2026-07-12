@@ -410,6 +410,23 @@ logger or catching network errors on its own:
    failures, so a flaky connection never surfaces as a crash or a blocked screen — the
    UI just shows an "offline" notice instead of an error.
 
+## Prebuilt Executables (Android / iOS)
+
+Prebuilt binaries are published on the
+[Releases](https://github.com/Mianjoy/Arrow-Maze-Escape-Puzzle/releases) page for
+anyone who wants to try the app without building it from source. Both are already
+configured to talk to a backend hosted on Render, so no local setup is required.
+
+- **Android:** download the `.apk` and install it on any Android device (enable
+  "install from unknown sources" for this one file if prompted).
+- **iOS:** download the `.zip` and follow the instructions in the release notes to
+  run it on the iOS Simulator (requires a Mac with Xcode; no Apple Developer account
+  needed, since the Simulator does not require code signing).
+
+> The backend runs on Render's free tier, which puts the service to sleep after a
+> period of inactivity. The first request after idling (e.g. the first login) may
+> take a few extra seconds while it wakes up — this is expected, not an error.
+
 ## Getting Started
 
 ```bash

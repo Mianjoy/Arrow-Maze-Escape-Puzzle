@@ -15,6 +15,9 @@ abstract interface class IAppSettings {
   /// Locale activo de la interfaz (`en` o `es`).
   Locale get locale;
 
+  /// Indica si ya se mostró (u omitió) el tutorial interactivo del nivel 1.
+  bool get hasSeenTutorial;
+
   /// Carga las preferencias persistidas (llamar al arrancar la app).
   Future<void> load();
 
@@ -27,4 +30,8 @@ abstract interface class IAppSettings {
 
   /// Cambia el idioma de la interfaz y lo persiste.
   Future<void> setLocale(Locale locale);
+
+  /// Marca el tutorial interactivo del nivel 1 como visto (u omitido), o
+  /// lo reactiva pasando `false` (p. ej. desde Ajustes, para repasarlo).
+  Future<void> setHasSeenTutorial(bool seen);
 }

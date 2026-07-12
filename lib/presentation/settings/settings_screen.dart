@@ -1,17 +1,50 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/domain.dart';
 import '../../l10n/app_strings.dart';
 import '../widgets/app_nav_actions.dart';
 import 'app_settings_controller.dart';
 
 /// Pantalla de ajustes: silenciar música de fondo, silenciar todos los
 /// efectos de sonido y elegir idioma (es/en).
-class SettingsScreen extends StatelessWidget {
-  /// Crea la pantalla con el [settingsController] observable.
-  const SettingsScreen({super.key, required this.settingsController});
+class SettingsScreen extends StatefulWidget {
+  /// Crea la pantalla con el [settingsController] observable y el
+  /// [levelRepository] usado para llevar al usuario directo al nivel 1 al
+  /// repasar el tutorial.
+  const SettingsScreen({
+    super.key,
+    required this.settingsController,
+    required this.levelRepository,
+  });
 
   /// Controlador de preferencias persistidas.
   final AppSettingsController settingsController;
+
+  /// Repositorio de niveles, para resolver el nivel 1 al repasar el tutorial.
+  final ILevelRepository levelRepository;
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _isLoadingTutorialLevel = false;
+
+  /// Reactiva el tutorial y navega directo al nivel 1 para mostrarlo.
+  Future<void> _replayTutorial() async {
+    if (_isLoadingTutorialLevel) return;
+    setState(() => _isLoadingTutorialLevel = true);
+
+    await widget.settingsController.setHasSeenTutorial(false);
+    final level = await widget.levelRepository.findById(const Identifier('level-1'));
+
+    if (!mounted) return;
+    setState(() => _isLoadingTutorialLevel = false);
+
+    if (level != null) {
+      Navigator.of(context).pushNamed('/game', arguments: level);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,8 +58,10 @@ class SettingsScreen extends StatelessWidget {
         ],
       ),
       body: ListenableBuilder(
-        listenable: settingsController,
+        listenable: widget.settingsController,
         builder: (context, _) {
+          final settingsController = widget.settingsController;
+
           return ListView(
             children: [
               SwitchListTile(
@@ -73,6 +108,19 @@ class SettingsScreen extends StatelessWidget {
                 onChanged: (locale) {
                   if (locale != null) settingsController.setLocale(locale);
                 },
+              ),
+              ListTile(
+                key: const ValueKey('settings-replay-tutorial'),
+                title: Text(strings.replayTutorial),
+                leading: const Icon(Icons.help_outline),
+                trailing: _isLoadingTutorialLevel
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : null,
+                onTap: _replayTutorial,
               ),
             ],
           );

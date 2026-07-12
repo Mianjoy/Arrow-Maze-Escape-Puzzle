@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -84,8 +85,24 @@ class CachedLevelRepository implements ILevelRepository {
   }
 
   /// Traduce los payloads crudos a [Level] y los ordena por número de nivel.
+  ///
+  /// Un nivel que el mapper no pueda traducir (p. ej. un valor de
+  /// `difficulty` que esta versión de la app todavía no reconoce) se omite
+  /// en vez de tumbar el catálogo completo — un solo nivel inesperado del
+  /// servidor no debe dejar a nadie sin poder jugar ninguno de los demás.
   List<Level> _mapAndSort(List<Map<String, dynamic>> payloads) {
-    final levels = payloads.map(_mapper.fromJson).toList();
+    final levels = <Level>[];
+    for (final payload in payloads) {
+      try {
+        levels.add(_mapper.fromJson(payload));
+      } catch (error) {
+        developer.log(
+          'Skipping level ${payload['id'] ?? '?'}: $error',
+          name: 'CachedLevelRepository',
+          level: 900,
+        );
+      }
+    }
     levels.sort((a, b) => (a.levelNumber ?? 0).compareTo(b.levelNumber ?? 0));
     return List.unmodifiable(levels);
   }
