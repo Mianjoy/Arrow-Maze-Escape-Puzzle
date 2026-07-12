@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -20,8 +21,18 @@ import '../../application/ports/i_audio_service.dart';
 class AppAudioService implements IAudioService {
   /// Crea el servicio leyendo mute desde [settings].
   AppAudioService({required IAppSettings settings}) : _settings = settings {
+    // Sin esto, cada `AudioPlayer` pide foco de audio exclusivo por defecto
+    // en Android (`AndroidAudioFocus.gain`): al reproducir el clic de un
+    // botón (un reproductor distinto al de la música), el sistema le quita
+    // el foco al reproductor de música y lo detiene. `none` deja que todos
+    // los sonidos de esta app convivan sin pisarse entre sí.
+    final noFocusContext = AudioContext(
+      android: AudioContextAndroid(audioFocus: AndroidAudioFocus.none),
+    );
+    unawaited(_musicPlayer.setAudioContext(noFocusContext));
     for (final player in _sfxPool) {
       player.setReleaseMode(ReleaseMode.stop);
+      unawaited(player.setAudioContext(noFocusContext));
     }
   }
 
