@@ -1,7 +1,7 @@
-import '../../infrastructure/http/progress_api_client.dart';
 import '../models/auth_session.dart';
 import '../models/pending_sync_entry.dart';
 import '../ports/i_pending_sync_repository.dart';
+import '../ports/i_progress_api_client.dart';
 
 /// Caso de uso: reintenta las sincronizaciones de progreso que quedaron
 /// pendientes de una sesión anterior sin red.
@@ -13,12 +13,12 @@ class SyncPendingProgressUseCase {
   /// Crea el caso de uso con el repositorio de pendientes y el cliente HTTP.
   const SyncPendingProgressUseCase({
     required IPendingSyncRepository pendingSyncRepository,
-    required ProgressApiClient progressApiClient,
+    required IProgressApiClient progressApiClient,
   })  : _pendingSyncRepository = pendingSyncRepository,
         _progressApiClient = progressApiClient;
 
   final IPendingSyncRepository _pendingSyncRepository;
-  final ProgressApiClient _progressApiClient;
+  final IProgressApiClient _progressApiClient;
 
   /// Reenvía las entradas pendientes de [session.playerId]; deja el resto de
   /// jugadores y las que sigan fallando en la cola para el próximo intento.

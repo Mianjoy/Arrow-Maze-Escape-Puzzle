@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../application/models/auth_session.dart';
+import '../../application/ports/i_auth_api_client.dart';
 import 'api_config.dart';
 import 'api_exception.dart';
 
@@ -10,7 +11,7 @@ import 'api_exception.dart';
 ///
 /// Traduce `POST /auth/register` y `POST /auth/login` a modelos de aplicación
 /// sin conocer la capa de dominio del juego.
-class AuthApiClient {
+class AuthApiClient implements IAuthApiClient {
   /// Crea el cliente con [config] y un [httpClient] inyectable para tests.
   AuthApiClient({
     required ApiConfig config,
@@ -25,6 +26,7 @@ class AuthApiClient {
   ///
   /// Devuelve el `userId` y `username` creados. El registro no emite JWT;
   /// hay que llamar a [login] después.
+  @override
   Future<({String userId, String username})> register({
     required String username,
     required String password,
@@ -47,6 +49,7 @@ class AuthApiClient {
   }
 
   /// Inicia sesión (`POST /auth/login`) y devuelve la sesión con JWT.
+  @override
   Future<AuthSession> login({
     required String username,
     required String password,

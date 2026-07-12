@@ -1,6 +1,6 @@
 import '../../domain/domain.dart';
-import '../../infrastructure/http/progress_api_client.dart';
 import '../models/auth_session.dart';
+import '../ports/i_progress_api_client.dart';
 
 /// Caso de uso: descargar el progreso del jugador desde el servidor y
 /// fusionarlo con el progreso local (best-of por nivel).
@@ -12,14 +12,14 @@ import '../models/auth_session.dart';
 class PullRemoteProgressUseCase {
   /// Crea el caso de uso con el cliente HTTP y los repositorios necesarios.
   const PullRemoteProgressUseCase({
-    required ProgressApiClient progressApiClient,
+    required IProgressApiClient progressApiClient,
     required IPlayerProgressRepository progressRepository,
     required ILevelRepository levelRepository,
   })  : _progressApiClient = progressApiClient,
         _progressRepository = progressRepository,
         _levelRepository = levelRepository;
 
-  final ProgressApiClient _progressApiClient;
+  final IProgressApiClient _progressApiClient;
   final IPlayerProgressRepository _progressRepository;
   final ILevelRepository _levelRepository;
 
