@@ -2158,3 +2158,29 @@ Se agregó cobertura de test explícita en/es para los tres casos (`login_screen
 - Una auditoría dirigida por subagente, acotada explícitamente al patrón de bug ya conocido (texto de UI final fuera de `AppStrings`) y con instrucciones de ignorar ruido (logs, excepciones no mostradas, comentarios), es más efectiva que repetir manualmente el mismo `grep` puntual: encontró tanto literales obvios (`Text('...')`) como una variante más sutil (un `toString()` de excepción de dominio renderizado directo), que un grep de texto simple no habría relacionado sin ese contexto.
 - Las pantallas de autenticación (login/registro) son las de mayor exposición real para este tipo de bug — todo usuario no autenticado las ve — y sin embargo habían quedado fuera de las dos correcciones anteriores porque el síntoma reportado por el usuario apuntaba a otras pantallas; vale la pena, tras el primer hallazgo de un patrón de bug, preguntar explícitamente "¿dónde más puede estar pasando esto?" en vez de darlo por cerrado con el caso puntual reportado.
 
+## Consulta #44 — Toggle opcional de cuadrícula en la pantalla de juego
+
+**Tarea o problema abordado.**
+
+Se solicitó añadir en la pantalla de partida un control discreto que permita al jugador activar o desactivar la visualización de la cuadrícula (grid) sobre el tablero, como ayuda visual durante el juego, sin alterar la lógica de partida ni el resto del sistema.
+
+**Herramienta de IA utilizada.**
+
+- Cursor (Composer), sesión interactiva con acceso de lectura/escritura al repositorio del cliente Flutter.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Implementar en la pantalla de juego un botón compacto que permita al usuario mostrar u ocultar la cuadrícula del tablero mientras juega un nivel. El cambio debe limitarse exclusivamente a la capa de presentación de la vista del board (renderizado visual); no debe afectar dominio, casos de uso, persistencia, backend ni otras pantallas del flujo.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+Se añadió un estado local `_showGrid` en `BoardView` (sin persistencia en `SharedPreferences` ni en `IAppSettings`), un botón overlay (`ValueKey('board-grid-toggle')`) en la esquina superior derecha del tablero, y el parámetro `showGrid` en `ArrowBoardPainter` para dibujar líneas con `AppColors.gridLine` debajo de muros y flechas. Se agregaron tooltips localizados (`showGridTooltip` / `hideGridTooltip`) en `AppStrings`. La capa de toques (`_BoardTouchGrid`) quedó intacta.
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Pendiente de revisión manual del equipo.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Preferencias puramente visuales y efímeras (solo durante la partida) pueden resolverse con estado local en el widget de presentación, evitando extender `IAppSettings` o el backend cuando no hay requisito de persistencia entre sesiones.
+

@@ -13,6 +13,7 @@ class ArrowBoardPainter extends CustomPainter {
     required this.board,
     required this.cellWidth,
     required this.cellHeight,
+    this.showGrid = false,
   });
 
   static const _strokeFactor = 0.12;
@@ -25,11 +26,32 @@ class ArrowBoardPainter extends CustomPainter {
   final double cellWidth;
   final double cellHeight;
 
+  /// Si es `true`, dibuja las líneas de la cuadrícula sobre el fondo del tablero.
+  final bool showGrid;
+
   @override
   void paint(Canvas canvas, Size size) {
+    if (showGrid) {
+      _paintGrid(canvas, size);
+    }
     _paintWalls(canvas);
     for (final arrow in board.arrows.where((a) => !a.isExtracted)) {
       _paintArrow(canvas, arrow);
+    }
+  }
+
+  void _paintGrid(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.gridLine.withValues(alpha: 0.35)
+      ..strokeWidth = 0.75;
+
+    for (var column = 0; column <= board.dimension.columns; column++) {
+      final x = column * cellWidth;
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (var row = 0; row <= board.dimension.rows; row++) {
+      final y = row * cellHeight;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
     }
   }
 
@@ -138,6 +160,7 @@ class ArrowBoardPainter extends CustomPainter {
   bool shouldRepaint(covariant ArrowBoardPainter oldDelegate) {
     return oldDelegate.board != board ||
         oldDelegate.cellWidth != cellWidth ||
-        oldDelegate.cellHeight != cellHeight;
+        oldDelegate.cellHeight != cellHeight ||
+        oldDelegate.showGrid != showGrid;
   }
 }

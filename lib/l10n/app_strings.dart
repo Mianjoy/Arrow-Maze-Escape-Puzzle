@@ -56,6 +56,12 @@ abstract class AppStrings {
   /// Etiqueta del puntaje.
   String get scoreLabel;
 
+  /// Tooltip del botón para mostrar la cuadrícula del tablero.
+  String get showGridTooltip;
+
+  /// Tooltip del botón para ocultar la cuadrícula del tablero.
+  String get hideGridTooltip;
+
   /// Etiqueta del temporizador con [remaining] y [total] en formato `mm:ss`.
   String timeRemainingLabel(String remaining, String total);
 
@@ -236,6 +242,12 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get scoreLabel => 'Score';
+
+  @override
+  String get showGridTooltip => 'Show grid';
+
+  @override
+  String get hideGridTooltip => 'Hide grid';
 
   @override
   String timeRemainingLabel(String remaining, String total) => 'Time: $remaining / $total';
@@ -424,6 +436,12 @@ class AppStringsEs extends AppStrings {
 
   @override
   String get scoreLabel => 'Puntuación';
+
+  @override
+  String get showGridTooltip => 'Mostrar cuadrícula';
+
+  @override
+  String get hideGridTooltip => 'Ocultar cuadrícula';
 
   @override
   String timeRemainingLabel(String remaining, String total) => 'Tiempo: $remaining / $total';

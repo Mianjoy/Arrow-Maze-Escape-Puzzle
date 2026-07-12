@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../../../domain/domain.dart';
+import '../../../l10n/app_strings.dart';
 import '../../theme/app_colors.dart';
 import 'arrow_board_painter.dart';
 
 /// Renderiza el [Board] con fondo liso, muros y flechas de trazo continuo.
 ///
 /// Separa la capa visual ([ArrowBoardPainter]) de la capa de toques invisible
-/// para que flechas multi-celda se dibujen como un solo camino.
-class BoardView extends StatelessWidget {
+/// para que flechas multi-celda se dibujen como un solo camino. Incluye un
+/// botón local para mostrar u ocultar la cuadrícula (solo afecta esta vista).
+class BoardView extends StatefulWidget {
   /// Crea la vista para [board] y notificar toques con [onCellTapped].
   const BoardView({super.key, required this.board, required this.onCellTapped});
 
@@ -19,9 +21,18 @@ class BoardView extends StatelessWidget {
   final ValueChanged<Position> onCellTapped;
 
   @override
+  State<BoardView> createState() => _BoardViewState();
+}
+
+class _BoardViewState extends State<BoardView> {
+  bool _showGrid = false;
+
+  @override
   Widget build(BuildContext context) {
+    final strings = AppStringsScope.of(context);
+
     return AspectRatio(
-      aspectRatio: board.dimension.columns / board.dimension.rows,
+      aspectRatio: widget.board.dimension.columns / widget.board.dimension.rows,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: DecoratedBox(
@@ -34,24 +45,34 @@ class BoardView extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final cellWidth = constraints.maxWidth / board.dimension.columns;
-                final cellHeight = constraints.maxHeight / board.dimension.rows;
+                final cellWidth = constraints.maxWidth / widget.board.dimension.columns;
+                final cellHeight = constraints.maxHeight / widget.board.dimension.rows;
 
                 return Stack(
                   fit: StackFit.expand,
                   children: [
                     CustomPaint(
                       painter: ArrowBoardPainter(
-                        board: board,
+                        board: widget.board,
                         cellWidth: cellWidth,
                         cellHeight: cellHeight,
+                        showGrid: _showGrid,
                       ),
                     ),
                     _BoardTouchGrid(
-                      board: board,
+                      board: widget.board,
                       cellWidth: cellWidth,
                       cellHeight: cellHeight,
-                      onCellTapped: onCellTapped,
+                      onCellTapped: widget.onCellTapped,
+                    ),
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: _GridToggleButton(
+                        showGrid: _showGrid,
+                        tooltip: _showGrid ? strings.hideGridTooltip : strings.showGridTooltip,
+                        onPressed: () => setState(() => _showGrid = !_showGrid),
+                      ),
                     ),
                   ],
                 );
@@ -59,6 +80,40 @@ class BoardView extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Botón compacto para activar o desactivar la cuadrícula del tablero.
+class _GridToggleButton extends StatelessWidget {
+  const _GridToggleButton({
+    required this.showGrid,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final bool showGrid;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.background.withValues(alpha: 0.85),
+      borderRadius: BorderRadius.circular(8),
+      child: IconButton(
+        key: const ValueKey('board-grid-toggle'),
+        visualDensity: VisualDensity.compact,
+        padding: const EdgeInsets.all(4),
+        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        tooltip: tooltip,
+        icon: Icon(
+          showGrid ? Icons.grid_off : Icons.grid_on,
+          size: 18,
+          color: showGrid ? AppColors.arrowActive : AppColors.textPrimary,
+        ),
+        onPressed: onPressed,
       ),
     );
   }
