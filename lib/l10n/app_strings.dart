@@ -113,6 +113,36 @@ abstract class AppStrings {
   /// Etiqueta del botón "Cerrar sesión".
   String get signOut;
 
+  /// Título de la pantalla de inicio de sesión.
+  String get loginTitle;
+
+  /// Título de la pantalla de registro.
+  String get registerTitle;
+
+  /// Etiqueta del campo de nombre de usuario.
+  String get usernameLabel;
+
+  /// Etiqueta del campo de contraseña (login).
+  String get passwordLabel;
+
+  /// Etiqueta del campo de contraseña con el mínimo de caracteres (registro).
+  String get passwordMinLengthLabel;
+
+  /// Error de validación: campo requerido.
+  String get requiredFieldError;
+
+  /// Error de validación: nombre de usuario con menos de 3 caracteres.
+  String get minUsernameLengthError;
+
+  /// Error de validación: contraseña con menos de 8 caracteres.
+  String get minPasswordLengthError;
+
+  /// Etiqueta del botón para crear una cuenta.
+  String get createAccount;
+
+  /// Enlace en la pantalla de registro para volver al login.
+  String get alreadyHaveAccountSignIn;
+
   /// Etiqueta de dificultad, con [name] interpolado.
   String difficultyLabel(String name);
 
@@ -133,6 +163,12 @@ abstract class AppStrings {
 
   /// Notificación cuando falla la actualización del catálogo.
   String get levelsRefreshFailed;
+
+  /// Mensaje cuando falla la carga inicial del catálogo de niveles.
+  String get levelSelectLoadFailed;
+
+  /// Mensaje cuando el catálogo de niveles está vacío.
+  String get levelSelectNoLevels;
 
   /// Mensaje cuando un nivel no tiene entradas en la clasificación.
   String get leaderboardNoScores;
@@ -263,6 +299,36 @@ class AppStringsEn extends AppStrings {
   String get signOut => 'Sign out';
 
   @override
+  String get loginTitle => 'Arrow Maze — Login';
+
+  @override
+  String get registerTitle => 'Arrow Maze — Register';
+
+  @override
+  String get usernameLabel => 'Username';
+
+  @override
+  String get passwordLabel => 'Password';
+
+  @override
+  String get passwordMinLengthLabel => 'Password (min 8)';
+
+  @override
+  String get requiredFieldError => 'Required';
+
+  @override
+  String get minUsernameLengthError => 'Min 3 characters';
+
+  @override
+  String get minPasswordLengthError => 'Min 8 characters';
+
+  @override
+  String get createAccount => 'Create account';
+
+  @override
+  String get alreadyHaveAccountSignIn => 'Already have an account? Sign in';
+
+  @override
   String difficultyLabel(String name) => 'Difficulty: $name';
 
   @override
@@ -284,6 +350,12 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get levelsRefreshFailed => 'Could not refresh the level catalog.';
+
+  @override
+  String get levelSelectLoadFailed => 'Could not load the level catalog. Try again later.';
+
+  @override
+  String get levelSelectNoLevels => 'No levels available.';
 
   @override
   String get leaderboardNoScores => 'No scores recorded for this level yet.';
@@ -416,6 +488,36 @@ class AppStringsEs extends AppStrings {
   String get signOut => 'Cerrar sesión';
 
   @override
+  String get loginTitle => 'Arrow Maze — Iniciar sesión';
+
+  @override
+  String get registerTitle => 'Arrow Maze — Registro';
+
+  @override
+  String get usernameLabel => 'Usuario';
+
+  @override
+  String get passwordLabel => 'Contraseña';
+
+  @override
+  String get passwordMinLengthLabel => 'Contraseña (mín. 8)';
+
+  @override
+  String get requiredFieldError => 'Requerido';
+
+  @override
+  String get minUsernameLengthError => 'Mínimo 3 caracteres';
+
+  @override
+  String get minPasswordLengthError => 'Mínimo 8 caracteres';
+
+  @override
+  String get createAccount => 'Crear cuenta';
+
+  @override
+  String get alreadyHaveAccountSignIn => '¿Ya tienes una cuenta? Inicia sesión';
+
+  @override
   String difficultyLabel(String name) => 'Dificultad: $name';
 
   @override
@@ -437,6 +539,12 @@ class AppStringsEs extends AppStrings {
 
   @override
   String get levelsRefreshFailed => 'No se pudo actualizar el catálogo de niveles.';
+
+  @override
+  String get levelSelectLoadFailed => 'No se pudo cargar el catálogo de niveles. Intenta más tarde.';
+
+  @override
+  String get levelSelectNoLevels => 'No hay niveles disponibles.';
 
   @override
   String get leaderboardNoScores => 'Aún no hay registros en este nivel.';

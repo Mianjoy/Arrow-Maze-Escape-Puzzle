@@ -2124,3 +2124,37 @@ Se agregó cobertura de test explícita para ambos locales en `test/presentation
 
 - Un mismo defecto de localización (texto final hardcodeado en vez de resuelto vía `AppStrings`) puede repetirse en más de una pantalla de forma independiente; conviene, tras corregir el primer caso, buscar el mismo patrón (`grep` por literales en inglés/español fuera de `app_strings.dart`) en el resto de la presentación en vez de asumir que era un caso aislado.
 - Verificar un fix de localización interactuando con la UI en el navegador embebido no siempre es viable: Flutter Web sin árbol de semántica no expone los widgets al DOM, así que los clics por coordenada pueden no alcanzar el widget esperado. Una prueba de widget que monta la pantalla con `AppStringsEs`/`AppStringsEn` explícitos y verifica el texto exacto es una verificación más confiable — y queda como regresión permanente — que una captura de pantalla puntual.
+
+## Consulta #43 — Auditoría completa de textos hardcodeados sin localizar
+
+**Tarea o problema abordado.**
+
+Tras corregir dos casos puntuales de este mismo bug (Consultas #41 y #42), el usuario pidió revisar de forma sistemática si el mismo problema (texto final de UI hardcodeado en un idioma fijo, sin pasar por `AppStrings`) ocurría en algún otro lugar de la app.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (Anthropic), modelo Sonnet 5, con un subagente de exploración (`Explore`) dedicado a auditar `lib/` en busca de literales de texto de UI fuera de `app_strings.dart`, seguido de la implementación y verificación en la sesión principal.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Podrías revisar dónde más puede estar ocurriendo.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+La auditoría encontró tres focos adicionales, confirmados y corregidos:
+
+1. **`lib/presentation/auth/login_screen.dart` y `register_screen.dart`** (el de mayor visibilidad: toda la pantalla de login/registro estaba en inglés fijo salvo el mensaje de error, que ya usaba `authErrorMessage`). Título del AppBar, etiquetas de campo (`Username`/`Password`), errores de validación (`Min 3 characters`, `Required`, `Min 8 characters`), y botones (`Sign in`, `Create account`, `Already have an account? Sign in`) estaban todos hardcodeados. Se agregaron 11 claves nuevas a `AppStrings` (`loginTitle`, `registerTitle`, `usernameLabel`, `passwordLabel`, `passwordMinLengthLabel`, `requiredFieldError`, `minUsernameLengthError`, `minPasswordLengthError`, `createAccount`, `alreadyHaveAccountSignIn`) con su traducción en/es, y ambas pantallas ahora leen todo de `AppStringsScope.of(context)`.
+2. **`lib/presentation/level_select/level_select_screen.dart:144`** — el catálogo vacío mostraba `'No levels available.'` fijo. Se agregó `levelSelectNoLevels`.
+3. **`lib/presentation/level_select/level_select_screen.dart:139`** — el error de carga inicial del catálogo mostraba `'${widget.controller.error}'`, el `toString()` crudo de la excepción (mismo patrón que `GameLossMessage` en la Consulta #41: un valor de dominio con su mensaje final ya redactado, ignorando el locale). Se reemplazó por `strings.levelSelectLoadFailed`, un mensaje genérico localizado, igual que ya hacía la pantalla de leaderboard para su caso análogo.
+
+Se agregó cobertura de test explícita en/es para los tres casos (`login_screen_test.dart`, `register_screen_test.dart`, `level_select_screen_test.dart`).
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna; se verificó con `flutter analyze` (sin nuevas advertencias) y `flutter test` (112/112 tests, incluyendo los 4 casos nuevos).
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Una auditoría dirigida por subagente, acotada explícitamente al patrón de bug ya conocido (texto de UI final fuera de `AppStrings`) y con instrucciones de ignorar ruido (logs, excepciones no mostradas, comentarios), es más efectiva que repetir manualmente el mismo `grep` puntual: encontró tanto literales obvios (`Text('...')`) como una variante más sutil (un `toString()` de excepción de dominio renderizado directo), que un grep de texto simple no habría relacionado sin ese contexto.
+- Las pantallas de autenticación (login/registro) son las de mayor exposición real para este tipo de bug — todo usuario no autenticado las ve — y sin embargo habían quedado fuera de las dos correcciones anteriores porque el síntoma reportado por el usuario apuntaba a otras pantallas; vale la pena, tras el primer hallazgo de un patrón de bug, preguntar explícitamente "¿dónde más puede estar pasando esto?" en vez de darlo por cerrado con el caso puntual reportado.
+

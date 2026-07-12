@@ -145,4 +145,26 @@ void main() {
 
     expect(find.text('Catalog is up to date (1 levels).'), findsOneWidget);
   });
+
+  testWidgets('should_show_localized_empty_state_when_catalog_has_no_levels', (tester) async {
+    final controller = buildController(
+      levels: const [],
+      playerId: const Identifier('test-user'),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AppStringsScope(
+          strings: const AppStringsEs(),
+          child: LevelSelectScreen(
+            controller: controller,
+            authSessionController: buildTestAuthSessionController(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('No hay niveles disponibles.'), findsOneWidget);
+  });
 }

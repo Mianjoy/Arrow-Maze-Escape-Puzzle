@@ -136,12 +136,12 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> with RouteAware {
           }
 
           if (widget.controller.error != null) {
-            return Center(child: Text('${widget.controller.error}'));
+            return Center(child: Text(strings.levelSelectLoadFailed));
           }
 
           final levels = widget.controller.levels;
           if (levels.isEmpty) {
-            return const Center(child: Text('No levels available.'));
+            return Center(child: Text(strings.levelSelectNoLevels));
           }
 
           final levelList = ListView.builder(
