@@ -51,66 +51,215 @@ Screens from the Android build (Spanish UI, synced with the backend on Render):
 
 ## Architecture
 
-Four Clean Architecture layers, dependencies pointing inward (outer layers depend on
-inner ones, never the reverse):
+Four **concentric** Clean Architecture layers (onion model, L4⊃L3⊃L2⊃L1): **DOMAIN** at the
+center; each outer ring may depend on inner rings only — never the reverse. Ports
+(`I*Repository`, `I*ApiClient`, `IAudioService`) live in domain/application; adapters
+(mappers, repositories, controllers) sit in the **INTERFACE ADAPTERS** ring; Flutter UI, HTTP
+and local storage form the outermost **FRAMEWORKS & DRIVERS** ring. Components are **white boxes**
+with a colored border per layer; arrows connect **component → component** with English labels
+(e.g. `LevelSelectScreen` → `GameController` with `renders / events`) and point inward. Dashed
+arrows show **implements (DIP)**. API clients call the external **arrowmaze-backend** REST API.
+The domain layer imports nothing (no Flutter, HTTP, or SharedPreferences).
 
 ```mermaid
 flowchart TB
-    %% Clean Architecture — frontend Arrow Maze.
-    %% Outer layers depend on inner layers only (dependency rule).
+    %% Frontend Arrow Maze — Clean Architecture (concentric onion · English)
+    %% Dependency rule: arrows point toward the center only
 
-    subgraph Legend["Legend — layer colors"]
+    subgraph Legend["Legend"]
         direction LR
-        LgD["#e8f4ea Domain"] ~~~ LgA["#e8eef8 Application"] ~~~ LgAd["#fdf3e2 Adapters"] ~~~ LgI["#f8e8ee Infrastructure"] ~~~ LgP["#efe6fa Presentation"]
+        legDom["🔴 DOMAIN"] ~~~ legApp["🟡 APPLICATION"] ~~~ legAdp["🟢 INTERFACE ADAPTERS"] ~~~ legFw["🔵 FRAMEWORKS & DRIVERS"] ~~~ legExt["⬜ component"] ~~~ legDip["- - implements (DIP)"]
     end
 
-    subgraph L4["Layer 4 — Presentation"]
+    subgraph Backend["arrowmaze-backend (REST API)"]
         direction TB
-        Screens["Screens: Home, LevelSelect, Game, Victory, Defeat,
-        Auth (login/register), Leaderboard, Settings, Collectibles gallery"]
-        Controllers["Controllers (ChangeNotifier): Game, LevelSelect, AuthSession,
-        Leaderboard, AppSettings"]
-        AudioScope["AudioScope (provides IAudioService to widget tree)"]
+        API_Levels["GET /levels · GET /levels/:id"]
+        API_Auth["POST /auth/login · POST /auth/register"]
+        API_Progress["POST /progress/sync · GET /progress"]
+        API_Leader["GET /leaderboard/:levelId"]
     end
 
-    subgraph L3["Layer 3 — Infrastructure & Interface Adapters"]
+    subgraph L4["🔵 FRAMEWORKS & DRIVERS"]
         direction TB
-        Adapters["LevelDtoMapper, PlayerProgressJsonMapper"]
-        HttpClients["LevelApiClient, ProgressApiClient, AuthApiClient, LeaderboardApiClient"]
-        LocalRepos["SharedPreferences repositories, AppAudioService / NoOpAudioService"]
+        ScreenLevels["LevelSelectScreen /<br/>GameView (SVG) / overlays<br/><i>lib/presentation/level_select</i>"]
+        ScreenGame["GameScreen /<br/>BoardView · PhoneFrame<br/><i>lib/presentation/game</i>"]
+        ScreenAuth["LoginScreen · RegisterScreen<br/><i>lib/presentation/auth</i>"]
+        ScreenHome["HomeScreen<br/><i>lib/presentation/home</i>"]
+        ScreenResult["VictoryScreen · DefeatScreen<br/><i>lib/presentation/result</i>"]
+        ScreenLeader["LeaderboardScreen · HubScreen<br/><i>lib/presentation/leaderboard</i>"]
+        HttpLib["HTTP client<br/><i>package:http</i>"]
+        Prefs["SharedPreferences<br/><i>package:shared_preferences</i>"]
+        AudioImpl["AppAudioService<br/><i>infrastructure/audio</i>"]
+
+        subgraph L3["🟢 INTERFACE ADAPTERS"]
+            direction TB
+            Ctrl_Game["GameController /<br/>useGameController<br/><i>lib/presentation/game/game_controller.dart</i>"]
+            Ctrl_Levels["LevelSelectController<br/><i>lib/presentation/level_select</i>"]
+            Ctrl_Auth["AuthSessionController<br/><i>lib/presentation/auth</i>"]
+            Ctrl_LoginReg["LoginController · RegisterController<br/><i>lib/presentation/auth</i>"]
+            Ctrl_Leader["LeaderboardController<br/><i>lib/presentation/leaderboard</i>"]
+            LevelMapper["LevelDtoMapper<br/><i>lib/interface_adapters/level_dto_mapper.dart</i>"]
+            ProgressMapper["PlayerProgressJsonMapper<br/><i>lib/interface_adapters/</i>"]
+            AdpCachedLevel["CachedLevelRepository<br/><i>infrastructure/level/</i>"]
+            AdpLevelApi["LevelApiClient<br/><i>infrastructure/http/level_api_client.dart</i>"]
+            AdpGameRepo["InMemoryGameRepository<br/><i>infrastructure/game/</i>"]
+            AdpLocalProgress["SharedPreferencesPlayerProgressRepository<br/><i>infrastructure/progress/</i>"]
+            AdpPendingSync["SharedPreferencesPendingSyncRepository<br/><i>infrastructure/progress/</i>"]
+            AdpAuthClient["AuthApiClient<br/><i>infrastructure/http/auth_api_client.dart</i>"]
+            AdpProgressClient["ProgressApiClient<br/><i>infrastructure/http/progress_api_client.dart</i>"]
+            AdpLeaderClient["LeaderboardApiClient<br/><i>infrastructure/http/leaderboard_api_client.dart</i>"]
+            TokenStore["SharedPreferencesTokenStorage<br/><i>infrastructure/auth/</i>"]
+            CompRoot["AppContainer<br/><i>lib/main.dart</i>"]
+            UseCaseLogger["ConsoleUseCaseLogger<br/><i>infrastructure/logging/</i>"]
+            LevelContract["StructuredLevelJsonDto<br/><i>lib/contract/level_contract.dart</i>"]
+
+            subgraph L2["🟡 APPLICATION"]
+                direction TB
+                UC_StartGame["StartGameUseCase<br/><i>application/use_cases/</i>"]
+                UC_FireArrow["FireArrowUseCase<br/><i>application/use_cases/</i>"]
+                UC_FireDecor["LoggingFireArrowUseCaseDecorator<br/><i>application/use_cases/</i>"]
+                UC_LoadLevels["LoadLevelsUseCase<br/><i>application/use_cases/</i>"]
+                UC_RecordVictory["RecordVictoryUseCase<br/><i>application/use_cases/</i>"]
+                UC_SyncPending["SyncPendingProgressUseCase<br/><i>application/use_cases/</i>"]
+                UC_Login["LoginUserUseCase<br/><i>application/use_cases/</i>"]
+                UC_Leader["GetLeaderboardUseCase<br/><i>application/use_cases/</i>"]
+                PortAuth["«port» IAuthApiClient<br/><i>application/ports/</i>"]
+                PortHttpProg["«port» IProgressApiClient<br/><i>application/ports/</i>"]
+                PortLeader["«port» ILeaderboardApiClient<br/><i>application/ports/</i>"]
+                PortToken["«port» ITokenStorage<br/><i>application/ports/</i>"]
+                PortFire["«port» IFireArrowUseCase<br/><i>application/use_cases/</i>"]
+                PortPending["«port» IPendingSyncRepository<br/><i>application/ports/</i>"]
+                PortAudio["«port» IAudioService<br/><i>application/ports/</i>"]
+
+                subgraph L1["🔴 DOMAIN"]
+                    direction TB
+                    Ent_Board["Board · Arrow · Cell<br/><i>domain/board/entities/</i>"]
+                    Ent_Game["Game<br/><i>domain/game/aggregates/game.dart</i>"]
+                    Ent_Level["Level<br/><i>domain/level/aggregates/level.dart</i>"]
+                    Ent_Progress["PlayerProgress<br/><i>domain/progress/aggregates/</i>"]
+                    Ent_Events["ArrowExtractedEvent<br/>GameWonEvent<br/><i>domain/events/</i>"]
+                    Dom_Engine["ArrowMovementEngine<br/>CollisionValidator<br/><i>domain/board/services/</i>"]
+                    Dom_LevelSvc["StarRatingCalculator<br/><i>domain/level/services/</i>"]
+                    Dom_Collect["MetaCollectibleCatalog<br/>UnlockPolicy<br/><i>domain/progress/services/</i>"]
+                    PortLevel["«port» ILevelRepository<br/><i>domain/repositories/</i>"]
+                    PortGame["«port» IGameRepository<br/><i>domain/repositories/</i>"]
+                    PortProgress["«port» IPlayerProgressRepository<br/><i>domain/repositories/</i>"]
+                    DomainNote["Domain imports nothing<br/><i>no Flutter · no HTTP · no SharedPreferences</i>"]
+                end
+            end
+        end
     end
 
-    subgraph L2["Layer 2 — Application"]
-        direction TB
-        UseCases["LoadLevels, StartGame, FireArrow (via IFireArrowUseCase),
-        RecordVictory, SyncPendingProgress, PullRemoteProgress,
-        Login/Register/Logout/RestoreSession, GetLeaderboard"]
-        AopDecorator["LoggingFireArrowUseCaseDecorator (AOP logging)"]
-        Ports["IAudioService, IAuthApiClient, IProgressApiClient, ILeaderboardApiClient, ITokenStorage"]
-    end
+    %% ── L4 → L3: UI renders / drives adapters ──
+    ScreenLevels -->|"renders / events"| Ctrl_Levels
+    ScreenGame -->|"renders / events"| Ctrl_Game
+    ScreenAuth -->|"renders / events"| Ctrl_LoginReg
+    ScreenHome -->|"renders / events"| Ctrl_Auth
+    ScreenResult -->|"retry from defeat"| Ctrl_Game
+    ScreenLeader -->|"renders / events"| Ctrl_Leader
+    Ctrl_LoginReg -->|"delegates session"| Ctrl_Auth
+    HttpLib -->|"HTTP request"| AdpAuthClient
+    HttpLib -->|"HTTP request"| AdpProgressClient
+    HttpLib -->|"HTTP request"| AdpLeaderClient
+    HttpLib -->|"HTTP request"| AdpLevelApi
+    Prefs -->|"local persistence"| AdpLocalProgress
+    Prefs -->|"offline sync queue"| AdpPendingSync
+    Prefs -->|"level JSON cache"| AdpCachedLevel
+    Prefs -->|"stores JWT"| TokenStore
+    AudioImpl -->|"plays effects"| Ctrl_Game
 
-    subgraph L1["Layer 1 — Domain"]
-        direction TB
-        Entities["Board, Game, Level, PlayerProfile, PlayerProgress,
-        meta-collectibles, domain events"]
-    end
+    %% ── L3 → L2: controllers execute use cases ──
+    Ctrl_Game -->|"starts game"| UC_StartGame
+    Ctrl_Game -->|"fires arrow via"| PortFire
+    Ctrl_Game -->|"records victory"| UC_RecordVictory
+    Ctrl_Game -->|"plays audio via"| PortAudio
+    Ctrl_Levels -->|"loads catalog"| UC_LoadLevels
+    Ctrl_Levels -->|"flushes offline queue"| UC_SyncPending
+    Ctrl_Auth -->|"login / register"| UC_Login
+    Ctrl_Leader -->|"fetches ranking"| UC_Leader
+    CompRoot -->|"wires / injects"| UC_StartGame
+    CompRoot -->|"wires / injects"| UC_LoadLevels
+    CompRoot -->|"wires / injects"| UC_RecordVictory
+    CompRoot -->|"wires / injects"| UC_Login
+    CompRoot -->|"decorates with logger"| UC_FireDecor
+    CompRoot -->|"instantiates repos"| AdpCachedLevel
+    CompRoot -->|"instantiates repos"| AdpGameRepo
+    CompRoot -->|"instantiates API clients"| AdpAuthClient
+    CompRoot -->|"instantiates API clients"| AdpProgressClient
+    CompRoot -->|"instantiates API clients"| AdpLevelApi
+    UseCaseLogger -->|"logs invocations"| UC_FireDecor
+    UC_FireDecor -->|"delegates to"| UC_FireArrow
+    PortFire -.->|"contract exposed by"| UC_FireDecor
 
-    L4 -->|depends on| L3
-    L3 -->|depends on| L2
-    L2 -->|depends on| L1
+    %% ── L3 → L1: mappers build domain ──
+    LevelMapper -->|"maps DTO → entities"| Ent_Level
+    LevelMapper -->|"builds board"| Ent_Board
+    LevelMapper -->|"uses wire contract"| LevelContract
+    ProgressMapper -->|"maps JSON → aggregate"| Ent_Progress
+    AdpCachedLevel -->|"deserializes via"| LevelMapper
+    AdpCachedLevel -->|"fetches remote via"| AdpLevelApi
+    AdpLocalProgress -->|"serializes via"| ProgressMapper
 
-    classDef domain fill:#e8f4ea,stroke:#2e7d32,color:#1b3a1e
-    classDef app fill:#e8eef8,stroke:#1565c0,color:#0d2a4d
-    classDef adapters fill:#fdf3e2,stroke:#ef6c00,color:#5c3600
-    classDef infra fill:#f8e8ee,stroke:#ad1457,color:#4d0d24
-    classDef presentation fill:#efe6fa,stroke:#6a1b9a,color:#33064d
-    classDef legend fill:#f5f5f5,stroke:#9e9e9e,color:#333
+    %% ── L2 → L1: use cases depend on domain ──
+    UC_StartGame -->|"creates session"| Ent_Game
+    UC_StartGame -->|"loads level"| Ent_Level
+    UC_StartGame -->|"persists via"| PortGame
+    UC_FireArrow -->|"moves arrows on"| Ent_Board
+    UC_FireArrow -->|"mutates"| Ent_Game
+    UC_FireArrow -->|"applies engine"| Dom_Engine
+    UC_FireArrow -->|"emits events"| Ent_Events
+    UC_FireArrow -->|"saves state via"| PortGame
+    UC_LoadLevels -->|"queries catalog via"| PortLevel
+    UC_RecordVictory -->|"updates progress"| Ent_Progress
+    UC_RecordVictory -->|"evaluates collectibles"| Dom_Collect
+    UC_RecordVictory -->|"calculates stars"| Dom_LevelSvc
+    UC_RecordVictory -->|"persists locally via"| PortProgress
+    UC_RecordVictory -->|"enqueues sync via"| PortPending
+    UC_RecordVictory -->|"sends to backend via"| PortHttpProg
+    UC_SyncPending -->|"reads queue via"| PortPending
+    UC_SyncPending -->|"flushes via"| PortHttpProg
+    UC_Login -->|"authenticates via"| PortAuth
+    UC_Login -->|"stores token via"| PortToken
+    UC_Leader -->|"queries ranking via"| PortLeader
 
-    class Entities domain
-    class UseCases,AopDecorator,Ports app
-    class Adapters,HttpClients,LocalRepos adapters
-    class Screens,Controllers,AudioScope presentation
-    class LgD,LgA,LgAd,LgI,LgP legend
+    %% ── L3 → external backend (HTTP) ──
+    AdpLevelApi -->|"HTTP request"| API_Levels
+    AdpAuthClient -->|"HTTP request"| API_Auth
+    AdpProgressClient -->|"HTTP request"| API_Progress
+    AdpLeaderClient -->|"HTTP request"| API_Leader
+
+    %% ── DIP: adapters implement ports (dashed) ──
+    AdpCachedLevel -.->|"implements"| PortLevel
+    AdpGameRepo -.->|"implements"| PortGame
+    AdpLocalProgress -.->|"implements"| PortProgress
+    AdpPendingSync -.->|"implements"| PortPending
+    AdpAuthClient -.->|"implements"| PortAuth
+    AdpProgressClient -.->|"implements"| PortHttpProg
+    AdpLeaderClient -.->|"implements"| PortLeader
+    TokenStore -.->|"implements"| PortToken
+    AudioImpl -.->|"implements"| PortAudio
+
+    classDef nodeL1 fill:#ffffff,stroke:#b71c1c,stroke-width:2px,color:#212121
+    classDef nodeL2 fill:#ffffff,stroke:#f57f17,stroke-width:2px,color:#212121
+    classDef nodeL3 fill:#ffffff,stroke:#2e7d32,stroke-width:2px,color:#212121
+    classDef nodeL4 fill:#ffffff,stroke:#1565c0,stroke-width:2px,color:#212121
+    classDef nodeExt fill:#ffffff,stroke:#616161,stroke-width:2px,color:#212121
+    classDef note fill:#fff8e1,stroke:#f57f17,stroke-width:1px,color:#424242,font-size:11px
+    classDef legend fill:#f5f5f5,stroke:#616161,color:#212121
+
+    class Ent_Board,Ent_Game,Ent_Level,Ent_Progress,Ent_Events,Dom_Engine,Dom_LevelSvc,Dom_Collect,PortLevel,PortGame,PortProgress nodeL1
+    class UC_StartGame,UC_FireArrow,UC_FireDecor,UC_LoadLevels,UC_RecordVictory,UC_SyncPending,UC_Login,UC_Leader,PortAuth,PortHttpProg,PortLeader,PortToken,PortFire,PortPending,PortAudio nodeL2
+    class Ctrl_Game,Ctrl_Levels,Ctrl_Auth,Ctrl_LoginReg,Ctrl_Leader,LevelMapper,ProgressMapper,AdpCachedLevel,AdpLevelApi,AdpGameRepo,AdpLocalProgress,AdpPendingSync,AdpAuthClient,AdpProgressClient,AdpLeaderClient,TokenStore,CompRoot,UseCaseLogger,LevelContract nodeL3
+    class ScreenLevels,ScreenGame,ScreenAuth,ScreenHome,ScreenResult,ScreenLeader,HttpLib,Prefs,AudioImpl nodeL4
+    class API_Levels,API_Auth,API_Progress,API_Leader nodeExt
+    class DomainNote note
+    class legDom,legApp,legAdp,legFw,legExt,legDip legend
+
+    style L1 fill:#ffcdd2,stroke:#b71c1c,stroke-width:3px
+    style L2 fill:#fff59d,stroke:#f57f17,stroke-width:3px
+    style L3 fill:#a5d6a7,stroke:#2e7d32,stroke-width:3px
+    style L4 fill:#90caf9,stroke:#1565c0,stroke-width:3px
+    style Backend fill:#e0e0e0,stroke:#616161,stroke-width:2px
 ```
 
 ![Clean Architecture layers (static export)](docs/architecture/clean-architecture.png)
@@ -120,9 +269,9 @@ Source: [`docs/architecture/clean-architecture.mmd`](docs/architecture/clean-arc
 | Layer | Responsibility | Status |
 |---|---|---|
 | **Domain** | Entities, aggregates, value objects, domain services, events, repository ports | ✅ Implemented |
-| **Application** | Use cases, AOP decorator (`LoggingFireArrowUseCaseDecorator`), HTTP/audio ports | ✅ Implemented |
-| **Infrastructure / Interface Adapters** | API clients, DTO mappers, SharedPreferences repos, audio service | ✅ Implemented |
-| **Presentation** | Flutter screens and controllers | ✅ Implemented |
+| **Application** | Use cases, AOP decorator (`LoggingFireArrowUseCaseDecorator`), application ports | ✅ Implemented |
+| **Interface Adapters** | Controllers, DTO mappers, repository implementations, API client adapters, `AppContainer` | ✅ Implemented |
+| **Presentation (Frameworks & Drivers)** | Flutter screens/widgets, HTTP client, SharedPreferences, `AppAudioService` | ✅ Implemented |
 
 ### Domain layer
 
@@ -193,21 +342,36 @@ screen controllers (presenters) are included. Editable source:
 classDiagram
     direction TB
 
+    %% ============================================================
     %% Arrow Maze Client — Class Diagram
-    %% Layer colors: green=Domain, blue=Application, orange=Adapters,
-    %% pink=Infrastructure, purple=Presentation
-    %% Patterns: Factory Method, Decorator, Adapter, Repository/DIP,
-    %% State (GameStatus), Domain Event, Observer (domain events)
+    %% Colors indicate Clean Architecture layer (see legend below).
+    %% Low-level UI widgets are intentionally excluded per scope;
+    %% screen controllers (presenters) are included.
+    %% Patterns shown: Factory Method (CellFactory/BoardFactory/
+    %% LevelFactory), Decorator (CachedLevelRepository), Adapter
+    %% (LevelDtoMapper), Repository/DIP (I*Repository ports).
+    %% ============================================================
 
     %% ----- Domain: board -----
     class Cell {
         <<abstract>>
+    }
+    class CellState {
+        <<enumeration>>
+        empty
+        occupied
+        cleared
+        wall
     }
     class Board {
         +Identifier id
         +BoardDimension dimension
         +Cell[] cells
         +Arrow[] arrows
+        +cellAt(position) Cell
+        +arrowIdAt(position) Identifier
+        +placeArrowSegments(arrow) Board
+        +applyArrowUpdate(arrow) Board
         +isCleared() bool
         +withDomainEvent(event) Board
         +pullDomainEvents() Board
@@ -218,11 +382,15 @@ classDiagram
         +ArrowDirection direction
         +ArrowState state
         +Position[] body
+        +occupies(position) bool
     }
     Board "1" o-- "0..*" Arrow
     Board ..> Cell
+    Cell --> CellState
 
-    class ArrowMovementEngine { +attemptMove(board, arrowId) MoveResult }
+    class ArrowMovementEngine {
+        +attemptMove(board, arrowId) MoveResult
+    }
     class ICollisionValidator {
         <<interface>>
         +isBlocked(board, arrow) bool
@@ -231,21 +399,29 @@ classDiagram
     ICollisionValidator <|.. CollisionValidator
     ArrowMovementEngine ..> ICollisionValidator
 
-    class CellFactory { +createCell(type) Cell }
-    class BoardFactory { +createBoard(definition) Board }
-    CellFactory ..> Cell : Factory Method
+    class CellFactory {
+        +createCell(type) Cell
+    }
+    class BoardFactory {
+        +createBoard(definition) Board
+    }
+    CellFactory ..> Cell : creates (Factory Method)
     BoardFactory ..> CellFactory
-    BoardFactory ..> Board : Factory Method
+    BoardFactory ..> Board : creates (Factory Method)
 
     %% ----- Domain: level -----
     class LevelDifficulty {
         <<enumeration>>
-        easy medium hard expert
+        easy
+        medium
+        hard
+        expert
     }
     class Level {
         +Identifier id
         +int levelNumber
         +LevelDifficulty difficulty
+        +LevelBoardDefinition boardDefinition
         +int parMoves
         +int optimalMoves
         +buildInitialBoard(factory) Board
@@ -253,21 +429,36 @@ classDiagram
     Level --> LevelDifficulty
     Level ..> BoardFactory
 
-    class LevelFactory { +fromJson(json) Level }
-    class ShortestPathCalculator { +calculateMinimumMoves(board) int }
-    class StarRatingCalculator { +calculate(moves, optimal) StarRating }
-    LevelFactory ..> Level : Factory Method
+    class LevelFactory {
+        +fromJson(json) Level
+    }
+    class ShortestPathCalculator {
+        +calculateMinimumMoves(board) int
+    }
+    class StarRatingCalculator {
+        +calculate(moves, optimalMoves) StarRating
+    }
+    LevelFactory ..> Level : creates (Factory Method)
+    LevelFactory ..> ShortestPathCalculator
 
-    %% ----- Domain: game (State pattern) -----
+    %% ----- Domain: game -----
     class GameStatus {
         <<enumeration>>
-        <<State>>
-        ready inProgress won lost paused
+        ready
+        inProgress
+        won
+        lost
+        paused
     }
     class Game {
+        +Identifier id
+        +Identifier playerId
+        +Level level
+        +Board board
         +GameStatus status
         +int moveCount
         +int score
+        +StarRating starsEarned
         +performMove(arrowId, engine) MoveResult
         +pause() Game
         +resume() Game
@@ -276,31 +467,69 @@ classDiagram
     }
     Game "1" *-- "1" Board
     Game "1" *-- "1" Level
-    Game --> GameStatus : State
+    Game --> GameStatus
+    Game ..> ArrowMovementEngine
+    Game ..> StarRatingCalculator
 
     %% ----- Domain: player & progress -----
     class PlayerProfile
     class PlayerStatistics
     PlayerProfile "1" *-- "1" PlayerStatistics
 
+    class LevelProgressStatus {
+        <<enumeration>>
+        locked
+        unlocked
+        completed
+    }
     class LevelProgress {
         +Identifier levelId
         +LevelProgressStatus status
-        +recordCompletion(...) LevelProgress
+        +int bestMoveCount
+        +StarRating bestStars
+        +recordCompletion(moves, time, stars) LevelProgress
+        +unlock() LevelProgress
     }
     class PlayerProgress {
         +Identifier playerId
-        +Map levels
-        +Set unlockedCollectibles
-        +mergeRemoteLevel(...) PlayerProgress
-        +mergeRemoteCollectibles(...) PlayerProgress
+        +Map~Identifier,LevelProgress~ levels
+        +Set~string~ unlockedCollectibles
+        +completeLevel(levelId, ...) PlayerProgress
+        +unlockLevel(levelId) PlayerProgress
+        +mergeRemoteLevel(levelId, remoteMoves, remoteTime, remoteCompleted) PlayerProgress
+        +unlockCollectible(collectibleId) PlayerProgress
+        +mergeRemoteCollectibles(remoteCollectibleIds) PlayerProgress
     }
     PlayerProgress "1" *-- "many" LevelProgress
+    LevelProgress --> LevelProgressStatus
 
-    class MetaCollectibleCatalog { <<static>> +forCompletedLevel(n) MetaCollectible }
-    class MetaCollectibleUnlockPolicy { <<static>> +shouldUnlock(...) bool }
+    %% ----- Domain: meta-collectibles -----
+    class MetaCollectibleKind {
+        <<enumeration>>
+        unlockable
+        finalLevel
+        comingSoon
+    }
+    class MetaCollectible {
+        +string id
+        +MetaCollectibleKind kind
+        +int milestoneLevelNumber
+        +string assetPath
+    }
+    class MetaCollectibleCatalog {
+        <<static>>
+        +forCompletedLevel(levelNumber) MetaCollectible
+    }
+    class MetaCollectibleUnlockPolicy {
+        <<static>>
+        +shouldUnlock(levelNumber, starsEarned, score, level) bool
+        +collectibleForLevel(levelNumber) MetaCollectible
+    }
+    MetaCollectible --> MetaCollectibleKind
+    MetaCollectibleCatalog ..> MetaCollectible : creates
+    MetaCollectibleUnlockPolicy ..> MetaCollectibleCatalog
 
-    %% ----- Domain: repository ports -----
+    %% ----- Domain: repository ports (DIP) -----
     class ILevelRepository {
         <<interface>>
         +findAll() Level[]
@@ -309,6 +538,7 @@ classDiagram
     class IGameRepository {
         <<interface>>
         +save(game) void
+        +findById(id) Game
     }
     class IPlayerProgressRepository {
         <<interface>>
@@ -319,145 +549,151 @@ classDiagram
         <<interface>>
         +add(entry) void
         +loadAll() PendingSyncEntry[]
+        +saveAll(entries) void
     }
 
-    %% ----- Application: ports & use cases -----
+    %% ----- Application: audio port -----
     class IAudioService {
         <<interface>>
+        +ensureAudioUnlocked() void
+        +playButtonClick() void
         +playArrowExtracted() void
+        +playMovementNotAllowed() void
+        +playLevelCleared() void
+        +playNoMovementsLeft() void
+        +playTimeUp() void
         +startBackgroundMusic() void
+        +stopBackgroundMusic() void
     }
-    class IAuthApiClient {
-        <<interface>>
-        +register(dto) AuthResult
-        +login(dto) AuthResult
+
+    %% ----- Application: use cases -----
+    class LoadLevelsUseCase {
+        +execute() Level[]
     }
-    class IProgressApiClient {
-        <<interface>>
-        +syncProgress(dto) void
-        +syncCollectibles(ids) void
-        +getProgress() PlayerProgressDto
+    class StartGameUseCase {
+        +execute(gameId, playerId, level) Game
     }
-    class ILeaderboardApiClient {
-        <<interface>>
-        +getLeaderboard(levelId) LeaderboardEntry[]
-    }
-    class ITokenStorage {
-        <<interface>>
-        +saveToken(token) void
-        +clear() void
-    }
-    class IFireArrowUseCase {
-        <<interface>>
+    class FireArrowUseCase {
         +execute(game, position) MoveOutcome
     }
-
-    class LoadLevelsUseCase { +execute() Level[] }
-    class StartGameUseCase { +execute(...) Game }
-    class FireArrowUseCase { +execute(game, position) MoveOutcome }
-    class LoggingFireArrowUseCaseDecorator { +execute(game, position) MoveOutcome }
-    class RecordVictoryUseCase { +execute(game, session) RecordVictoryResult }
-    class SyncPendingProgressUseCase { +execute(session) void }
-    class PullRemoteProgressUseCase { +execute(session) PlayerProgress }
-    class LoginUserUseCase { +execute(dto) bool }
-    class RegisterUserUseCase { +execute(dto) bool }
-    class LogoutUserUseCase { +execute() void }
-    class GetLeaderboardUseCase { +execute(levelId) entries }
-    class EnsureInitialProgressUseCase { +execute(playerId) void }
-
-    IFireArrowUseCase <|.. FireArrowUseCase
-    IFireArrowUseCase <|.. LoggingFireArrowUseCaseDecorator : Decorator AOP
-    LoggingFireArrowUseCaseDecorator o-- FireArrowUseCase : wraps
+    class RecordVictoryUseCase {
+        +execute(game, session) RecordVictoryResult
+    }
+    RecordVictoryUseCase ..> MetaCollectibleUnlockPolicy
+    RecordVictoryUseCase ..> MetaCollectible
+    class SyncPendingProgressUseCase {
+        +execute(session) void
+    }
+    class PullRemoteProgressUseCase {
+        +execute(session) PlayerProgress
+    }
+    class LoginUserUseCase
+    class RegisterUserUseCase
+    class EnsureInitialProgressUseCase
+    EnsureInitialProgressUseCase ..> ILevelRepository
+    EnsureInitialProgressUseCase ..> IPlayerProgressRepository
 
     LoadLevelsUseCase ..> ILevelRepository
     StartGameUseCase ..> IGameRepository
     FireArrowUseCase ..> IGameRepository
     FireArrowUseCase ..> ArrowMovementEngine
     RecordVictoryUseCase ..> IPlayerProgressRepository
+    RecordVictoryUseCase ..> ILevelRepository
     RecordVictoryUseCase ..> IPendingSyncRepository
-    RecordVictoryUseCase ..> IProgressApiClient
-    RecordVictoryUseCase ..> MetaCollectibleUnlockPolicy
     SyncPendingProgressUseCase ..> IPendingSyncRepository
-    SyncPendingProgressUseCase ..> IProgressApiClient
     PullRemoteProgressUseCase ..> IPlayerProgressRepository
-    PullRemoteProgressUseCase ..> IProgressApiClient
-    LoginUserUseCase ..> IAuthApiClient
-    LoginUserUseCase ..> ITokenStorage
-    RegisterUserUseCase ..> IAuthApiClient
-    RegisterUserUseCase ..> ITokenStorage
-    LogoutUserUseCase ..> ITokenStorage
-    GetLeaderboardUseCase ..> ILeaderboardApiClient
+    PullRemoteProgressUseCase ..> ILevelRepository
+    PullRemoteProgressUseCase ..> PlayerProgress : uses mergeRemoteLevel
 
     %% ----- Interface Adapters -----
-    class LevelDtoMapper { +fromDto(dto) Level }
-    class PlayerProgressJsonMapper { +toJson(progress) String }
+    class LevelDtoMapper {
+        +fromDto(dto) Level
+        +fromJson(json) Level
+    }
+    LevelDtoMapper ..> Level : adapts (Adapter)
     LoadLevelsUseCase ..> LevelDtoMapper
-    LevelDtoMapper ..> Level : Adapter
 
     %% ----- Infrastructure -----
     class RemoteLevelRepository
-    class CachedLevelRepository { +findAll() Level[] }
+    class CachedLevelRepository {
+        +findAll() Level[]
+    }
     class SharedPreferencesPlayerProgressRepository
     class SharedPreferencesPendingSyncRepository
-    class LevelApiClient
-    class ProgressApiClient
-    class AuthApiClient
-    class LeaderboardApiClient
-    class AppAudioService
+    class AppAudioService {
+        +ensureAudioUnlocked() void
+        +startBackgroundMusic() void
+    }
     class NoOpAudioService
 
     ILevelRepository <|.. RemoteLevelRepository
     ILevelRepository <|.. CachedLevelRepository
-    CachedLevelRepository ..> RemoteLevelRepository : Decorator
-    CachedLevelRepository ..> LevelApiClient
+    CachedLevelRepository ..> RemoteLevelRepository : wraps (Decorator)
     CachedLevelRepository ..> LevelDtoMapper
     IPlayerProgressRepository <|.. SharedPreferencesPlayerProgressRepository
-    SharedPreferencesPlayerProgressRepository ..> PlayerProgressJsonMapper
     IPendingSyncRepository <|.. SharedPreferencesPendingSyncRepository
-    IAuthApiClient <|.. AuthApiClient
-    IProgressApiClient <|.. ProgressApiClient
-    ILeaderboardApiClient <|.. LeaderboardApiClient
     IAudioService <|.. AppAudioService
-    IAudioService <|.. NoOpAudioService
+    IAudioService <|.. NoOpAudioService : (test double)
 
-    %% ----- Presentation -----
-    class GameController { +onCellTapped(position) void }
-    class LevelSelectController { +load() void }
-    class AuthSessionController { +login() bool +logout() void }
-    class LeaderboardController { +load(levelId) void }
-    class AppSettingsController { +toggleSound() void }
+    %% ----- Presentation: controllers (presenters) & audio provider -----
+    class GameController {
+        +startGame(level) void
+        +onCellTapped(position) void
+    }
+    class LevelSelectController {
+        +load() void
+        +isOffline bool
+    }
+    class AuthSessionController {
+        +login(username, password) bool
+        +register(username, password) bool
+    }
+    class CollectiblesScreen
+    class AudioScope {
+        +of(context) IAudioService
+    }
+    AudioScope ..> IAudioService : provides (InheritedWidget)
+    CollectiblesScreen ..> PlayerProgress
+    CollectiblesScreen ..> MetaCollectibleCatalog
 
     GameController ..> StartGameUseCase
-    GameController ..> IFireArrowUseCase
+    GameController ..> FireArrowUseCase
     GameController ..> RecordVictoryUseCase
-    GameController ..> IAudioService
+    GameController ..> IAudioService : contextual SFX + countdown
     LevelSelectController ..> LoadLevelsUseCase
     LevelSelectController ..> SyncPendingProgressUseCase
     LevelSelectController ..> PullRemoteProgressUseCase
+    LevelSelectController ..> EnsureInitialProgressUseCase
     AuthSessionController ..> LoginUserUseCase
     AuthSessionController ..> RegisterUserUseCase
-    AuthSessionController ..> LogoutUserUseCase
-    LeaderboardController ..> GetLeaderboardUseCase
 
-    class AppContainer { <<composition root>> }
+    %% ----- Composition root -----
+    class AppContainer {
+        <<composition root>>
+    }
     AppContainer ..> CachedLevelRepository
+    AppContainer ..> SharedPreferencesPlayerProgressRepository
+    AppContainer ..> SharedPreferencesPendingSyncRepository
+    AppContainer ..> AppAudioService
     AppContainer ..> GameController
     AppContainer ..> LevelSelectController
     AppContainer ..> AuthSessionController
-    AppContainer ..> LoggingFireArrowUseCaseDecorator
+    AppContainer ..> EnsureInitialProgressUseCase
 
-    %% ----- Layer legend -----
+    %% ============================================================
+    %% Layer legend (fill colors)
+    %% ============================================================
     classDef domain fill:#e8f4ea,stroke:#2e7d32,color:#1b3a1e
     classDef application fill:#e8eef8,stroke:#1565c0,color:#0d2a4d
     classDef adapters fill:#fdf3e2,stroke:#ef6c00,color:#5c3600
     classDef infrastructure fill:#f8e8ee,stroke:#ad1457,color:#4d0d24
     classDef presentation fill:#efe6fa,stroke:#6a1b9a,color:#33064d
 
-    cssClass "Cell,Board,Arrow,ArrowMovementEngine,ICollisionValidator,CollisionValidator,CellFactory,BoardFactory,LevelDifficulty,Level,LevelFactory,ShortestPathCalculator,StarRatingCalculator,GameStatus,Game,PlayerProfile,PlayerStatistics,LevelProgress,PlayerProgress,MetaCollectibleCatalog,MetaCollectibleUnlockPolicy,ILevelRepository,IGameRepository,IPlayerProgressRepository,IPendingSyncRepository" domain
-    cssClass "IAudioService,IAuthApiClient,IProgressApiClient,ILeaderboardApiClient,ITokenStorage,IFireArrowUseCase,LoadLevelsUseCase,StartGameUseCase,FireArrowUseCase,LoggingFireArrowUseCaseDecorator,RecordVictoryUseCase,SyncPendingProgressUseCase,PullRemoteProgressUseCase,LoginUserUseCase,RegisterUserUseCase,LogoutUserUseCase,GetLeaderboardUseCase,EnsureInitialProgressUseCase" application
-    cssClass "LevelDtoMapper,PlayerProgressJsonMapper" adapters
-    cssClass "RemoteLevelRepository,CachedLevelRepository,SharedPreferencesPlayerProgressRepository,SharedPreferencesPendingSyncRepository,LevelApiClient,ProgressApiClient,AuthApiClient,LeaderboardApiClient,AppAudioService,NoOpAudioService,AppContainer" infrastructure
-    cssClass "GameController,LevelSelectController,AuthSessionController,LeaderboardController,AppSettingsController" presentation
+    cssClass "Cell,CellState,Board,Arrow,ArrowMovementEngine,ICollisionValidator,CollisionValidator,CellFactory,BoardFactory,LevelDifficulty,Level,LevelFactory,ShortestPathCalculator,StarRatingCalculator,GameStatus,Game,PlayerProfile,PlayerStatistics,LevelProgressStatus,LevelProgress,PlayerProgress,MetaCollectibleKind,MetaCollectible,MetaCollectibleCatalog,MetaCollectibleUnlockPolicy,ILevelRepository,IGameRepository,IPlayerProgressRepository,IPendingSyncRepository" domain
+    cssClass "LoadLevelsUseCase,StartGameUseCase,FireArrowUseCase,RecordVictoryUseCase,SyncPendingProgressUseCase,PullRemoteProgressUseCase,LoginUserUseCase,RegisterUserUseCase,EnsureInitialProgressUseCase,IAudioService" application
+    cssClass "LevelDtoMapper" adapters
+    cssClass "RemoteLevelRepository,CachedLevelRepository,SharedPreferencesPlayerProgressRepository,SharedPreferencesPendingSyncRepository,AppAudioService,NoOpAudioService,AppContainer" infrastructure
+    cssClass "GameController,LevelSelectController,AuthSessionController,CollectiblesScreen,AudioScope" presentation
 ```
 
 ![Class diagram (static export)](docs/architecture/class-diagram.png)
