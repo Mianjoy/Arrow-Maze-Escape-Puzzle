@@ -491,7 +491,7 @@ Cerrar la segunda mitad del **Día 2** del plan de integración (5 días): conec
 
 **Prompt o instrucción proporcionada.**
 
-> Implementar el bloque **RemoteLevelRepository + conectar app** del plan crítico: cliente HTTP contra los endpoints públicos de niveles, implementación de `ILevelRepository` remota con `LevelDtoMapper`, wiring en `AppContainer` (composition root), tests con `MockClient`, comentarios dartdoc en español por función, y registro en `AI_USAGE.md` con redacción técnica acorde al estándar del repositorio.
+> Implementar el bloque **RemoteLevelRepository + conectar app** del plan crítico: cliente HTTP contra los endpoints públicos de niveles, implementación de `ILevelRepository` remota con `LevelDtoMapper`, wiring en `AppContainer` (composition root), tests con `MockClient`, comentarios dartdoc en español por función, y registro en `AI_USAGE.md`.
 
 **Resultado obtenido.**
 
@@ -596,7 +596,7 @@ Ejecutar la **prueba de sistema completa** del plan de integración: correr la s
 
 **Prompt o instrucción proporcionada.**
 
-> Ejecutar la verificación integral del sistema Arrow Maze: validar backend (`npm test`, `GET /levels` con 15 entradas) y frontend (`flutter analyze`, `flutter test`, suite `test/e2e`); corregir los fallos detectados durante la ejecución; documentar parámetros, resultados y lecciones en `AI_USAGE.md` con redacción técnica profesional.
+> Ejecutar la verificación integral del sistema Arrow Maze: validar backend (`npm test`, `GET /levels` con 15 entradas) y frontend (`flutter analyze`, `flutter test`, suite `test/e2e`); corregir los fallos detectados durante la ejecución; documentar parámetros, resultados y lecciones en `AI_USAGE.md`.
 
 **Parámetros y comandos de verificación.**
 
@@ -673,7 +673,7 @@ Implementar el **Día 4** del plan de integración en Flutter: flujo de **regist
 
 **Prompt o instrucción proporcionada.**
 
-> Implementar el bloque Día 4 (autenticación, progreso y leaderboard) en `Arrow-Maze-Escape-Puzzle`: pantallas de login/registro, almacenamiento de JWT, sincronización automática al ganar un nivel, vista de leaderboard, integración en `AppContainer`, tests automatizados y documentación dartdoc en español; actualizar `AI_USAGE.md` con redacción técnica profesional.
+> Implementar el bloque Día 4 (autenticación, progreso y leaderboard) en `Arrow-Maze-Escape-Puzzle`: pantallas de login/registro, almacenamiento de JWT, sincronización automática al ganar un nivel, vista de leaderboard, integración en `AppContainer`, tests automatizados y documentación dartdoc en español; actualizar `AI_USAGE.md`.
 
 **Resultado obtenido.**
 
@@ -738,7 +738,7 @@ Implementar los requisitos **críticos de funcionalidad mínima** del proyecto s
 
 **Prompt o instrucción proporcionada.**
 
-> Implementar la funcionalidad mínima crítica del enunciado académico en `Arrow-Maze-Escape-Puzzle`: pantalla de inicio y ajustes, internacionalización español/inglés, efectos de sonido y música con opción de silenciar, persistencia local del progreso del jugador, indicadores de niveles bloqueados en la selección, pantallas dedicadas de victoria y derrota con navegación al siguiente nivel; documentar el código con comentarios explicativos y registrar la consulta en `AI_USAGE.md` con redacción técnica profesional.
+> Implementar la funcionalidad mínima crítica del enunciado académico en `Arrow-Maze-Escape-Puzzle`: pantalla de inicio y ajustes, internacionalización español/inglés, efectos de sonido y música con opción de silenciar, persistencia local del progreso del jugador, indicadores de niveles bloqueados en la selección, pantallas dedicadas de victoria y derrota con navegación al siguiente nivel; documentar el código con comentarios explicativos y registrar la consulta en `AI_USAGE.md`.
 
 **Resultado obtenido.**
 
@@ -1120,7 +1120,7 @@ El backend ya podía sembrar niveles desde `levels/*.json` y sincronizarlos en c
 
 **Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
 
-> Complementar el cliente Flutter con un botón de actualización del catálogo en la pantalla de selección de niveles: invalidar la caché del repositorio, volver a descargar `GET /levels`, refrescar la UI y mostrar una notificación (SnackBar) con el resultado; añadir i18n, tests y documentación en `AI_USAGE.md` con redacción técnica profesional, alineado con el hot-reload del backend vía patrón Observer.
+> Complementar el cliente Flutter con un botón de actualización del catálogo en la pantalla de selección de niveles: invalidar la caché del repositorio, volver a descargar `GET /levels`, refrescar la UI y mostrar una notificación (SnackBar) con el resultado; añadir i18n, tests y documentación en `AI_USAGE.md`, alineado con el hot-reload del backend vía patrón Observer.
 
 **Resultado obtenido (fragmento de código, diseño, explicación).**
 
@@ -1158,7 +1158,7 @@ Alinear la interfaz del cliente con la identidad visual acordada por el equipo (
 
 **Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
 
-> Implementar el rediseño visual del cliente Flutter según la paleta Tollens y el logo del laberinto: flechas con trazo continuo que abarquen hasta tres celdas del tablero, tablero minimalista con esquinas redondeadas, tema global coherente, validación del límite de segmentos en el contrato compartido, documentación dartdoc en español en cada función nueva, y registro en `AI_USAGE.md` con redacción técnica profesional.
+> Implementar el rediseño visual del cliente Flutter según la paleta Tollens y el logo del laberinto: flechas con trazo continuo que abarquen hasta tres celdas del tablero, tablero minimalista con esquinas redondeadas, tema global coherente, validación del límite de segmentos en el contrato compartido, documentación dartdoc en español en cada función nueva, y registro en `AI_USAGE.md`.
 
 **Resultado obtenido.**
 
@@ -1280,7 +1280,7 @@ Tres mejoras de producto detectadas al probar niveles espirales (p. ej. `level-1
 
 **Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
 
-> Corregir el renderizado de flechas para que los cruces y la unión cabeza–cuerpo coincidan con la referencia visual (trazo continuo, esquinas redondeadas, punta integrada). Añadir botones de Ajustes y Clasificación en todas las pantallas; en web, mostrar la aplicación dentro de un marco con proporciones de teléfono móvil; habilitar acceso al leaderboard global desde cualquier vista. Registrar la consulta en `AI_USAGE.md` con redacción técnica profesional.
+> Corregir el renderizado de flechas para que los cruces y la unión cabeza–cuerpo coincidan con la referencia visual (trazo continuo, esquinas redondeadas, punta integrada). Añadir botones de Ajustes y Clasificación en todas las pantallas; en web, mostrar la aplicación dentro de un marco con proporciones de teléfono móvil; habilitar acceso al leaderboard global desde cualquier vista. Registrar la consulta en `AI_USAGE.md`.
 
 **Resultado obtenido (fragmento de código, diseño, explicación).**
 
@@ -1320,7 +1320,7 @@ Seis incidencias detectadas en pruebas manuales tras la Consulta #27: (1) crash 
 
 **Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
 
-> Corregir seis detalles de UX detectados en pruebas: manejo amigable del leaderboard vacío (evitar errores técnicos), ocultar iconos de navegación redundantes en clasificación y ajustes, eliminar la flecha atrás en la pantalla principal, refrescar el progreso de niveles completados al regresar del juego, y ampliar la cabeza de las flechas para que la dirección sea legible. Registrar la consulta en `AI_USAGE.md` con redacción técnica profesional.
+> Corregir seis detalles de UX detectados en pruebas: manejo amigable del leaderboard vacío (evitar errores técnicos), ocultar iconos de navegación redundantes en clasificación y ajustes, eliminar la flecha atrás en la pantalla principal, refrescar el progreso de niveles completados al regresar del juego, y ampliar la cabeza de las flechas para que la dirección sea legible. Registrar la consulta en `AI_USAGE.md`.
 
 **Resultado obtenido (fragmento de código, diseño, explicación).**
 
@@ -1360,7 +1360,7 @@ Dos mejoras de producto detectadas en pruebas: (1) en la pantalla de **Ajustes**
 
 **Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
 
-> Implementar los ajustes pendientes de la revisión UX: ocultar el botón de clasificación en la pantalla de Ajustes; extender el contrato compartido de niveles con el campo `name` y mostrar ese nombre legible en la UI (selector de niveles, partida, hub y detalle de ranking) en lugar del identificador interno. Actualizar mappers, entidades y pruebas en backend y frontend. Registrar la consulta en `AI_USAGE.md` con redacción técnica profesional.
+> Implementar los ajustes pendientes de la revisión UX: ocultar el botón de clasificación en la pantalla de Ajustes; extender el contrato compartido de niveles con el campo `name` y mostrar ese nombre legible en la UI (selector de niveles, partida, hub y detalle de ranking) en lugar del identificador interno. Actualizar mappers, entidades y pruebas en backend y frontend. Registrar la consulta en `AI_USAGE.md`.
 
 **Resultado obtenido (fragmento de código, diseño, explicación).**
 
@@ -1499,7 +1499,7 @@ El equipo decidió convertir la biblioteca completa de sonidos del juego de **MP
 > - Mantener la **misma estructura de carpetas** y la **misma lógica de asignación por contexto** (`Tap_sound`, `General_Tap`, `Level_Cleared`, `Movement_Not_Allowe`, `times_up`, `no_movements_left`, `background`).
 > - Actualizar la tabla de referencia en `assets/audio/README.md`.
 > - No modificar `IAudioService`, controladores ni la semántica de los métodos por contexto de UX.
-> - Registrar la consulta en `AI_USAGE.md` con redacción técnica profesional.
+> - Registrar la consulta en `AI_USAGE.md`.
 
 **Resultado obtenido (fragmento de código, diseño, explicación).**
 
@@ -1566,7 +1566,7 @@ Tras la migración a WAV (Consulta #31), la reproducción de audio falló en **B
 > - **Reproducción robusta en Web:** corregir los errores de carga observados en consola (HTTP 404 con rutas duplicadas `assets/assets/...`); garantizar que los efectos y la música se reproduzcan de forma fiable en Flutter Web (Brave/macOS).
 > - **Comportamiento del mute:** el interruptor de Ajustes debe silenciar **solo** la música de fondo (`background.mp3`). Los efectos de juego (`Tap_sound/`, `General_Tap/`, `Level_Cleared/`, `Movement_Not_Allowe/`, `times_up.mp3`, `no_movements_left.mp3`) deben seguir reproduciéndose con el mute activado.
 > - **Arquitectura:** mantener `IAudioService`, `NoOpAudioService` para tests y la asignación por contexto de la Consulta #30.
-> - Registrar la consulta en `AI_USAGE.md` con redacción técnica profesional.
+> - Registrar la consulta en `AI_USAGE.md`.
 
 **Resultado obtenido (fragmento de código, diseño, explicación).**
 
@@ -1674,7 +1674,7 @@ Se requería una corrección definitiva que evite la resolución de URLs duplica
 > - **Caché y pool:** mantener caché en memoria de bytes y pool rotativo de reproductores SFX para solapamiento de efectos.
 > - **pubspec.yaml:** listar explícitamente los 11 archivos MP3 usados por el juego (más fiable en Web que solo declarar el directorio).
 > - **Comportamiento del mute:** sin cambios respecto a #32 — el toggle silencia solo `background.mp3`; los efectos de juego siguen activos.
-> - **Documentación:** actualizar `assets/audio/README.md` y registrar la consulta en `AI_USAGE.md` con redacción técnica profesional.
+> - **Documentación:** actualizar `assets/audio/README.md` y registrar la consulta en `AI_USAGE.md`.
 
 **Resultado obtenido (fragmento de código, diseño, explicación).**
 
@@ -2336,9 +2336,7 @@ El enunciado del proyecto exige entregar un ejecutable de la app para Android y/
 
 **Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
 
-> Uno de los requisitos es generar un ejecutable para Android o iOS. Si quisiera hacer ambos, ¿qué debería hacer y cómo?
->
-> [Turnos posteriores, resumidos] ¿Podrías hacer tú lo necesario para correr en iOS? / Sí, prepara ambos (Android e iOS) para que el profesor pueda probarlos.
+> Uno de los requisitos es generar un ejecutable para Android o iOS. Si quisiera hacer ambos, ¿qué debería hacer y cómo,y si es posible, prepara ambos (Android e iOS) para que el profesor pueda probarlos.
 
 **Resultado obtenido (fragmento de código, diseño, explicación).**
 
@@ -2572,6 +2570,101 @@ La causa: la app nunca escuchaba los cambios de ciclo de vida (`AppLifecycleStat
 **Lecciones aprendidas o limitaciones identificadas.**
 
 - Cualquier reproducción de audio en bucle debe atarse explícitamente al ciclo de vida de la aplicación; sin un `WidgetsBindingObserver`, el estado de "en primer plano" nunca se propaga a servicios que gestionan recursos del sistema como el audio.
+
+---
+
+## Consulta #57 — Migración a PostgreSQL (Neon) para persistencia en Render (`Develop`)
+
+**Tarea o problema abordado.**
+
+Tras desplegar el backend en Render (plan gratuito), el equipo detectó que los datos de jugadores (usuarios, progreso, coleccionables y entradas de leaderboard) **no sobrevivían a un redeploy**: el proceso usaba SQLite en disco efímero dentro del contenedor, que se destruye en cada despliegue. Los niveles sí se recuperaban porque el catálogo se re-siembra desde `levels/*.json` en cada arranque (`seedLevelCatalog`), pero el progreso del jugador se perdía.
+
+Se necesitaba migrar la persistencia de datos de jugador a una base **externa y gestionada** (PostgreSQL en Neon), manteniendo el mismo contrato HTTP, SQLite como fallback para desarrollo local y CI, y pruebas en la rama `Develop` antes de fusionar a `main`.
+
+**Alcance en este repositorio (`Arrow-Maze-Escape-Puzzle`, rama `Develop`):** compilar APK apuntando a Render; confirmar que el cliente existente ya sincroniza progreso y coleccionables sin cambios de contrato.
+
+**Alcance coordinado en el backend (`BackEnd-ArrowMaze`, rama `develop`):** persistencia dual Postgres/SQLite vía `DATABASE_URL` (ver Consulta #30 del repo servidor).
+
+**Herramienta de IA utilizada.**
+
+- Cursor (agente con acceso a terminal, lectura/escritura del repositorio y ejecución de tests).
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Necesito que realizar el cambio a PostgresSQL para poder realizar la conexion con Neon
+
+**Contexto implícito del pedido (misma conversación):**
+
+- Desplegar el backend en **Render** con datos de jugador que **no se pierdan** en cada redeploy.
+- Usar **Neon** como proveedor de PostgreSQL (`DATABASE_URL`).
+- Mantener **SQLite** para tests/CI y desarrollo local sin credenciales de Neon.
+- **No cambiar** dominio, casos de uso, rutas HTTP ni contrato con el frontend.
+- Seguir sembrando niveles desde `levels/*.json` en cada arranque.
+- Probar en ramas **`develop`** / **`Develop`** de ambos repositorios.
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+Sin cambios de contrato HTTP; el cliente reutiliza la infraestructura de sync ya implementada:
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Config API | `lib/infrastructure/http/api_config.dart` | `API_BASE_URL` vía `--dart-define` en build |
+| Auth HTTP | `lib/infrastructure/http/auth_api_client.dart` | `POST /auth/register`, `POST /auth/login` |
+| Progreso HTTP | `lib/infrastructure/http/progress_api_client.dart` | `GET /progress`, `POST /progress/sync`, `POST /progress/collectibles/sync` |
+| Pull remoto | `lib/application/use_cases/pull_remote_progress_use_case.dart` | Fusiona progreso y coleccionables al cargar niveles |
+| Sync victoria | `lib/application/use_cases/record_victory_use_case.dart` | Sync best-effort al ganar (progreso + coleccionables) |
+| Cola offline | `lib/application/use_cases/sync_pending_progress_use_case.dart` | Reenvía victorias pendientes sin red |
+| Composition root | `lib/main.dart` → `AppContainer` | `enableProgressSync: true` por defecto |
+| APK release | `build/app/outputs/flutter-apk/app-release.apk` | ~52 MB; URL Render embebida en compilación |
+
+**Flujo de despliegue (Render + Neon):**
+
+1. Crear proyecto en Neon; copiar connection string (`postgresql://...?sslmode=require`; host **pooler** recomendado).
+2. Render → Environment: `DATABASE_URL`, `JWT_SECRET`, `NODE_ENV=production`.
+3. Build backend: `npm install --include=dev && npm run build`.
+4. Start backend: `node dist/src/main.js`.
+5. Al arrancar: esquema Postgres + seed de `levels/*.json`.
+6. Cliente: `flutter build apk --dart-define=API_BASE_URL=https://backend-arrowmaze-aplx.onrender.com`.
+
+**Qué persiste dónde:**
+
+| Dato | Postgres (Neon) | Re-sembrado en cada deploy |
+|------|-----------------|----------------------------|
+| Usuarios / contraseñas (hash) | Sí | — |
+| Progreso por nivel | Sí | — |
+| Coleccionables desbloqueados | Sí | — |
+| Leaderboard | Sí | — |
+| Catálogo de niveles (JSON) | Sí (upsert en seed) | Sí, desde `levels/*.json` |
+
+**Arquitectura cliente ↔ servidor:**
+
+| Capa | Responsabilidad |
+|------|-----------------|
+| APK / Flutter | Llama `https://backend-arrowmaze-aplx.onrender.com` (auth, niveles, progreso, leaderboard) |
+| Backend en Render | Lee `DATABASE_URL`, se conecta a Neon, expone la misma API |
+| Neon (PostgreSQL) | Persiste datos de jugador; **invisible** para la app |
+
+**Verificación:**
+
+- `flutter analyze` y `flutter test` en verde antes del build (suite existente).
+- `flutter build apk --release --dart-define=API_BASE_URL=https://backend-arrowmaze-aplx.onrender.com`.
+- Prueba en dispositivo: login → niveles (pull) → victoria (sync) → redeploy backend → login → datos intactos.
+- Backend: `npm test` 168/168 en verde (Consulta #30).
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Variables `DATABASE_URL` y `JWT_SECRET` en Render (configuración externa al repo frontend).
+- APK instalada en dispositivo físico para prueba E2E contra backend con Neon.
+- Commit backend en `develop` (Consulta #30 del repo servidor).
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- **SQLite en Render no persiste jugadores**: filesystem efímero del contenedor; Postgres externo (Neon) resuelve el problema sin reescribir dominio ni API.
+- **No exponer `DATABASE_URL` en el cliente**: confundirlo con `API_BASE_URL` es un error común; solo el backend usa el connection string de Postgres.
+- **La URL de Render se “hornea” en la APK** al compilar; cambiar de servidor exige recompilar con otro `--dart-define`.
+- **Login obligatorio** para sync remoto: sin JWT, progreso y coleccionables quedan solo en `SharedPreferences` local.
+- **Cold start** (plan free): primer request tras inactividad puede tardar ~30 s.
+- **Seguridad**: rotar credenciales de Neon si el connection string se filtró; nunca commitear `.env`.
 
 ---
 
