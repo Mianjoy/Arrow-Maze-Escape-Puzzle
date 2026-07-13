@@ -4,13 +4,14 @@ import 'package:http/http.dart' as http;
 
 import '../../application/models/auth_session.dart';
 import '../../application/models/remote_player_progress.dart';
+import '../../application/ports/i_progress_api_client.dart';
 import 'api_config.dart';
 import 'api_exception.dart';
 
 /// Cliente HTTP para sincronizar progreso del jugador (`POST /progress/sync`).
 ///
 /// Requiere un [AuthSession] válido porque el endpoint está protegido por JWT.
-class ProgressApiClient {
+class ProgressApiClient implements IProgressApiClient {
   /// Crea el cliente con [config] y un [httpClient] inyectable para tests.
   ProgressApiClient({
     required ApiConfig config,
@@ -24,6 +25,7 @@ class ProgressApiClient {
   /// Envía el progreso de un nivel completado al backend.
   ///
   /// El cuerpo sigue el contrato `ProgressSyncDto` del backend.
+  @override
   Future<void> syncProgress({
     required AuthSession session,
     required String levelId,
@@ -57,6 +59,7 @@ class ProgressApiClient {
   }
 
   /// Sincroniza los coleccionables desbloqueados del jugador.
+  @override
   Future<void> syncCollectibles({
     required AuthSession session,
     required List<String> collectibleIds,
@@ -84,6 +87,7 @@ class ProgressApiClient {
   ///
   /// El backend identifica al usuario por el JWT; devuelve la lista de niveles
   /// con registro para que el cliente la fusione con su progreso local.
+  @override
   Future<RemotePlayerProgress> fetchProgress(AuthSession session) async {
     final uri = _config.resolve('/progress');
     final http.Response response;

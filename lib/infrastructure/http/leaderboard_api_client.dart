@@ -3,13 +3,14 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../application/models/leaderboard_entry.dart';
+import '../../application/ports/i_leaderboard_api_client.dart';
 import 'api_config.dart';
 import 'api_exception.dart';
 
 /// Cliente HTTP para consultar el ranking por nivel (`GET /leaderboard/:levelId`).
 ///
 /// Endpoint público: no requiere JWT.
-class LeaderboardApiClient {
+class LeaderboardApiClient implements ILeaderboardApiClient {
   /// Crea el cliente con [config] y un [httpClient] inyectable para tests.
   LeaderboardApiClient({
     required ApiConfig config,
@@ -23,6 +24,7 @@ class LeaderboardApiClient {
   /// Obtiene el top de jugadores para [levelId].
   ///
   /// [limit] acota la cantidad de entradas (por defecto 10 en el backend).
+  @override
   Future<List<LeaderboardEntry>> fetchLeaderboard({
     required String levelId,
     int? limit,

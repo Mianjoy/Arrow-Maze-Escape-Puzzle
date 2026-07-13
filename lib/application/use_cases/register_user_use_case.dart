@@ -1,5 +1,5 @@
-import '../../infrastructure/http/auth_api_client.dart';
 import '../models/auth_session.dart';
+import '../ports/i_auth_api_client.dart';
 import '../ports/i_token_storage.dart';
 
 /// Caso de uso: registrar un nuevo usuario y persistir la sesión tras login.
@@ -9,12 +9,12 @@ import '../ports/i_token_storage.dart';
 class RegisterUserUseCase {
   /// Crea el caso de uso con [authApiClient] y [tokenStorage].
   const RegisterUserUseCase({
-    required AuthApiClient authApiClient,
+    required IAuthApiClient authApiClient,
     required ITokenStorage tokenStorage,
   })  : _authApiClient = authApiClient,
         _tokenStorage = tokenStorage;
 
-  final AuthApiClient _authApiClient;
+  final IAuthApiClient _authApiClient;
   final ITokenStorage _tokenStorage;
 
   /// Registra [username]/[password] y devuelve la sesión tras login automático.

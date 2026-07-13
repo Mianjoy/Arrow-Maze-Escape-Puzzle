@@ -18,8 +18,9 @@ classDiagram
     class CellState {
         <<enumeration>>
         empty
-        wall
         occupied
+        cleared
+        wall
     }
     class Board {
         +Identifier id
@@ -44,6 +45,7 @@ classDiagram
     }
     Board "1" o-- "0..*" Arrow
     Board ..> Cell
+    Cell --> CellState
 
     class ArrowMovementEngine {
         +attemptMove(board, arrowId) MoveResult
@@ -247,6 +249,8 @@ classDiagram
     class LoginUserUseCase
     class RegisterUserUseCase
     class EnsureInitialProgressUseCase
+    EnsureInitialProgressUseCase ..> ILevelRepository
+    EnsureInitialProgressUseCase ..> IPlayerProgressRepository
 
     LoadLevelsUseCase ..> ILevelRepository
     StartGameUseCase ..> IGameRepository
@@ -318,6 +322,7 @@ classDiagram
     LevelSelectController ..> LoadLevelsUseCase
     LevelSelectController ..> SyncPendingProgressUseCase
     LevelSelectController ..> PullRemoteProgressUseCase
+    LevelSelectController ..> EnsureInitialProgressUseCase
     AuthSessionController ..> LoginUserUseCase
     AuthSessionController ..> RegisterUserUseCase
 
@@ -332,6 +337,7 @@ classDiagram
     AppContainer ..> GameController
     AppContainer ..> LevelSelectController
     AppContainer ..> AuthSessionController
+    AppContainer ..> EnsureInitialProgressUseCase
 
     %% ============================================================
     %% Layer legend (fill colors)

@@ -1,9 +1,9 @@
 import '../../domain/domain.dart';
-import '../../infrastructure/http/progress_api_client.dart';
 import '../models/auth_session.dart';
 import '../models/pending_sync_entry.dart';
 import '../models/record_victory_result.dart';
 import '../ports/i_pending_sync_repository.dart';
+import '../ports/i_progress_api_client.dart';
 
 /// Caso de uso: registrar victoria localmente, desbloquear siguiente nivel y sincronizar.
 ///
@@ -14,7 +14,7 @@ class RecordVictoryUseCase {
   const RecordVictoryUseCase({
     required IPlayerProgressRepository progressRepository,
     required ILevelRepository levelRepository,
-    required ProgressApiClient progressApiClient,
+    required IProgressApiClient progressApiClient,
     required IPendingSyncRepository pendingSyncRepository,
   })  : _progressRepository = progressRepository,
         _levelRepository = levelRepository,
@@ -23,7 +23,7 @@ class RecordVictoryUseCase {
 
   final IPlayerProgressRepository _progressRepository;
   final ILevelRepository _levelRepository;
-  final ProgressApiClient _progressApiClient;
+  final IProgressApiClient _progressApiClient;
   final IPendingSyncRepository _pendingSyncRepository;
 
   /// Persiste la victoria de [game], desbloquea el siguiente nivel y sincroniza con la API.
