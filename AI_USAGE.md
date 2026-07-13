@@ -2668,6 +2668,73 @@ Sin cambios de contrato HTTP; el cliente reutiliza la infraestructura de sync ya
 
 ---
 
+## Consulta #58 — Release v1.1.0: ejecutables actualizados tras sincronizar con `develop`/`Develop`
+
+**Tarea o problema abordado.**
+
+Después de traer (`git pull`) los últimos cambios de ambas ramas de integración —
+migración a PostgreSQL/Neon en el backend (Consulta #57), catálogo ampliado de 15 a 29
+niveles, corrección de DIP en clientes HTTP del lado del cliente
+(`b33cc5a fix(architecture): apply DIP to HTTP client dependencies in use cases`) y en
+`LevelJsonMapper` del lado del servidor, y refresco de diagramas de arquitectura/README
+en ambos repos — el equipo necesitaba: (1) generar ejecutables nuevos que reflejen ese
+estado, (2) publicarlos en un nuevo GitHub Release, y (3) dejar registrado en la
+documentación qué cambió respecto al release anterior (`v1.0.0`), para que quien pruebe
+el proyecto entienda las diferencias sin tener que leer el historial completo de commits.
+
+**Herramienta de IA utilizada.**
+
+- Claude Code (agente con acceso a terminal, lectura/escritura del repositorio,
+  ejecución de builds y del CLI `gh`).
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+> Ahora necesito que hagas los ejecutables, tanto el apk para android como el de IOS
+> para probar el estado final del proyecto
+>
+> Ok, abre el simulator para probar la version ios
+>
+> Ok, ahora haz el release, de esta nueva version, explica las correcciones en la
+> documentacion
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+- `flutter build apk --release --dart-define=API_BASE_URL=https://backend-arrowmaze.onrender.com`
+  → `app-release.apk` (~54.7 MB), firmado con el keystore real del equipo
+  (`android/key.properties`, gitignored).
+- `flutter build ios --simulator --dart-define=API_BASE_URL=https://backend-arrowmaze.onrender.com`
+  → `Runner.app`, empaquetado como `ArrowMazeEscape-iOS-Simulator.zip`.
+- Verificación manual: `Runner.app` instalado y lanzado en un simulador de iPhone 17 Pro
+  (`xcrun simctl install` / `launch`) antes de publicar, para confirmar que arranca y se
+  conecta al backend antes de entregarlo.
+- Correcciones documentadas respecto a `v1.0.0`:
+
+| Área | Cambio desde v1.0.0 |
+|------|---------------------|
+| Persistencia backend | SQLite efímero → PostgreSQL (Neon) vía `DATABASE_URL`; el progreso ya sobrevive a un redeploy en Render (Consulta #57 / Consulta #30 del backend). |
+| Catálogo de niveles | 15 → 29 niveles (niveles 16-22 sustituidos por 27-40); README corregido (mencionaba "15-level catalog" desactualizado). |
+| Arquitectura (cliente) | `AuthApiClient`/`ProgressApiClient`/`LeaderboardApiClient` ahora se inyectan por interfaz (`IAuthApiClient`, `IProgressApiClient`, `ILeaderboardApiClient`) en los casos de uso, corrigiendo una violación de DIP donde se dependía de la clase concreta. |
+| Arquitectura (backend) | Corrección equivalente de DIP: los casos de uso dependen de `ILevelJsonMapper`, no de `LevelJsonMapper` concreto. |
+| Documentación | Diagramas de Clean Architecture y de clases regenerados en ambos repos para incluir los repositorios Postgres y la composición real cliente-caché→API; capturas de pantalla añadidas al README del cliente. |
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Ninguna: los ejecutables se generaron y verificaron en un solo intento sin errores de
+  build ni de arranque.
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- Ninguno de los cambios de esta consulta reescribió lógica de negocio: fue
+  responsabilidad de esta tarea reconstruir artefactos y documentar con precisión lo que
+  otros commits ya habían corregido, evitando atribuir a esta sesión cambios de código
+  que no se hicieron aquí.
+- El release anterior (`v1.0.0`) quedó en la rama `main`; los cambios reales de esta
+  consulta viven en `Develop` — al recompilar siempre desde la rama de integración más
+  avanzada se evita publicar un ejecutable desactualizado respecto al backend en
+  producción.
+
+---
+
 ## Evaluación crítica
 
 **Porcentaje aproximado del código que contó con asistencia de IA.**
