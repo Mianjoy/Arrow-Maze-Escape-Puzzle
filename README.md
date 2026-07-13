@@ -27,7 +27,27 @@ the player across devices.
 
 ## Demo / Screenshots
 
-_TBD — pending a recorded GIF/screenshots of the running app for this section._
+Screens from the Android build (Spanish UI, synced with the backend on Render):
+
+| Screen | Description |
+|--------|-------------|
+| Home | Title, **Play** button, shortcuts to collectibles, leaderboard and settings |
+| Level select | Catalog with completion checkmarks, difficulty, par moves and stars |
+| Gameplay | Board with arrows, move/score counter and per-level countdown timer |
+| Victory | Score, stars earned, progress saved, next level / leaderboard actions |
+| Collectibles | Gallery unlocked every 2 levels with 3 stars; exclusive final-level reward |
+| Leaderboard | Global ranking per level (score, moves, time) |
+
+<p align="center">
+  <img src="docs/screenshots/01-home.png" alt="Home screen" width="220" />
+  <img src="docs/screenshots/02-level-select.png" alt="Level selection" width="220" />
+  <img src="docs/screenshots/03-gameplay.png" alt="Gameplay — La Escuadra" width="220" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/04-victory.png" alt="Level cleared" width="220" />
+  <img src="docs/screenshots/05-collectibles.png" alt="Collectibles gallery" width="220" />
+  <img src="docs/screenshots/06-leaderboard.png" alt="Leaderboard" width="220" />
+</p>
 
 ## Architecture
 
@@ -36,39 +56,72 @@ inner ones, never the reverse):
 
 ```mermaid
 flowchart TB
-    subgraph L4["Presentation"]
-        direction TB
-        UI["Screens + Controllers (ChangeNotifier): home, level select,
-        game, victory, defeat, auth, leaderboard, settings, collectibles gallery"]
-        AudioScope["AudioScope (provides IAudioService to the widget tree)"]
-    end
-    subgraph L3["Infrastructure & Interface Adapters"]
-        direction TB
-        Adapters["lib/interface_adapters: LevelDtoMapper, PlayerProgressJsonMapper"]
-        Infra["lib/infrastructure: HTTP clients, SharedPreferences repositories,
-        AppAudioService/NoOpAudioService (contextual SFX, background music, per-level countdown)"]
-    end
-    subgraph L2["Application"]
-        direction TB
-        UseCases["Use cases: LoadLevels, StartGame, FireArrow, RecordVictory (also evaluates
-        collectible unlocks and syncs them), SyncPendingProgress, PullRemoteProgress, Login/Register/Logout"]
-        AudioPort["IAudioService (port)"]
-    end
-    subgraph L1["Domain"]
-        direction TB
-        Entities["Board, Game, Level, Player, PlayerProgress (bounded contexts)"]
+    %% Clean Architecture — frontend Arrow Maze.
+    %% Outer layers depend on inner layers only (dependency rule).
+
+    subgraph Legend["Legend — layer colors"]
+        direction LR
+        LgD["#e8f4ea Domain"] ~~~ LgA["#e8eef8 Application"] ~~~ LgAd["#fdf3e2 Adapters"] ~~~ LgI["#f8e8ee Infrastructure"] ~~~ LgP["#efe6fa Presentation"]
     end
 
-    L4 --> L3 --> L2 --> L1
+    subgraph L4["Layer 4 — Presentation"]
+        direction TB
+        Screens["Screens: Home, LevelSelect, Game, Victory, Defeat,
+        Auth (login/register), Leaderboard, Settings, Collectibles gallery"]
+        Controllers["Controllers (ChangeNotifier): Game, LevelSelect, AuthSession,
+        Leaderboard, AppSettings"]
+        AudioScope["AudioScope (provides IAudioService to widget tree)"]
+    end
+
+    subgraph L3["Layer 3 — Infrastructure & Interface Adapters"]
+        direction TB
+        Adapters["LevelDtoMapper, PlayerProgressJsonMapper"]
+        HttpClients["LevelApiClient, ProgressApiClient, AuthApiClient, LeaderboardApiClient"]
+        LocalRepos["SharedPreferences repositories, AppAudioService / NoOpAudioService"]
+    end
+
+    subgraph L2["Layer 2 — Application"]
+        direction TB
+        UseCases["LoadLevels, StartGame, FireArrow (via IFireArrowUseCase),
+        RecordVictory, SyncPendingProgress, PullRemoteProgress,
+        Login/Register/Logout/RestoreSession, GetLeaderboard"]
+        AopDecorator["LoggingFireArrowUseCaseDecorator (AOP logging)"]
+        Ports["IAudioService, IAuthApiClient, IProgressApiClient, ILeaderboardApiClient, ITokenStorage"]
+    end
+
+    subgraph L1["Layer 1 — Domain"]
+        direction TB
+        Entities["Board, Game, Level, PlayerProfile, PlayerProgress,
+        meta-collectibles, domain events"]
+    end
+
+    L4 -->|depends on| L3
+    L3 -->|depends on| L2
+    L2 -->|depends on| L1
+
+    classDef domain fill:#e8f4ea,stroke:#2e7d32,color:#1b3a1e
+    classDef app fill:#e8eef8,stroke:#1565c0,color:#0d2a4d
+    classDef adapters fill:#fdf3e2,stroke:#ef6c00,color:#5c3600
+    classDef infra fill:#f8e8ee,stroke:#ad1457,color:#4d0d24
+    classDef presentation fill:#efe6fa,stroke:#6a1b9a,color:#33064d
+    classDef legend fill:#f5f5f5,stroke:#9e9e9e,color:#333
+
+    class Entities domain
+    class UseCases,AopDecorator,Ports app
+    class Adapters,HttpClients,LocalRepos adapters
+    class Screens,Controllers,AudioScope presentation
+    class LgD,LgA,LgAd,LgI,LgP legend
 ```
 
-Source: [`docs/architecture/clean-architecture.mmd`](docs/architecture/clean-architecture.mmd)
+![Clean Architecture layers (static export)](docs/architecture/clean-architecture.png)
+
+Source: [`docs/architecture/clean-architecture.mmd`](docs/architecture/clean-architecture.mmd) (editable). Regenerate README embeds with `python scripts/sync-readme-diagrams.py`.
 
 | Layer | Responsibility | Status |
 |---|---|---|
 | **Domain** | Entities, aggregates, value objects, domain services, events, repository ports | ✅ Implemented |
-| **Application** | Use cases and orchestration | ✅ Implemented |
-| **Infrastructure / Interface Adapters** | Local persistence, backend API clients, DTO↔domain mapping | ✅ Implemented |
+| **Application** | Use cases, AOP decorator (`LoggingFireArrowUseCaseDecorator`), HTTP/audio ports | ✅ Implemented |
+| **Infrastructure / Interface Adapters** | API clients, DTO mappers, SharedPreferences repos, audio service | ✅ Implemented |
 | **Presentation** | Flutter screens and controllers | ✅ Implemented |
 
 ### Domain layer
@@ -134,21 +187,27 @@ Main classes across all four layers (color-coded), their relationships
 (inheritance, interface implementation, association/composition), and the
 design patterns applied. Low-level UI widgets are intentionally excluded;
 screen controllers (presenters) are included. Editable source:
-[`docs/architecture/class-diagram.mmd`](docs/architecture/class-diagram.mmd).
+[`docs/architecture/class-diagram.mmd`](docs/architecture/class-diagram.mmd). Regenerate README embeds with `python scripts/sync-readme-diagrams.py`.
 
 ```mermaid
 classDiagram
     direction TB
-    class Cell { <<abstract>> }
+
+    %% Arrow Maze Client — Class Diagram
+    %% Layer colors: green=Domain, blue=Application, orange=Adapters,
+    %% pink=Infrastructure, purple=Presentation
+    %% Patterns: Factory Method, Decorator, Adapter, Repository/DIP,
+    %% State (GameStatus), Domain Event, Observer (domain events)
+
+    %% ----- Domain: board -----
+    class Cell {
+        <<abstract>>
+    }
     class Board {
         +Identifier id
         +BoardDimension dimension
         +Cell[] cells
         +Arrow[] arrows
-        +cellAt(position) Cell
-        +arrowIdAt(position) Identifier
-        +placeArrowSegments(arrow) Board
-        +applyArrowUpdate(arrow) Board
         +isCleared() bool
         +withDomainEvent(event) Board
         +pullDomainEvents() Board
@@ -159,7 +218,6 @@ classDiagram
         +ArrowDirection direction
         +ArrowState state
         +Position[] body
-        +occupies(position) bool
     }
     Board "1" o-- "0..*" Arrow
     Board ..> Cell
@@ -175,51 +233,41 @@ classDiagram
 
     class CellFactory { +createCell(type) Cell }
     class BoardFactory { +createBoard(definition) Board }
-    CellFactory ..> Cell : creates (Factory Method)
+    CellFactory ..> Cell : Factory Method
     BoardFactory ..> CellFactory
-    BoardFactory ..> Board : creates (Factory Method)
+    BoardFactory ..> Board : Factory Method
 
+    %% ----- Domain: level -----
     class LevelDifficulty {
         <<enumeration>>
-        easy
-        medium
-        hard
-        expert
+        easy medium hard expert
     }
     class Level {
         +Identifier id
         +int levelNumber
         +LevelDifficulty difficulty
-        +LevelBoardDefinition boardDefinition
         +int parMoves
         +int optimalMoves
         +buildInitialBoard(factory) Board
     }
     Level --> LevelDifficulty
     Level ..> BoardFactory
+
     class LevelFactory { +fromJson(json) Level }
     class ShortestPathCalculator { +calculateMinimumMoves(board) int }
-    class StarRatingCalculator { +calculate(moves, optimalMoves) StarRating }
-    LevelFactory ..> Level : creates (Factory Method)
-    LevelFactory ..> ShortestPathCalculator
+    class StarRatingCalculator { +calculate(moves, optimal) StarRating }
+    LevelFactory ..> Level : Factory Method
 
+    %% ----- Domain: game (State pattern) -----
     class GameStatus {
         <<enumeration>>
-        ready
-        inProgress
-        won
-        lost
-        paused
+        <<State>>
+        ready inProgress won lost paused
     }
     class Game {
-        +Identifier id
-        +Identifier playerId
-        +Level level
-        +Board board
         +GameStatus status
         +int moveCount
         +int score
-        +StarRating starsEarned
         +performMove(arrowId, engine) MoveResult
         +pause() Game
         +resume() Game
@@ -228,66 +276,31 @@ classDiagram
     }
     Game "1" *-- "1" Board
     Game "1" *-- "1" Level
-    Game --> GameStatus
-    Game ..> ArrowMovementEngine
-    Game ..> StarRatingCalculator
+    Game --> GameStatus : State
 
+    %% ----- Domain: player & progress -----
     class PlayerProfile
     class PlayerStatistics
     PlayerProfile "1" *-- "1" PlayerStatistics
 
-    class LevelProgressStatus {
-        <<enumeration>>
-        locked
-        unlocked
-        completed
-    }
     class LevelProgress {
         +Identifier levelId
         +LevelProgressStatus status
-        +int bestMoveCount
-        +StarRating bestStars
-        +recordCompletion(moves, time, stars) LevelProgress
-        +unlock() LevelProgress
+        +recordCompletion(...) LevelProgress
     }
     class PlayerProgress {
         +Identifier playerId
-        +Map~Identifier,LevelProgress~ levels
-        +Set~string~ unlockedCollectibles
-        +completeLevel(levelId, ...) PlayerProgress
-        +unlockLevel(levelId) PlayerProgress
-        +mergeRemoteLevel(levelId, remoteMoves, remoteTime, remoteCompleted) PlayerProgress
-        +unlockCollectible(collectibleId) PlayerProgress
-        +mergeRemoteCollectibles(remoteCollectibleIds) PlayerProgress
+        +Map levels
+        +Set unlockedCollectibles
+        +mergeRemoteLevel(...) PlayerProgress
+        +mergeRemoteCollectibles(...) PlayerProgress
     }
     PlayerProgress "1" *-- "many" LevelProgress
-    LevelProgress --> LevelProgressStatus
 
-    class MetaCollectibleKind {
-        <<enumeration>>
-        unlockable
-        finalLevel
-        comingSoon
-    }
-    class MetaCollectible {
-        +string id
-        +MetaCollectibleKind kind
-        +int milestoneLevelNumber
-        +string assetPath
-    }
-    class MetaCollectibleCatalog {
-        <<static>>
-        +forCompletedLevel(levelNumber) MetaCollectible
-    }
-    class MetaCollectibleUnlockPolicy {
-        <<static>>
-        +shouldUnlock(levelNumber, starsEarned, score, level) bool
-        +collectibleForLevel(levelNumber) MetaCollectible
-    }
-    MetaCollectible --> MetaCollectibleKind
-    MetaCollectibleCatalog ..> MetaCollectible : creates
-    MetaCollectibleUnlockPolicy ..> MetaCollectibleCatalog
+    class MetaCollectibleCatalog { <<static>> +forCompletedLevel(n) MetaCollectible }
+    class MetaCollectibleUnlockPolicy { <<static>> +shouldUnlock(...) bool }
 
+    %% ----- Domain: repository ports -----
     class ILevelRepository {
         <<interface>>
         +findAll() Level[]
@@ -296,7 +309,6 @@ classDiagram
     class IGameRepository {
         <<interface>>
         +save(game) void
-        +findById(id) Game
     }
     class IPlayerProgressRepository {
         <<interface>>
@@ -307,117 +319,148 @@ classDiagram
         <<interface>>
         +add(entry) void
         +loadAll() PendingSyncEntry[]
-        +saveAll(entries) void
     }
+
+    %% ----- Application: ports & use cases -----
     class IAudioService {
         <<interface>>
-        +ensureAudioUnlocked() void
-        +playButtonClick() void
         +playArrowExtracted() void
-        +playMovementNotAllowed() void
-        +playLevelCleared() void
-        +playNoMovementsLeft() void
-        +playTimeUp() void
         +startBackgroundMusic() void
-        +stopBackgroundMusic() void
+    }
+    class IAuthApiClient {
+        <<interface>>
+        +register(dto) AuthResult
+        +login(dto) AuthResult
+    }
+    class IProgressApiClient {
+        <<interface>>
+        +syncProgress(dto) void
+        +syncCollectibles(ids) void
+        +getProgress() PlayerProgressDto
+    }
+    class ILeaderboardApiClient {
+        <<interface>>
+        +getLeaderboard(levelId) LeaderboardEntry[]
+    }
+    class ITokenStorage {
+        <<interface>>
+        +saveToken(token) void
+        +clear() void
+    }
+    class IFireArrowUseCase {
+        <<interface>>
+        +execute(game, position) MoveOutcome
     }
 
     class LoadLevelsUseCase { +execute() Level[] }
-    class StartGameUseCase { +execute(gameId, playerId, level) Game }
+    class StartGameUseCase { +execute(...) Game }
     class FireArrowUseCase { +execute(game, position) MoveOutcome }
+    class LoggingFireArrowUseCaseDecorator { +execute(game, position) MoveOutcome }
     class RecordVictoryUseCase { +execute(game, session) RecordVictoryResult }
-    RecordVictoryUseCase ..> MetaCollectibleUnlockPolicy
-    RecordVictoryUseCase ..> MetaCollectible
     class SyncPendingProgressUseCase { +execute(session) void }
     class PullRemoteProgressUseCase { +execute(session) PlayerProgress }
-    class LoginUserUseCase
-    class RegisterUserUseCase
-    class EnsureInitialProgressUseCase
+    class LoginUserUseCase { +execute(dto) bool }
+    class RegisterUserUseCase { +execute(dto) bool }
+    class LogoutUserUseCase { +execute() void }
+    class GetLeaderboardUseCase { +execute(levelId) entries }
+    class EnsureInitialProgressUseCase { +execute(playerId) void }
+
+    IFireArrowUseCase <|.. FireArrowUseCase
+    IFireArrowUseCase <|.. LoggingFireArrowUseCaseDecorator : Decorator AOP
+    LoggingFireArrowUseCaseDecorator o-- FireArrowUseCase : wraps
 
     LoadLevelsUseCase ..> ILevelRepository
     StartGameUseCase ..> IGameRepository
     FireArrowUseCase ..> IGameRepository
     FireArrowUseCase ..> ArrowMovementEngine
     RecordVictoryUseCase ..> IPlayerProgressRepository
-    RecordVictoryUseCase ..> ILevelRepository
     RecordVictoryUseCase ..> IPendingSyncRepository
+    RecordVictoryUseCase ..> IProgressApiClient
+    RecordVictoryUseCase ..> MetaCollectibleUnlockPolicy
     SyncPendingProgressUseCase ..> IPendingSyncRepository
+    SyncPendingProgressUseCase ..> IProgressApiClient
     PullRemoteProgressUseCase ..> IPlayerProgressRepository
-    PullRemoteProgressUseCase ..> ILevelRepository
-    PullRemoteProgressUseCase ..> PlayerProgress : uses mergeRemoteLevel
+    PullRemoteProgressUseCase ..> IProgressApiClient
+    LoginUserUseCase ..> IAuthApiClient
+    LoginUserUseCase ..> ITokenStorage
+    RegisterUserUseCase ..> IAuthApiClient
+    RegisterUserUseCase ..> ITokenStorage
+    LogoutUserUseCase ..> ITokenStorage
+    GetLeaderboardUseCase ..> ILeaderboardApiClient
 
-    class LevelDtoMapper {
-        +fromDto(dto) Level
-        +fromJson(json) Level
-    }
-    LevelDtoMapper ..> Level : adapts (Adapter)
+    %% ----- Interface Adapters -----
+    class LevelDtoMapper { +fromDto(dto) Level }
+    class PlayerProgressJsonMapper { +toJson(progress) String }
     LoadLevelsUseCase ..> LevelDtoMapper
+    LevelDtoMapper ..> Level : Adapter
 
+    %% ----- Infrastructure -----
     class RemoteLevelRepository
     class CachedLevelRepository { +findAll() Level[] }
     class SharedPreferencesPlayerProgressRepository
     class SharedPreferencesPendingSyncRepository
-    class AppAudioService {
-        +ensureAudioUnlocked() void
-        +startBackgroundMusic() void
-    }
+    class LevelApiClient
+    class ProgressApiClient
+    class AuthApiClient
+    class LeaderboardApiClient
+    class AppAudioService
     class NoOpAudioService
+
     ILevelRepository <|.. RemoteLevelRepository
     ILevelRepository <|.. CachedLevelRepository
-    CachedLevelRepository ..> RemoteLevelRepository : wraps (Decorator)
+    CachedLevelRepository ..> RemoteLevelRepository : Decorator
+    CachedLevelRepository ..> LevelApiClient
     CachedLevelRepository ..> LevelDtoMapper
     IPlayerProgressRepository <|.. SharedPreferencesPlayerProgressRepository
+    SharedPreferencesPlayerProgressRepository ..> PlayerProgressJsonMapper
     IPendingSyncRepository <|.. SharedPreferencesPendingSyncRepository
+    IAuthApiClient <|.. AuthApiClient
+    IProgressApiClient <|.. ProgressApiClient
+    ILeaderboardApiClient <|.. LeaderboardApiClient
     IAudioService <|.. AppAudioService
-    IAudioService <|.. NoOpAudioService : (test double)
+    IAudioService <|.. NoOpAudioService
 
-    class GameController {
-        +startGame(level) void
-        +onCellTapped(position) void
-    }
-    class LevelSelectController {
-        +load() void
-        +isOffline bool
-    }
-    class AuthSessionController {
-        +login(username, password) bool
-        +register(username, password) bool
-    }
-    class CollectiblesScreen
-    class AudioScope { +of(context) IAudioService }
-    AudioScope ..> IAudioService : provides (InheritedWidget)
-    CollectiblesScreen ..> PlayerProgress
-    CollectiblesScreen ..> MetaCollectibleCatalog
+    %% ----- Presentation -----
+    class GameController { +onCellTapped(position) void }
+    class LevelSelectController { +load() void }
+    class AuthSessionController { +login() bool +logout() void }
+    class LeaderboardController { +load(levelId) void }
+    class AppSettingsController { +toggleSound() void }
+
     GameController ..> StartGameUseCase
-    GameController ..> FireArrowUseCase
+    GameController ..> IFireArrowUseCase
     GameController ..> RecordVictoryUseCase
-    GameController ..> IAudioService : contextual SFX + countdown
+    GameController ..> IAudioService
     LevelSelectController ..> LoadLevelsUseCase
     LevelSelectController ..> SyncPendingProgressUseCase
     LevelSelectController ..> PullRemoteProgressUseCase
     AuthSessionController ..> LoginUserUseCase
     AuthSessionController ..> RegisterUserUseCase
+    AuthSessionController ..> LogoutUserUseCase
+    LeaderboardController ..> GetLeaderboardUseCase
 
     class AppContainer { <<composition root>> }
     AppContainer ..> CachedLevelRepository
-    AppContainer ..> SharedPreferencesPlayerProgressRepository
-    AppContainer ..> SharedPreferencesPendingSyncRepository
-    AppContainer ..> AppAudioService
     AppContainer ..> GameController
     AppContainer ..> LevelSelectController
     AppContainer ..> AuthSessionController
+    AppContainer ..> LoggingFireArrowUseCaseDecorator
 
+    %% ----- Layer legend -----
     classDef domain fill:#e8f4ea,stroke:#2e7d32,color:#1b3a1e
     classDef application fill:#e8eef8,stroke:#1565c0,color:#0d2a4d
     classDef adapters fill:#fdf3e2,stroke:#ef6c00,color:#5c3600
     classDef infrastructure fill:#f8e8ee,stroke:#ad1457,color:#4d0d24
     classDef presentation fill:#efe6fa,stroke:#6a1b9a,color:#33064d
-    cssClass "Cell,Board,Arrow,ArrowMovementEngine,ICollisionValidator,CollisionValidator,CellFactory,BoardFactory,LevelDifficulty,Level,LevelFactory,ShortestPathCalculator,StarRatingCalculator,GameStatus,Game,PlayerProfile,PlayerStatistics,LevelProgressStatus,LevelProgress,PlayerProgress,MetaCollectibleKind,MetaCollectible,MetaCollectibleCatalog,MetaCollectibleUnlockPolicy,ILevelRepository,IGameRepository,IPlayerProgressRepository,IPendingSyncRepository" domain
-    cssClass "LoadLevelsUseCase,StartGameUseCase,FireArrowUseCase,RecordVictoryUseCase,SyncPendingProgressUseCase,PullRemoteProgressUseCase,LoginUserUseCase,RegisterUserUseCase,EnsureInitialProgressUseCase,IAudioService" application
-    cssClass "LevelDtoMapper" adapters
-    cssClass "RemoteLevelRepository,CachedLevelRepository,SharedPreferencesPlayerProgressRepository,SharedPreferencesPendingSyncRepository,AppAudioService,NoOpAudioService,AppContainer" infrastructure
-    cssClass "GameController,LevelSelectController,AuthSessionController,CollectiblesScreen,AudioScope" presentation
+
+    cssClass "Cell,Board,Arrow,ArrowMovementEngine,ICollisionValidator,CollisionValidator,CellFactory,BoardFactory,LevelDifficulty,Level,LevelFactory,ShortestPathCalculator,StarRatingCalculator,GameStatus,Game,PlayerProfile,PlayerStatistics,LevelProgress,PlayerProgress,MetaCollectibleCatalog,MetaCollectibleUnlockPolicy,ILevelRepository,IGameRepository,IPlayerProgressRepository,IPendingSyncRepository" domain
+    cssClass "IAudioService,IAuthApiClient,IProgressApiClient,ILeaderboardApiClient,ITokenStorage,IFireArrowUseCase,LoadLevelsUseCase,StartGameUseCase,FireArrowUseCase,LoggingFireArrowUseCaseDecorator,RecordVictoryUseCase,SyncPendingProgressUseCase,PullRemoteProgressUseCase,LoginUserUseCase,RegisterUserUseCase,LogoutUserUseCase,GetLeaderboardUseCase,EnsureInitialProgressUseCase" application
+    cssClass "LevelDtoMapper,PlayerProgressJsonMapper" adapters
+    cssClass "RemoteLevelRepository,CachedLevelRepository,SharedPreferencesPlayerProgressRepository,SharedPreferencesPendingSyncRepository,LevelApiClient,ProgressApiClient,AuthApiClient,LeaderboardApiClient,AppAudioService,NoOpAudioService,AppContainer" infrastructure
+    cssClass "GameController,LevelSelectController,AuthSessionController,LeaderboardController,AppSettingsController" presentation
 ```
+
+![Class diagram (static export)](docs/architecture/class-diagram.png)
 
 ## Design Patterns
 
@@ -426,10 +469,12 @@ classDiagram
 | **Aggregate Root** | — (DDD) | `Level`, `Game`, `PlayerProfile`, `PlayerProgress` |
 | **Value Object** | — (DDD) | `Position`, `Direction`, `StarRating`, `LevelBoardDefinition`, etc. |
 | **Factory Method** | Creational | `LevelFactory`, `BoardFactory`, `CellFactory` |
-| **Decorator** | Structural | `CachedLevelRepository` wraps the remote source with a write-through local cache behind the same `ILevelRepository` port; `LoggingFireArrowUseCaseDecorator` wraps `FireArrowUseCase` behind `IFireArrowUseCase` to add logging (AOP) |
+| **Decorator** | Structural | `CachedLevelRepository` (offline cache); `LoggingFireArrowUseCaseDecorator` wraps `FireArrowUseCase` behind `IFireArrowUseCase` (AOP logging) |
 | **Adapter** | Structural | `LevelDtoMapper` (wire format ↔ domain), `PlayerProgressJsonMapper` |
 | **Repository (DIP)** | Structural | Interfaces in `lib/domain/repositories/` and `lib/application/ports/` |
+| **State** | Behavioral | `GameStatus` drives `Game` lifecycle (`ready`, `inProgress`, `won`, `lost`, `paused`) |
 | **Domain Event** | Behavioral | `GameWonEvent`, `ArrowExtractedEvent`, `ArrowBlockedEvent`, raised via `Board.pullDomainEvents()` |
+| **Observer** | Behavioral | Domain events decouple board movement from scoring/audio/UI reactions |
 | **Domain Service** | Behavioral | `ShortestPathCalculator`, `StarRatingCalculator`, `ArrowMovementEngine`, `CollisionValidator` |
 
 ## SOLID Principles
