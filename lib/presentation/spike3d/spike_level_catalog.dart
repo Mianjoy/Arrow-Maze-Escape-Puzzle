@@ -3,11 +3,19 @@ import '../../domain/domain.dart';
 /// Datos de una flecha tal como están en `levels/level-N.json` del backend
 /// (`arrows[].head/body/direction`), transcritos a mano para el spike.
 class SpikeArrowSpec {
+  /// Crea una especificación de flecha embebida para el spike.
   const SpikeArrowSpec(this.id, this.direction, this.head, this.body);
 
+  /// Identificador estable de la flecha.
   final String id;
+
+  /// Dirección de disparo de la punta.
   final ArrowDirection direction;
+
+  /// Celda de la punta `(fila, columna)`.
   final (int row, int col) head;
+
+  /// Segmentos del cuerpo, en orden desde la punta.
   final List<(int row, int col)> body;
 }
 
@@ -38,6 +46,7 @@ Board buildSpikeBoard(String boardId, int size, List<SpikeArrowSpec> specs) {
 /// reutiliza "Nudo Triple" (no hay un 6º nivel 9x9 disponible todavía).
 const int kSpikeFaceSize = 9;
 
+/// Flechas del nivel «Nudo Triple» (level-8), cara 9×9.
 const List<SpikeArrowSpec> kLevel8NudoTriple = [
   SpikeArrowSpec('l1', ArrowDirection.left, (0, 0), [(0, 1), (0, 2)]),
   SpikeArrowSpec('l2', ArrowDirection.up, (1, 2), [(2, 2), (3, 2)]),
@@ -52,6 +61,7 @@ const List<SpikeArrowSpec> kLevel8NudoTriple = [
   SpikeArrowSpec('a12', ArrowDirection.right, (4, 8), [(4, 7)]),
 ];
 
+/// Flechas del nivel «Cruce de Caminos» (level-9), cara 9×9.
 const List<SpikeArrowSpec> kLevel9CruceDeCaminos = [
   SpikeArrowSpec('u1', ArrowDirection.up, (0, 4), [(1, 4)]),
   SpikeArrowSpec('u2', ArrowDirection.up, (2, 4), [(3, 4)]),
@@ -65,6 +75,7 @@ const List<SpikeArrowSpec> kLevel9CruceDeCaminos = [
   SpikeArrowSpec('c2', ArrowDirection.down, (8, 8), [(7, 8)]),
 ];
 
+/// Flechas del nivel «Viento de Molino» (level-11), cara 9×9.
 const List<SpikeArrowSpec> kLevel11VientoDeMolino = [
   SpikeArrowSpec('b1o', ArrowDirection.right, (1, 8), [(1, 5), (1, 6), (1, 7)]),
   SpikeArrowSpec('b1i', ArrowDirection.up, (2, 5), [(3, 5), (4, 5)]),
@@ -78,6 +89,7 @@ const List<SpikeArrowSpec> kLevel11VientoDeMolino = [
   SpikeArrowSpec('h2', ArrowDirection.down, (8, 8), [(7, 8)]),
 ];
 
+/// Flechas del nivel «Punto de Quiebre» (level-12), cara 9×9.
 const List<SpikeArrowSpec> kLevel12PuntoDeQuiebre = [
   SpikeArrowSpec('t1', ArrowDirection.up, (0, 0),
       [(0, 1), (0, 2), (0, 3), (0, 4), (0, 5), (0, 6), (0, 7), (0, 8)]),
@@ -95,6 +107,7 @@ const List<SpikeArrowSpec> kLevel12PuntoDeQuiebre = [
   SpikeArrowSpec('w2', ArrowDirection.right, (4, 8), [(4, 7)]),
 ];
 
+/// Flechas del nivel «El Remolino» (level-13), cara 9×9.
 const List<SpikeArrowSpec> kLevel13ElRemolino = [
   SpikeArrowSpec('sp1', ArrowDirection.left, (0, 0),
       [(0, 1), (0, 2), (0, 3), (0, 4), (0, 5), (0, 6), (0, 7), (0, 8)]),
