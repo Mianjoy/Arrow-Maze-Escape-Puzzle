@@ -1,0 +1,552 @@
+classDiagram
+    direction TB
+
+    %% ============================================================
+    %% Arrow Maze Client — Class Diagram
+    %% Colors indicate Clean Architecture layer (see legend below).
+    %% Stereotypes indicate DDD role: <<aggregate root>>, <<entity>>,
+    %% <<value object>>, <<enumeration>>, <<interface>>, <<repository>>,
+    %% <<domain service>>, <<use case>>, <<mapper>>, <<factory>>,
+    %% <<controller>>, <<screen>>.
+    %% The Game2D / Cube3D boxes group classes by which board model they
+    %% belong to; shared value objects and cross-cutting concerns (auth,
+    %% progress, audio, composition root) sit outside both.
+    %% NOTA: CubeGame / StartCubeGameUseCase / FireCubePathArrowUseCase son
+    %% diseño propuesto (no implementado todavía) que reemplazaría las
+    %% dependencias directas de Mode3DScreen sobre CubeSurfaceLevelGenerator
+    %% y CubePathMovementEngine — ver conversación de diseño.
+    %% Low-level UI widgets are intentionally excluded per scope;
+    %% screen controllers (presenters) are included.
+    %% Patterns shown: Factory Method (CellFactory/BoardFactory/
+    %% LevelFactory), Decorator (CachedLevelRepository), Adapter
+    %% (LevelDtoMapper), Repository/DIP (I*Repository ports).
+    %% ============================================================
+
+    namespace Game2D {
+        class Cell {
+            <<abstract, entity>>
+        }
+        class CellState {
+            <<enumeration>>
+            empty
+            occupied
+            cleared
+            wall
+        }
+        class Board {
+            <<aggregate root>>
+            +Identifier id
+            +BoardDimension dimension
+            +Cell[] cells
+            +Arrow[] arrows
+            +cellAt(position) Cell
+            +arrowIdAt(position) Identifier
+            +placeArrowSegments(arrow) Board
+            +applyArrowUpdate(arrow) Board
+            +isCleared() bool
+            +withDomainEvent(event) Board
+            +pullDomainEvents() Board
+        }
+        class Arrow {
+            <<entity>>
+            +Identifier id
+            +Position position
+            +ArrowDirection direction
+            +ArrowState state
+            +Position[] body
+            +occupies(position) bool
+        }
+        class ArrowMovementEngine {
+            <<domain service>>
+            +attemptMove(board, arrowId) MoveResult
+        }
+        class ICollisionValidator {
+            <<interface, domain service>>
+            +isBlocked(board, arrow) bool
+        }
+        class CollisionValidator {
+            <<domain service>>
+        }
+        class CellFactory {
+            <<factory>>
+            +createCell(type) Cell
+        }
+        class BoardFactory {
+            <<factory>>
+            +createBoard(definition) Board
+        }
+        class LevelDifficulty {
+            <<enumeration>>
+            easy
+            medium
+            hard
+            expert
+        }
+        class Level {
+            <<aggregate root>>
+            +Identifier id
+            +int levelNumber
+            +LevelDifficulty difficulty
+            +LevelBoardDefinition boardDefinition
+            +int parMoves
+            +int optimalMoves
+            +buildInitialBoard(factory) Board
+        }
+        class LevelFactory {
+            <<factory>>
+            +fromJson(json) Level
+        }
+        class ShortestPathCalculator {
+            <<domain service>>
+            +calculateMinimumMoves(board) int
+        }
+        class StarRatingCalculator {
+            <<domain service>>
+            +calculate(moves, optimalMoves) StarRating
+        }
+        class GameStatus {
+            <<enumeration>>
+            ready
+            inProgress
+            won
+            lost
+            paused
+        }
+        class Game {
+            <<aggregate root>>
+            +Identifier id
+            +Identifier playerId
+            +Level level
+            +Board board
+            +GameStatus status
+            +int moveCount
+            +int score
+            +StarRating starsEarned
+            +performMove(arrowId, engine) MoveResult
+            +pause() Game
+            +resume() Game
+            +isWon() bool
+            +isLost() bool
+        }
+        class ILevelRepository {
+            <<interface, repository>>
+            +findAll() Level[]
+            +findById(id) Level
+        }
+        class IGameRepository {
+            <<interface, repository>>
+            +save(game) void
+            +findById(id) Game
+        }
+        class LoadLevelsUseCase {
+            <<use case>>
+            +execute() Level[]
+        }
+        class StartGameUseCase {
+            <<use case>>
+            +execute(gameId, playerId, level) Game
+        }
+        class FireArrowUseCase {
+            <<use case>>
+            +execute(game, position) MoveOutcome
+        }
+        class LevelDtoMapper {
+            <<mapper>>
+            +fromDto(dto) Level
+            +fromJson(json) Level
+        }
+        class RemoteLevelRepository {
+            <<repository>>
+        }
+        class CachedLevelRepository {
+            <<repository>>
+            +findAll() Level[]
+        }
+        class GameController {
+            <<controller>>
+            +startGame(level) void
+            +onCellTapped(position) void
+        }
+        class LevelSelectController {
+            <<controller>>
+            +load() void
+            +isOffline bool
+        }
+    }
+
+    Board "1" o-- "0..*" Arrow
+    Board ..> Cell
+    Cell --> CellState
+    ICollisionValidator <|.. CollisionValidator
+    ArrowMovementEngine ..> ICollisionValidator
+    CellFactory ..> Cell : creates (Factory Method)
+    BoardFactory ..> CellFactory
+    BoardFactory ..> Board : creates (Factory Method)
+    Level --> LevelDifficulty
+    Level ..> BoardFactory
+    LevelFactory ..> Level : creates (Factory Method)
+    LevelFactory ..> ShortestPathCalculator
+    Game "1" *-- "1" Board
+    Game "1" *-- "1" Level
+    Game --> GameStatus
+    Game ..> ArrowMovementEngine
+    Game ..> StarRatingCalculator
+    LoadLevelsUseCase ..> ILevelRepository
+    StartGameUseCase ..> IGameRepository
+    FireArrowUseCase ..> IGameRepository
+    FireArrowUseCase ..> ArrowMovementEngine
+    LevelDtoMapper ..> Level : adapts (Adapter)
+    LoadLevelsUseCase ..> LevelDtoMapper
+    ILevelRepository <|.. RemoteLevelRepository
+    ILevelRepository <|.. CachedLevelRepository
+    CachedLevelRepository ..> RemoteLevelRepository : wraps (Decorator)
+    CachedLevelRepository ..> LevelDtoMapper
+    GameController ..> StartGameUseCase
+    GameController ..> FireArrowUseCase
+    LevelSelectController ..> LoadLevelsUseCase
+
+    namespace Cube3D {
+        class Face {
+            <<enumeration>>
+            top
+            bottom
+            front
+            back
+            left
+            right
+        }
+        class CubeBoard {
+            <<aggregate root>>
+            +boardAt(face) Board
+            +isCleared bool
+            +withUpdatedFace(face, board) CubeBoard
+        }
+        class CubeSurfacePosition {
+            <<value object>>
+            +Face face
+            +int row
+            +int column
+        }
+        class CubeEscapePoint {
+            <<value object>>
+            +CubeSurfacePosition position
+        }
+        class CubePathArrow {
+            <<entity>>
+            +Identifier id
+            +CubeSurfacePosition tip
+            +Direction direction
+            +CubeSurfacePosition[] body
+            +CubeSurfacePosition[] escapeRoute
+            +occupies(position) bool
+        }
+        class CubeSurfaceBoard {
+            <<aggregate root>>
+            +int faceSize
+            +CubeEscapePoint escapePoint
+            +isCleared bool
+            +arrowAt(position) CubePathArrow
+            +withoutArrow(id) CubeSurfaceBoard
+        }
+        class CubeSurfaceTopology {
+            <<domain service>>
+            +stepForward(position, direction) Object
+            +neighbors(position) CubeSurfacePosition[]
+            +traceTo(...) CubeSurfacePosition[]
+            +directionBetween(a, b) Direction
+        }
+        class GeneratedCubeSurfaceLevel {
+            <<value object>>
+            +CubeSurfaceBoard board
+            +Identifier[] solutionOrder
+        }
+        class CubeSurfaceLevelGenerator {
+            <<domain service>>
+            +generate() GeneratedCubeSurfaceLevel
+        }
+        class CubePathMovementEngine {
+            <<domain service>>
+            +attemptFireAt(board, position) CubeSurfaceFireResult
+        }
+        class CubeGame {
+            <<aggregate root>>
+            +CubeSurfaceBoard board
+            +int moveCount
+            +GameStatus status
+            +performMove(position, engine) CubeSurfaceFireResult
+        }
+        class StartCubeGameUseCase {
+            <<use case>>
+            +execute() CubeGame
+        }
+        class FireCubePathArrowUseCase {
+            <<use case>>
+            +execute(game, position) CubeSurfaceFireResult
+        }
+        class Mode3DScreen {
+            <<screen>>
+            +onCellTapped(face, position) void
+        }
+        class Mode3DCatalog {
+            <<repository>>
+            +levels() GeneratedCubeSurfaceLevel[]
+        }
+        class Mode3DFaceMap {
+            <<mapper>>
+            +faceForUv(face, u, v) Position
+        }
+        class Mode3DSolutionMap {
+            <<service>>
+        }
+        class Mode3DVictoryOverlay {
+            <<screen>>
+        }
+    }
+
+    %% NOTA: CubeBoard no está conectado a ninguna pantalla — Mode3DScreen usa
+    %% CubeSurfaceBoard vía los casos de uso propuestos abajo.
+    CubeBoard "1" o-- "6" Board : boardsByFace
+    CubeBoard --> Face : indexado por
+    CubeSurfacePosition --> Face
+    CubeEscapePoint "1" *-- "1" CubeSurfacePosition
+    CubePathArrow "1" *-- "1" CubeSurfacePosition : tip
+    CubePathArrow "1" *-- "0..*" CubeSurfacePosition : body
+    CubePathArrow "1" *-- "1..*" CubeSurfacePosition : escapeRoute
+    CubePathArrow --> Direction
+    CubeSurfaceBoard "1" *-- "1" CubeEscapePoint
+    CubeSurfaceBoard "1" o-- "0..*" CubePathArrow : arrows
+    CubeSurfaceTopology --> CubeSurfacePosition
+    CubeSurfaceLevelGenerator ..> CubeSurfaceTopology : traza escapeRoute con
+    CubeSurfaceLevelGenerator ..> GeneratedCubeSurfaceLevel : creates
+    GeneratedCubeSurfaceLevel "1" *-- "1" CubeSurfaceBoard
+    CubePathMovementEngine ..> CubeSurfaceBoard
+    CubePathMovementEngine ..> CubePathArrow
+    CubeGame "1" *-- "1" CubeSurfaceBoard
+    CubeGame --> GameStatus
+    StartCubeGameUseCase ..> CubeSurfaceLevelGenerator : genera nivel con
+    StartCubeGameUseCase ..> CubeGame : crea
+    FireCubePathArrowUseCase ..> CubePathMovementEngine : delega en
+    FireCubePathArrowUseCase ..> CubeGame
+    Mode3DScreen ..> StartCubeGameUseCase
+    Mode3DScreen ..> FireCubePathArrowUseCase
+    Mode3DScreen ..> Mode3DCatalog
+    Mode3DScreen ..> Mode3DFaceMap
+    Mode3DScreen ..> Mode3DSolutionMap
+    Mode3DScreen ..> Mode3DVictoryOverlay
+
+    %% ----- Shared value objects (usados por Game2D y Cube3D) -----
+    %% Direction envuelve ArrowDirection (el enum real); no es un enum en sí.
+    class Direction {
+        <<value object>>
+        +ArrowDirection arrowDirection
+    }
+    class Position {
+        <<value object>>
+        +int row
+        +int col
+    }
+
+    %% ----- Domain: player & progress -----
+    class PlayerProfile {
+        <<entity>>
+    }
+    class PlayerStatistics {
+        <<value object>>
+    }
+    PlayerProfile "1" *-- "1" PlayerStatistics
+
+    class LevelProgressStatus {
+        <<enumeration>>
+        locked
+        unlocked
+        completed
+    }
+    class LevelProgress {
+        <<entity>>
+        +Identifier levelId
+        +LevelProgressStatus status
+        +int bestMoveCount
+        +StarRating bestStars
+        +recordCompletion(moves, time, stars) LevelProgress
+        +unlock() LevelProgress
+    }
+    class PlayerProgress {
+        <<aggregate root>>
+        +Identifier playerId
+        +Map~Identifier,LevelProgress~ levels
+        +Set~string~ unlockedCollectibles
+        +completeLevel(levelId, ...) PlayerProgress
+        +unlockLevel(levelId) PlayerProgress
+        +mergeRemoteLevel(levelId, remoteMoves, remoteTime, remoteCompleted) PlayerProgress
+        +unlockCollectible(collectibleId) PlayerProgress
+        +mergeRemoteCollectibles(remoteCollectibleIds) PlayerProgress
+    }
+    PlayerProgress "1" *-- "many" LevelProgress
+    LevelProgress --> LevelProgressStatus
+
+    %% ----- Domain: meta-collectibles -----
+    class MetaCollectibleKind {
+        <<enumeration>>
+        unlockable
+        finalLevel
+        comingSoon
+    }
+    class MetaCollectible {
+        <<value object>>
+        +string id
+        +MetaCollectibleKind kind
+        +int milestoneLevelNumber
+        +string assetPath
+    }
+    class MetaCollectibleCatalog {
+        <<static, domain service>>
+        +forCompletedLevel(levelNumber) MetaCollectible
+    }
+    class MetaCollectibleUnlockPolicy {
+        <<static, domain service>>
+        +shouldUnlock(levelNumber, starsEarned, score, level) bool
+        +collectibleForLevel(levelNumber) MetaCollectible
+    }
+    MetaCollectible --> MetaCollectibleKind
+    MetaCollectibleCatalog ..> MetaCollectible : creates
+    MetaCollectibleUnlockPolicy ..> MetaCollectibleCatalog
+
+    %% ----- Domain: repository ports (DIP) -----
+    class IPlayerProgressRepository {
+        <<interface, repository>>
+        +save(progress) void
+        +findByPlayerId(id) PlayerProgress
+    }
+    class IPendingSyncRepository {
+        <<interface, repository>>
+        +add(entry) void
+        +loadAll() PendingSyncEntry[]
+        +saveAll(entries) void
+    }
+
+    %% ----- Application: audio port -----
+    class IAudioService {
+        <<interface, service>>
+        +ensureAudioUnlocked() void
+        +playButtonClick() void
+        +playArrowExtracted() void
+        +playMovementNotAllowed() void
+        +playLevelCleared() void
+        +playNoMovementsLeft() void
+        +playTimeUp() void
+        +startBackgroundMusic() void
+        +stopBackgroundMusic() void
+    }
+
+    %% ----- Application: use cases -----
+    class RecordVictoryUseCase {
+        <<use case>>
+        +execute(game, session) RecordVictoryResult
+    }
+    RecordVictoryUseCase ..> MetaCollectibleUnlockPolicy
+    RecordVictoryUseCase ..> MetaCollectible
+    class SyncPendingProgressUseCase {
+        <<use case>>
+        +execute(session) void
+    }
+    class PullRemoteProgressUseCase {
+        <<use case>>
+        +execute(session) PlayerProgress
+    }
+    class LoginUserUseCase {
+        <<use case>>
+    }
+    class RegisterUserUseCase {
+        <<use case>>
+    }
+    class EnsureInitialProgressUseCase {
+        <<use case>>
+    }
+    EnsureInitialProgressUseCase ..> ILevelRepository
+    EnsureInitialProgressUseCase ..> IPlayerProgressRepository
+
+    RecordVictoryUseCase ..> IPlayerProgressRepository
+    RecordVictoryUseCase ..> ILevelRepository
+    RecordVictoryUseCase ..> IPendingSyncRepository
+    SyncPendingProgressUseCase ..> IPendingSyncRepository
+    PullRemoteProgressUseCase ..> IPlayerProgressRepository
+    PullRemoteProgressUseCase ..> ILevelRepository
+    PullRemoteProgressUseCase ..> PlayerProgress : uses mergeRemoteLevel
+
+    %% ----- Infrastructure -----
+    class SharedPreferencesPlayerProgressRepository {
+        <<repository>>
+    }
+    class SharedPreferencesPendingSyncRepository {
+        <<repository>>
+    }
+    class AppAudioService {
+        <<service>>
+        +ensureAudioUnlocked() void
+        +startBackgroundMusic() void
+    }
+    class NoOpAudioService {
+        <<service>>
+    }
+
+    IPlayerProgressRepository <|.. SharedPreferencesPlayerProgressRepository
+    IPendingSyncRepository <|.. SharedPreferencesPendingSyncRepository
+    IAudioService <|.. AppAudioService
+    IAudioService <|.. NoOpAudioService : (test double)
+
+    %% ----- Presentation: controllers (presenters) & audio provider -----
+    class AuthSessionController {
+        <<controller>>
+        +login(username, password) bool
+        +register(username, password) bool
+    }
+    class CollectiblesScreen {
+        <<screen>>
+    }
+    class AudioScope {
+        <<provider>>
+        +of(context) IAudioService
+    }
+    AudioScope ..> IAudioService : provides (InheritedWidget)
+    CollectiblesScreen ..> PlayerProgress
+    CollectiblesScreen ..> MetaCollectibleCatalog
+
+    GameController ..> RecordVictoryUseCase
+    GameController ..> IAudioService : contextual SFX + countdown
+    LevelSelectController ..> SyncPendingProgressUseCase
+    LevelSelectController ..> PullRemoteProgressUseCase
+    LevelSelectController ..> EnsureInitialProgressUseCase
+    AuthSessionController ..> LoginUserUseCase
+    AuthSessionController ..> RegisterUserUseCase
+
+    %% ----- Composition root -----
+    class AppContainer {
+        <<composition root>>
+    }
+    AppContainer ..> CachedLevelRepository
+    AppContainer ..> SharedPreferencesPlayerProgressRepository
+    AppContainer ..> SharedPreferencesPendingSyncRepository
+    AppContainer ..> AppAudioService
+    AppContainer ..> GameController
+    AppContainer ..> LevelSelectController
+    AppContainer ..> AuthSessionController
+    AppContainer ..> EnsureInitialProgressUseCase
+
+    %% ============================================================
+    %% Layer legend (fill colors)
+    %% ============================================================
+    classDef domain fill:#e8f4ea,stroke:#2e7d32,color:#1b3a1e
+    classDef application fill:#e8eef8,stroke:#1565c0,color:#0d2a4d
+    classDef adapters fill:#fdf3e2,stroke:#ef6c00,color:#5c3600
+    classDef infrastructure fill:#f8e8ee,stroke:#ad1457,color:#4d0d24
+    classDef presentation fill:#efe6fa,stroke:#6a1b9a,color:#33064d
+    classDef domainUnwired fill:#e8f4ea,stroke:#2e7d32,color:#1b3a1e,stroke-dasharray: 4 3
+
+    cssClass "Cell,CellState,Board,Arrow,ArrowMovementEngine,ICollisionValidator,CollisionValidator,CellFactory,BoardFactory,LevelDifficulty,Level,LevelFactory,ShortestPathCalculator,StarRatingCalculator,GameStatus,Game,PlayerProfile,PlayerStatistics,LevelProgressStatus,LevelProgress,PlayerProgress,MetaCollectibleKind,MetaCollectible,MetaCollectibleCatalog,MetaCollectibleUnlockPolicy,ILevelRepository,IGameRepository,IPlayerProgressRepository,IPendingSyncRepository,Direction,Position" domain
+    cssClass "CubeSurfacePosition,CubeEscapePoint,CubePathArrow,CubeSurfaceBoard,CubeSurfaceTopology,GeneratedCubeSurfaceLevel,CubeSurfaceLevelGenerator,CubePathMovementEngine,CubeGame" domain
+    %% Borde punteado = dominio puro sin ninguna pantalla que lo use todavía.
+    cssClass "CubeBoard" domainUnwired
+    cssClass "LoadLevelsUseCase,StartGameUseCase,FireArrowUseCase,RecordVictoryUseCase,SyncPendingProgressUseCase,PullRemoteProgressUseCase,LoginUserUseCase,RegisterUserUseCase,EnsureInitialProgressUseCase,IAudioService,StartCubeGameUseCase,FireCubePathArrowUseCase" application
+    cssClass "LevelDtoMapper" adapters
+    cssClass "RemoteLevelRepository,CachedLevelRepository,SharedPreferencesPlayerProgressRepository,SharedPreferencesPendingSyncRepository,AppAudioService,NoOpAudioService,AppContainer" infrastructure
+    cssClass "GameController,LevelSelectController,AuthSessionController,CollectiblesScreen,AudioScope,Mode3DScreen,Mode3DCatalog,Mode3DFaceMap,Mode3DSolutionMap,Mode3DVictoryOverlay" presentation

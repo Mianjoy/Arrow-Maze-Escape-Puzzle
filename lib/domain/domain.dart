@@ -17,10 +17,12 @@ export 'shared/exceptions/cell_occupied_exception.dart';
 export 'board/entities/arrow.dart';
 export 'board/entities/board.dart';
 export 'board/entities/cell.dart';
+export 'board/entities/cube_board.dart';
 export 'board/value_objects/arrow_state.dart';
 export 'board/value_objects/board_dimension.dart';
 export 'board/value_objects/board_generation_config.dart';
 export 'board/value_objects/cell_state.dart';
+export 'board/value_objects/face.dart';
 export 'board/value_objects/move_result.dart';
 export 'board/factories/board_factory.dart';
 export 'board/factories/cell_factory.dart';
@@ -31,6 +33,15 @@ export 'board/services/i_random_board_generator.dart';
 export 'board/services/random_board_generator.dart';
 export 'board/events/arrow_extracted_event.dart';
 export 'board/events/arrow_blocked_event.dart';
+
+// Cube surface (Modo 3D: flechas multi-cara + punto de escape)
+export 'cube_surface/cube_surface_position.dart';
+export 'cube_surface/cube_escape_point.dart';
+export 'cube_surface/cube_path_arrow.dart';
+export 'cube_surface/cube_surface_board.dart';
+export 'cube_surface/cube_path_movement_engine.dart';
+export 'cube_surface/cube_surface_topology.dart';
+export 'cube_surface/cube_surface_level_generator.dart';
 
 // Level
 export 'level/aggregates/level.dart';

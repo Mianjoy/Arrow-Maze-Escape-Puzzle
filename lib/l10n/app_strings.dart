@@ -251,6 +251,63 @@ abstract class AppStrings {
 
   /// Indicación para abrir la galería desde el anuncio de victoria.
   String get collectibleTapToOpenGallery;
+
+  /// Etiqueta del botón "Modo 3D" en la pantalla de inicio.
+  String get homeMode3d;
+
+  /// Título de la pantalla del Modo 3D.
+  String get mode3dTitle;
+
+  /// Pista inicial: orbitar el cubo y tocar celdas.
+  String get mode3dStatusHint;
+
+  /// Título del mapa de solución (caras → niveles).
+  String get mode3dSolutionMapTitle;
+
+  /// Texto de ayuda del mapa de solución.
+  String get mode3dSolutionMapHint;
+
+  /// Feedback: no hay flecha en la celda de [face].
+  String mode3dNoArrow(String face);
+
+  /// Feedback: flecha bloqueada en [face].
+  String mode3dBlocked(String face);
+
+  /// Feedback: flecha liberada en [face].
+  String mode3dExtracted(String face);
+
+  /// Feedback: cubo resuelto tras liberar en [face].
+  String mode3dCubeSolved(String face);
+
+  /// Feedback: movimiento inválido en [face].
+  String mode3dInvalid(String face);
+
+  /// Etiqueta del punto de escape en el mapa ([face], [row], [col]).
+  String mode3dEscapeLabel(String face, int row, int col);
+
+  /// Título de la lista de orden de disparo.
+  String get mode3dSolutionOrderTitle;
+
+  /// Aviso de que punta y cuerpo pueden vivir en caras distintas.
+  String get mode3dMultiFaceHint;
+
+  /// Título del mapa de caras interactivo.
+  String get mode3dFaceMapTitle;
+
+  /// Pista del mapa: tocar celdas para sacar flechas.
+  String get mode3dFaceMapHint;
+
+  /// Título de victoria del Modo 3D.
+  String get mode3dVictoryTitle;
+
+  /// Mensaje de victoria del Modo 3D.
+  String get mode3dVictoryMessage;
+
+  /// Botón reintentar nivel 3D.
+  String get mode3dRetry;
+
+  /// Botón volver al Home desde victoria 3D.
+  String get mode3dBackHome;
 }
 
 /// Cadenas en inglés (idioma por defecto).
@@ -520,6 +577,69 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get collectibleTapToOpenGallery => 'Tap to open collectibles';
+
+  @override
+  String get homeMode3d => '3D Mode';
+
+  @override
+  String get mode3dTitle => '3D Mode — 3×3 Cube';
+
+  @override
+  String get mode3dStatusHint =>
+      'Tap a free arrow (darker cell) · blocked routes stay put · drag to rotate';
+
+  @override
+  String get mode3dSolutionMapTitle => 'Solution order (3×3)';
+
+  @override
+  String get mode3dSolutionMapHint =>
+      'An arrow exits only when its forward route has no collision.';
+
+  @override
+  String mode3dNoArrow(String face) => '$face: no arrow on that cell';
+
+  @override
+  String mode3dBlocked(String face) => '$face: path to escape is blocked';
+
+  @override
+  String mode3dExtracted(String face) => '$face: arrow slid out through escape';
+
+  @override
+  String mode3dCubeSolved(String face) => '$face: last arrow escaped — you win!';
+
+  @override
+  String mode3dInvalid(String face) => '$face: invalid move';
+
+  @override
+  String mode3dEscapeLabel(String face, int row, int col) =>
+      'Escape: $face ($row, $col)';
+
+  @override
+  String get mode3dSolutionOrderTitle => 'Suggested fire order';
+
+  @override
+  String get mode3dMultiFaceHint =>
+      'The exit and arrow positions change every time you retry.';
+
+  @override
+  String get mode3dFaceMapTitle => 'Cube faces (map)';
+
+  @override
+  String get mode3dFaceMapHint =>
+      'Each face is a 3×3 grid. Tap arrows here or on the cube to fire them.';
+
+  @override
+  String get mode3dVictoryTitle => 'Cube cleared!';
+
+  @override
+  String get mode3dVictoryMessage =>
+      'Every arrow left through the escape cell. Retry the puzzle or return home.';
+
+  @override
+  String get mode3dRetry => 'Retry';
+
+  @override
+  String get mode3dBackHome => 'Home';
 }
 
 /// Cadenas en español.
@@ -790,6 +910,69 @@ class AppStringsEs extends AppStrings {
 
   @override
   String get collectibleTapToOpenGallery => 'Toca para abrir coleccionables';
+
+  @override
+  String get homeMode3d => 'Modo 3D';
+
+  @override
+  String get mode3dTitle => 'Modo 3D — Cubo 3×3';
+
+  @override
+  String get mode3dStatusHint =>
+      'Toca una flecha libre (celda más oscura) · si hay choque no sale · arrastra para girar';
+
+  @override
+  String get mode3dSolutionMapTitle => 'Orden de solución (3×3)';
+
+  @override
+  String get mode3dSolutionMapHint =>
+      'Una flecha sale solamente cuando su ruta frontal no tiene colisiones.';
+
+  @override
+  String mode3dNoArrow(String face) => '$face: no hay flecha en esa celda';
+
+  @override
+  String mode3dBlocked(String face) => '$face: camino al escape bloqueado';
+
+  @override
+  String mode3dExtracted(String face) => '$face: la flecha salió por el escape';
+
+  @override
+  String mode3dCubeSolved(String face) => '$face: última flecha — ¡victoria!';
+
+  @override
+  String mode3dInvalid(String face) => '$face: movimiento inválido';
+
+  @override
+  String mode3dEscapeLabel(String face, int row, int col) =>
+      'Escape: $face ($row, $col)';
+
+  @override
+  String get mode3dSolutionOrderTitle => 'Orden sugerido de disparo';
+
+  @override
+  String get mode3dMultiFaceHint =>
+      'El escape y las posiciones de las flechas cambian al reintentar.';
+
+  @override
+  String get mode3dFaceMapTitle => 'Caras del cubo (mapa)';
+
+  @override
+  String get mode3dFaceMapHint =>
+      'Cada cara es un grid 3×3. Toca las flechas aquí o en el cubo para dispararlas.';
+
+  @override
+  String get mode3dVictoryTitle => '¡Cubo limpio!';
+
+  @override
+  String get mode3dVictoryMessage =>
+      'Todas las flechas salieron por el escape. Reintenta el puzzle o vuelve al inicio.';
+
+  @override
+  String get mode3dRetry => 'Reintentar';
+
+  @override
+  String get mode3dBackHome => 'Inicio';
 }
 
 /// Provee [AppStrings] a descendientes del árbol de widgets vía `of(context)`.

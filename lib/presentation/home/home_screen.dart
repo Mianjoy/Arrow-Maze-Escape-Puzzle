@@ -57,6 +57,16 @@ class HomeScreen extends StatelessWidget {
                   icon: const Icon(Icons.play_arrow),
                   label: Text(strings.homePlay),
                 ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  key: const ValueKey('home-mode3d'),
+                  onPressed: withButtonClick(
+                    context,
+                    () => Navigator.of(context).pushNamed('/mode3d'),
+                  ),
+                  icon: const Icon(Icons.view_in_ar),
+                  label: Text(strings.homeMode3d),
+                ),
               ],
             ),
           ),
