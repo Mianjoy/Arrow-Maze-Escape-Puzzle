@@ -2668,6 +2668,72 @@ Sin cambios de contrato HTTP; el cliente reutiliza la infraestructura de sync ya
 
 ---
 
+## Consulta #58 — Mode 3D de superficie (cubo exterior jugable)
+
+**Tarea o problema abordado.**
+
+Diseñar e implementar un **Mode 3D** como bounded context nuevo, sin alterar el juego 2D existente: puzzle sobre las seis caras exteriores de un cubo 3×3, con reglas tipo Escape Path (extracción por un punto de escape si la ruta está libre). El alcance incluyó generación aleatoria siempre resoluble, UX táctil (órbita vs tap), flechas planas visibles, salida alineada a la punta, cuerpos de 1–4 celdas multi-cara por aristas adyacentes, y corrección de wrap/alineación visual en bordes.
+
+**Herramienta de IA utilizada.**
+
+- Cursor Agent (Composer / Auto), con acceso de lectura/escritura a frontend (y coordinación con backend), ejecución de `flutter test` / `flutter analyze`, y verificación manual en Flutter Web.
+
+**Prompt o instrucción proporcionada (transcripción literal o paráfrasis fiel).**
+
+>
+> Implementa Mode 3D en **sin modificar el comportamiento del modo 2D** (Board, motor clásico, auth, catálogo, progreso).
+>
+> Creame un puzzle en la superficie exterior de un cubo 3×3 (6 caras), estética neutra (cubo gris, flechas negras planas Path), orientado a móvil/web. en el cual el Body de la flecha pueda encontrarse en cada cara 
+> cercana al borde de la misma, para que la flecha se desplace entre caras.  
+>
+> Asi mismo generar niveles aleatorios de maximo 8 flechas si es posible, que la interfaz grafica tenga, tanto boton para colocar otro mapa de manera aleatoria, y una pantalla que al finalizar te genere un mensaje 
+> de listo para regresar al Home y con un boton para jugar otro nivel aleatorio, todo esto montalo con un boton llamado Modo 3D donde es experimental en la pantalla de inicio 
+>
+> **Criterios de aceptación:** 2D intacto; tap/órbita en Chrome; flechas visibles; dirección de punta = primer paso; bodies multi-cara solo por aristas contiguas; tests de dominio/UI y analyze en verde.
+
+
+
+**Resultado obtenido (fragmento de código, diseño, explicación).**
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| Posición de superficie | `lib/domain/cube_surface/cube_surface_position.dart` | Value object inmutable (cara + fila + columna); valida límites frente a `faceSize` y actúa como identidad de celda para ocupación, rutas y picking. |
+| Punto de escape | `lib/domain/cube_surface/cube_escape_point.dart` | Define la celda única de salida del nivel; ancla obligatoria del final de toda `escapeRoute` y del escape aleatorio del generador. |
+| Flecha de superficie | `lib/domain/cube_surface/cube_path_arrow.dart` | Entidad tip + dirección + body multi-celda (multi-cara) + ruta al escape; expone `occupiedCells` para bloqueos, taps y render. |
+| Agregado tablero 3D | `lib/domain/cube_surface/cube_surface_board.dart` | Estado del puzzle: flechas + escape, `arrowAt`, eliminación al extraer, invariantes de no solape y rutas que terminan en el escape. |
+| Topología / wrap | `lib/domain/cube_surface/cube_surface_topology.dart` | Grafo de 6 caras (`stepForward`, `traceTo`, `neighbors`) con wrap por arista derivado del embebido 3D, garantizando continuidad en bordes. |
+| Motor de disparo | `lib/domain/cube_surface/cube_path_movement_engine.dart` | Aplica reglas Escape Path: extrae si la ruta está libre; bloquea si otra flecha ocupa la ruta; admite disparo desde tip o body. |
+| Generador de niveles | `lib/domain/cube_surface/cube_surface_level_generator.dart` | Produce layouts resolubles (orden de eliminación), escape variable, cuerpos 1–4 hacia atrás desde la punta y densidad viable en 3×3. |
+| Catálogo Mode 3D | `lib/presentation/mode3d/mode_3d_catalog.dart` | Constantes de tamaño/conteo, demo estático y factory de nivel aleatorio para la UI. |
+| Pantalla Mode 3D | `lib/presentation/mode3d/mode_3d_screen.dart` | Escena 3D, siluetas planas, feedback visual de libre/bloqueado, órbita táctil, tap, animación de salida y victoria. |
+| Entrada táctil | Overlay en `mode_3d_screen.dart` | Separa órbita/zoom de tap corto; combina pick de celdas y proximidad en pantalla para Web. |
+| Render de flechas | Helpers de visual/body/`_cellLocal` | Dibuja tip y segmentos de cuerpo de forma fiable; corrige espejo UV left/right para alinear cuerpos en aristas. |
+| i18n / navegación | `app_strings.dart`, `home_screen.dart`, `main.dart` | Textos ES/EN, entrada desde Home y ruta `/mode3d`. |
+| Suite de pruebas | `test/domain/cube_surface/*`, `test/presentation/mode3d/*` | Regresión de solvabilidad, dirección de punta, wrap contiguo, disparo por body y widgets auxiliares. |
+
+**Commits asociados (Conventional Commits):**
+
+1. `feat(mode3d): add playable cube-surface mode with reliable flat arrows`
+
+**Verificación:**
+
+- `flutter test test/domain/cube_surface` y `test/presentation/mode3d`.
+- `flutter analyze` sobre `lib/domain/cube_surface` y `lib/presentation/mode3d`.
+- Prueba manual en Chrome (`flutter run -d chrome --web-port=8080`).
+
+**Modificaciones realizadas por el equipo al resultado de la IA.**
+
+- Pendiente de revisión del equipo tras prueba en navegador/dispositivo.
+- Alcance futuro acordado oralmente: al menos 3 niveles estáticos con progresión (aún no implementado).
+
+**Lecciones aprendidas o limitaciones identificadas.**
+
+- En Flutter Web, `ShapeGeometry` de three_js puede no rasterizar de forma fiable; geometría plana fina es más robusta.
+- El canvas WebGL suele capturar gestos: conviene `IgnorePointer` + overlay Flutter para órbita/tap.
+- El wrap debe derivarse del mismo embebido 3D que el render; heurísticas de esquina producen desalineación visual aunque los tests “internos” pasen.
+- Cuerpos largos saturan un 3×3: ajustar `arrowCount` es parte del diseño de generabilidad.
+- No eliminar meshes de celda vía `parent.remove` al regenerar pickables.
+
 ## Evaluación crítica
 
 **Porcentaje aproximado del código que contó con asistencia de IA.**
