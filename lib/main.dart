@@ -59,6 +59,7 @@ import 'presentation/leaderboard/leaderboard_screen.dart';
 import 'presentation/collectibles/collectibles_screen.dart';
 import 'presentation/level_select/level_select_controller.dart';
 import 'presentation/level_select/level_select_screen.dart';
+import 'presentation/mode3d/mode_3d_screen.dart';
 import 'presentation/result/defeat_screen.dart';
 import 'presentation/result/result_screen_args.dart';
 import 'presentation/result/victory_screen.dart';
@@ -518,6 +519,11 @@ class _ArrowMazeAppState extends State<ArrowMazeApp> with WidgetsBindingObserver
             getPlayerProgressUseCase: container.getPlayerProgressUseCase,
             playerId: playerId,
           ),
+        );
+      case '/mode3d':
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const Mode3DScreen(),
         );
       default:
         return MaterialPageRoute(

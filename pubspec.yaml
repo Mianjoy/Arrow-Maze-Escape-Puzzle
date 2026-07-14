@@ -13,6 +13,8 @@ dependencies:
   meta: ^1.11.0
   shared_preferences: ^2.3.3
   audioplayers: ^6.1.0
+  three_js: ^0.1.6
+  three_js_controls: ^0.1.0
 
 dev_dependencies:
   flutter_test:

@@ -81,6 +81,32 @@ void main() {
     expect(pushedRoute, '/login');
   });
 
+  testWidgets('should_navigate_to_mode3d_when_mode3d_button_is_tapped', (tester) async {
+    // Arrange
+    final authSessionController = buildTestAuthSessionController();
+    String? pushedRoute;
+
+    await tester.pumpWidget(
+      AppStringsScope(
+        strings: const AppStringsEs(),
+        child: MaterialApp(
+          home: HomeScreen(authSessionController: authSessionController),
+          onGenerateRoute: (settings) {
+            pushedRoute = settings.name;
+            return MaterialPageRoute(builder: (_) => const SizedBox());
+          },
+        ),
+      ),
+    );
+
+    // Act
+    await tester.tap(find.byKey(const ValueKey('home-mode3d')));
+    await tester.pumpAndSettle();
+
+    // Assert
+    expect(pushedRoute, '/mode3d');
+  });
+
   testWidgets('should_navigate_to_settings_when_settings_button_is_tapped', (tester) async {
     // Arrange
     final authSessionController = buildTestAuthSessionController();

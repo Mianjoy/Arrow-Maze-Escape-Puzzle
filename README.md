@@ -20,7 +20,7 @@ blocked moves, level cleared, time/moves exhausted) plus background music and a
 per-level countdown timer, all behind a mutable `IAudioService` port, and two languages
 (English/Spanish). It authenticates against the
 [BackEnd-ArrowMaze](https://github.com/Georopeza/BackEnd-ArrowMaze) API, downloads and
-caches the level catalog (29 levels and growing) for offline play, and keeps player progress — including
+caches the 15-level catalog for offline play, and keeps player progress — including
 unlocked collectibles — in sync with the server in both directions: push on victory
 (with a retry queue for offline wins) and pull-and-merge on login, so progress follows
 the player across devices.
@@ -308,7 +308,7 @@ rejecting unsolvable levels before they ever reach the UI.
 
 - `CachedLevelRepository` (`lib/infrastructure/level/`) fetches `GET /levels` and writes
   the raw catalog to `SharedPreferences`; if the network fails, it serves the last
-  cached copy instead of a bundled fallback, so the level catalog stays playable
+  cached copy instead of a bundled fallback, so the 15-level catalog stays playable
   offline.
 - `RecordVictoryUseCase` always saves progress locally first; if the push to the server
   fails, the win is enqueued (`PendingSyncEntry`) instead of lost, and
